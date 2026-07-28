@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<!-- viewport-fit=cover: no celular com entalhe, o jogo vai até a borda;
+     o HUD se protege com env(safe-area-inset-*) no CSS -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Bob em Busca da AGI Sagrada 3D</title>
+<meta name="description" content="Cruzada 3D estilo GTA numa cidade brasileira: Bob e a comunidade Inteligência Mil Grau recuperam os 5 Fragmentos do Cálice de Silício das mãos das Big Techs para treinar o CURUPIRA-1, a primeira AGI verde-amarela.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#05070c">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Bob em Busca da AGI Sagrada 3D">
+<meta property="og:description" content="A cruzada da AGI Sagrada em mundo aberto 3D. Cinco chefões, sete fases, uma cidade brasileira inteira para atravessar.">
+<meta property="og:locale" content="pt_BR">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="./css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏺</text></svg>">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.180.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+
+<!-- ==================== HUD ==================== -->
+<div id="hud" class="hidden">
+
+  <!-- [42] mira posicionada a 2/5 do topo da tela / [37] mira no ponto que o tiro acerta -->
+  <div id="crosshair">
+    <svg viewBox="0 0 64 64" width="64" height="64">
+      <circle cx="32" cy="32" r="13" class="ch-ring"/>
+      <circle cx="32" cy="32" r="1.6" class="ch-dot"/>
+      <line x1="32" y1="6"  x2="32" y2="19" class="ch-line"/>
+      <line x1="32" y1="45" x2="32" y2="58" class="ch-line"/>
+      <line x1="6"  y1="32" x2="19" y2="32" class="ch-line"/>
+      <line x1="45" y1="32" x2="58" y2="32" class="ch-line"/>
+    </svg>
+    <div id="hitmarker"></div>
+  </div>
+
+  <!-- topo esquerdo: vidas, pontos, tempo -->
+  <div id="topleft">
+    <!-- [33][34][35] corações -->
+    <div id="hearts"></div>
+    <div class="stat-row">
+      <div class="stat">
+        <span class="stat-label">PONTOS</span>
+        <span class="stat-value" id="score">0</span>
+      </div>
+      <!-- [8] tempo de 10 minutos (pode ser desativado) -->
+      <div class="stat" id="timer-box">
+        <span class="stat-label">TEMPO</span>
+        <span class="stat-value" id="timer">10:00</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">ENTREGAS</span>
+        <span class="stat-value" id="deliveries">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- [10] minimapa que gira junto com o jogador -->
+  <div id="minimap-wrap">
+    <canvas id="minimap" width="360" height="360"></canvas>
+    <div id="minimap-ring"></div>
+    <div id="compass-n">N</div>
+  </div>
+
+  <!-- objetivo atual -->
+  <div id="objective">
+    <div id="objective-icon">📦</div>
+    <div>
+      <div id="objective-title">COLETAR</div>
+      <div id="objective-text">Encontre o portador do pacote</div>
+      <div id="objective-dist">-- m</div>
+    </div>
+  </div>
+
+  <!-- [28] velocímetro até 120 km/h (só aparece dentro do carro) -->
+  <div id="speedo" class="hidden">
+    <canvas id="speedo-canvas" width="300" height="300"></canvas>
+    <div id="speedo-value">0</div>
+    <div id="speedo-unit">km/h</div>
+    <div id="gear">P</div>
+  </div>
+
+  <!-- altímetro do helicóptero [43] -->
+  <div id="heli-panel" class="hidden">
+    <div class="heli-row"><span>ALT</span><b id="heli-alt">0</b><span>m</span></div>
+    <div class="heli-row"><span>VEL</span><b id="heli-spd">0</b><span>km/h</span></div>
+    <!-- [63] no ar, o E/clique dispara míssil no lugar da pistola -->
+    <div class="heli-row heli-arm"><span>ARM</span><b>MÍSSEIS</b><span id="heli-arm-key">E / clique</span></div>
+    <div id="heli-warn">DESÇA PARA SAIR</div>
+  </div>
+
+  <!-- trava do míssil teleguiado (tecla X) -->
+  <div id="lock-on" class="hidden">
+    <svg viewBox="0 0 100 100" width="100" height="100">
+      <path d="M8 30 V8 H30"/><path d="M70 8 H92 V30"/>
+      <path d="M92 70 V92 H70"/><path d="M30 92 H8 V70"/>
+      <circle cx="50" cy="50" r="4"/>
+    </svg>
+    <div id="lock-label">TRAVADO</div>
+  </div>
+
+  <div id="missile-gauge" class="hidden">
+    <div id="mg-bar"><div id="mg-fill"></div></div>
+    <div id="mg-label">MÍSSIL <kbd>X</kbd></div>
+  </div>
+
+  <!-- dica contextual (entrar em carro / helicóptero / pegar objeto) -->
+  <div id="prompt" class="hidden"></div>
+
+  <!-- avisos flutuantes (+10 pontos, +30s...) -->
+  <div id="toasts"></div>
+
+  <!-- [50] item carregado -->
+  <div id="carrying" class="hidden">📦 PACOTE EM MÃOS</div>
+
+  <div id="clockbox"><span id="clock">12:00</span><span id="daynight">☀️</span></div>
+
+  <!-- contador de FPS e perfil gráfico atual (tecla G) -->
+  <div id="perfbox">
+    <span id="fps">--</span><span class="perf-unit">FPS</span>
+    <span id="preset-tag">MÉDIA</span>
+    <!-- [60] modo Deus (tecla M): voo livre pelo mapa -->
+    <span id="god-tag" class="hidden">MODO DEUS</span>
+  </div>
+</div>
+
+<!-- ==================== AGI SAGRADA: barra do chefão ==================== -->
+<div id="boss-bar" class="hidden">
+  <div id="boss-name">CHEFÃO</div>
+  <div id="boss-track"><div id="boss-fill"></div></div>
+  <div id="boss-phase"></div>
+</div>
+
+<!-- ==================== AGI SAGRADA: cartão de fase ==================== -->
+<div id="phase-card" class="hidden">
+  <div id="phase-flag">🇧🇷</div>
+  <div id="phase-title">FASE 0 — O CHAMADO</div>
+  <div id="phase-place">Estúdio IMG, São Paulo</div>
+</div>
+
+<!-- ==================== AGI SAGRADA: caixa de diálogo ==================== -->
+<div id="dialogue" class="hidden">
+  <div id="dlg-portrait"></div>
+  <div id="dlg-body">
+    <div id="dlg-name">BOB</div>
+    <div id="dlg-text"></div>
+    <div id="dlg-hint" class="hidden"><kbd>Espaço</kbd> continuar · <kbd>F</kbd> pular a cena</div>
+  </div>
+  <!-- no toque a fala avança tocando em qualquer lugar; este botão é a saída -->
+  <button id="dlg-skip" type="button">PULAR CENA</button>
+</div>
+
+<!-- ==================== AGI SAGRADA: o Plano (tecla J) ==================== -->
+<div id="plan-screen" class="hidden">
+  <div class="panel plan-panel">
+    <h2>O PLANO DA AGI SAGRADA</h2>
+    <p class="muted">Oito peças. A comunidade constrói o que não se compra.</p>
+    <div id="plan-grid"></div>
+    <div id="plan-next"></div>
+    <button id="plan-close" class="ghost">FECHAR (F)</button>
+  </div>
+</div>
+
+<!-- ==================== [56] CELULAR ==================== -->
+<div id="phone" class="hidden">
+  <div id="phone-body">
+    <div id="phone-notch"></div>
+    <div id="phone-screen">
+      <div id="phone-header">
+        <div id="phone-back">‹</div>
+        <div id="phone-title">Mensagens</div>
+        <div id="phone-signal">▂▄▆█</div>
+      </div>
+
+      <div id="phone-contacts">
+        <div class="phone-hint">Digite o número nas costas de um NPC</div>
+        <input id="phone-number" type="tel" maxlength="11" placeholder="Número (ex: 90210)" autocomplete="off">
+        <button id="phone-call">ABRIR CONVERSA</button>
+        <div class="phone-sub">CONVERSAS RECENTES</div>
+        <div id="phone-list"></div>
+      </div>
+
+      <div id="phone-chat" class="hidden">
+        <div id="chat-who"></div>
+        <div id="chat-log"></div>
+        <div id="chat-input-row">
+          <input id="chat-input" type="text" maxlength="120" placeholder="Mensagem..." autocomplete="off">
+          <button id="chat-send">➤</button>
+        </div>
+      </div>
+    </div>
+    <div id="phone-home"></div>
+  </div>
+  <div id="phone-tip">C ou ESC para fechar</div>
+</div>
+
+<!-- ==================== [39] TELA DE ABERTURA ==================== -->
+<!--
+  A abertura tem UMA pergunta: jogar. Tudo o que não responde a ela
+  (as vinte teclas de atalho, os seletores de qualidade, os volumes)
+  saiu daqui para as telas de OPÇÕES e CONTROLES, logo abaixo.
+-->
+<div id="title-screen">
+  <div id="title-bg"></div>
+  <div id="title-content">
+    <h1 id="game-title"><span>BOB</span> EM BUSCA DA <b>AGI SAGRADA</b> <em>3D</em></h1>
+    <p id="tagline">Bob e a comunidade Mil Grau contra as Big Techs. Recupere os 5 Fragmentos e treine o CURUPIRA-1.</p>
+
+    <!-- [62] só aparece quando existe uma partida em andamento por trás do menu -->
+    <button id="resume-title-btn" class="hidden">VOLTAR AO JOGO</button>
+    <button id="start-btn">INICIAR JOGO</button>
+    <div id="start-warn" class="hidden">apaga o Plano da AGI e recomeça do zero</div>
+
+    <div id="title-links">
+      <button id="open-options" type="button" class="menu-link">⚙️ OPÇÕES</button>
+      <button id="open-keys" type="button" class="menu-link">🎮 CONTROLES</button>
+    </div>
+
+    <div id="loading-note">carregando cidade...</div>
+  </div>
+</div>
+
+<!-- ==================== OPÇÕES ==================== -->
+<div id="options-screen" class="hidden">
+  <div class="panel menu-panel">
+    <h2>OPÇÕES</h2>
+
+    <!-- [8] desmarcado por padrão: o jogo começa sem limite de tempo -->
+    <label id="timer-toggle">
+      <input type="checkbox" id="timer-enabled">
+      <span>Limite de tempo (10 minutos)</span>
+    </label>
+
+    <!-- [13] ciclo dia/noite: pode ser congelado -->
+    <div id="cycle-choice">
+      <span class="choice-label">ILUMINAÇÃO</span>
+      <div class="choice-group" id="cycle-group">
+        <button type="button" class="choice" data-cycle="ciclo">CICLO DIA/NOITE</button>
+        <button type="button" class="choice active" data-cycle="dia">SEMPRE DIA</button>
+        <button type="button" class="choice" data-cycle="noite">SEMPRE NOITE</button>
+      </div>
+    </div>
+
+    <!-- [61] quanta gente e quantos carros — vale mudar durante o jogo com P -->
+    <div id="pop-choice">
+      <span class="choice-label">MOVIMENTO NA CIDADE</span>
+      <div class="choice-group" id="pop-group">
+        <button type="button" class="choice" data-pop="0">POUCA</button>
+        <button type="button" class="choice" data-pop="1">NORMAL</button>
+        <button type="button" class="choice active" data-pop="2">MOVIMENTADA</button>
+        <button type="button" class="choice" data-pop="3">CIDADE CHEIA</button>
+      </div>
+      <span class="choice-note">mais gente e mais carros custam FPS</span>
+    </div>
+
+    <div id="qual-choice">
+      <span class="choice-label">QUALIDADE GRÁFICA</span>
+      <div class="choice-group" id="qual-group">
+        <button type="button" class="choice" data-qual="0">BAIXA</button>
+        <button type="button" class="choice active" data-qual="1">MÉDIA</button>
+        <button type="button" class="choice" data-qual="2">ALTA</button>
+      </div>
+      <span class="choice-note">no celular, BAIXA é o que segura os 30 FPS</span>
+    </div>
+
+    <div id="dist-choice">
+      <span class="choice-label">ALCANCE DE RENDERIZAÇÃO</span>
+      <div class="choice-group" id="dist-group">
+        <button type="button" class="choice" data-dist="0">CURTA</button>
+        <button type="button" class="choice" data-dist="1">MÉDIA</button>
+        <button type="button" class="choice active" data-dist="2">LONGA</button>
+        <button type="button" class="choice" data-dist="3">TOTAL</button>
+      </div>
+    </div>
+
+    <div id="toque-choice">
+      <span class="choice-label">CONTROLES NA TELA</span>
+      <div class="choice-group" id="toque-group">
+        <button type="button" class="choice active" data-toque="auto">AUTOMÁTICO</button>
+        <button type="button" class="choice" data-toque="on">SEMPRE</button>
+        <button type="button" class="choice" data-toque="off">NUNCA</button>
+      </div>
+      <span class="choice-note">automático: ligam sozinhos em celular e tablet</span>
+    </div>
+
+    <div id="vol-choice">
+      <span class="choice-label">SOM</span>
+      <div class="slider-row">
+        <label for="vol-efeitos">EFEITOS</label>
+        <input type="range" id="vol-efeitos" min="0" max="100" step="5" value="55">
+        <span class="slider-val" id="vol-efeitos-val">55</span>
+      </div>
+      <div class="slider-row">
+        <label for="vol-musica">MÚSICA</label>
+        <input type="range" id="vol-musica" min="0" max="100" step="5" value="45">
+        <span class="slider-val" id="vol-musica-val">45</span>
+      </div>
+    </div>
+
+    <div class="menu-actions">
+      <button id="options-close" class="ghost">FECHAR</button>
+      <!-- as escolhas acima ficam salvas no navegador -->
+      <button id="reset-cfg" type="button">restaurar padrões</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== CONTROLES / CONFIG DE TECLAS ==================== -->
+<div id="keys-screen" class="hidden">
+  <div class="panel menu-panel">
+    <h2>CONTROLES</h2>
+    <p id="keys-note" class="muted">Clique numa tecla e aperte a nova.</p>
+
+    <div id="keys-list"></div>
+
+    <div id="keys-touch">
+      <div class="keys-group">NO CELULAR</div>
+      <div class="keys-row"><span class="keys-name">Andar e correr</span><span class="keys-tag">analógico (empurre até o fim para correr)</span></div>
+      <div class="keys-row"><span class="keys-name">Olhar em volta · zoom</span><span class="keys-tag">arrastar na tela · dois dedos</span></div>
+      <div class="keys-row"><span class="keys-name">Atirar · pular · agir</span><span class="keys-tag">botões à direita</span></div>
+      <div class="keys-row"><span class="keys-name">Menu · Plano · celular</span><span class="keys-tag">☰ 📋 📱 no alto da tela</span></div>
+    </div>
+
+    <div class="menu-actions">
+      <button id="keys-close" class="ghost">FECHAR</button>
+      <button id="keys-reset" type="button">restaurar teclas padrão</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ==================== [35][40] FIM DE JOGO ==================== -->
+<div id="over-screen" class="hidden">
+  <div class="panel">
+    <h2 id="over-title">FIM DE JOGO</h2>
+    <p id="over-reason" class="muted"></p>
+    <div id="over-stats">
+      <div><b id="over-score">0</b><span>pontos</span></div>
+      <div><b id="over-deliveries">0</b><span>entregas</span></div>
+      <div><b id="over-time">0:00</b><span>sobreviveu</span></div>
+    </div>
+    <!-- [40] botão de reiniciar -->
+    <button id="restart-btn">JOGAR NOVAMENTE</button>
+  </div>
+</div>
+
+<!-- ==================== CONTROLES NA TELA (celular) ==================== -->
+<!--
+  A ordem importa: a área de olhar é a camada de baixo e ocupa a tela
+  inteira; a zona do analógico e os botões ficam por cima e capturam o
+  dedo antes dela. Assim qualquer canto livre da tela gira a câmera.
+-->
+<div id="touch" class="hidden">
+  <div id="tc-look"></div>
+
+  <!-- só aparece em pé: deitado, o jogo tem o dobro de campo de visão -->
+  <div id="tc-rotate">🔄 vire o celular para jogar deitado</div>
+
+  <div id="tc-stick-zone">
+    <div id="tc-base"><div id="tc-knob"></div></div>
+  </div>
+
+  <div id="tc-top">
+    <button type="button" class="tc-icon" data-acao="menu" title="Menu">☰</button>
+    <button type="button" class="tc-icon" data-acao="plano" title="O Plano da AGI">📋</button>
+    <button type="button" class="tc-icon" data-acao="celular" title="Celular">📱</button>
+  </div>
+
+  <div id="tc-pad">
+    <button type="button" class="tc-btn tc-fogo"  id="tc-fogo"   data-segura="atirar">ATIRAR</button>
+    <button type="button" class="tc-btn tc-pular" id="tc-pular"  data-segura="pular">PULAR</button>
+    <button type="button" class="tc-btn tc-acao"  id="tc-acao"   data-acao="acao">AÇÃO</button>
+    <button type="button" class="tc-btn tc-sec tc-descer hidden" id="tc-descer" data-segura="correr">▼</button>
+    <button type="button" class="tc-btn tc-sec tc-visao hidden"  id="tc-visao"  data-acao="visao">👁</button>
+    <button type="button" class="tc-btn tc-sec tc-missil hidden" id="tc-missil" data-acao="missil">🚀</button>
+  </div>
+</div>
+
+<div id="fatal" class="hidden"></div>
+
+<script type="module">
+  import { boot } from './src/main.js';
+  boot().catch((err) => {
+    console.error(err);
+    const el = document.getElementById('fatal');
+    el.classList.remove('hidden');
+    el.innerHTML = '<h3>Falha ao iniciar</h3><pre>' + (err && err.stack || err) + '</pre>' +
+      '<p>Verifique a conexão com a internet (o Three.js é carregado via CDN).</p>';
+  });
+</script>
+</body>
+</html>
