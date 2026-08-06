@@ -9,6 +9,7 @@ import { criarKillfeed } from '../ui/killfeed.js';
 import { criarScoreboard } from '../ui/scoreboard.js';
 import { criarBrHud } from '../ui/brHud.js';
 import { criarNetStatus } from '../ui/netStatus.js';
+import { Car } from '../ent/car.js';
 import { T } from './protocol.js';
 
 const INPUT_HZ = 20;
@@ -51,6 +52,16 @@ export class Match {
     this._raf = null;
     this._ult = 0;
 
+    // veiculos do MP (carros autoritativos vindos do servidor)
+    this.carrosMp = new Map();   // id -> { mesh: Car, x, y, z, playerId }
+    this._emCarro = false;
+    this._toggleCar = false;
+
+    // veiculos do MP (carros autoritativos vindos do servidor)
+    this.carrosMp = new Map();   // id -> { mesh: Car, x, y, z, playerId }
+    this._emCarro = false;
+    this._toggleCar = false;
+
     this._ligarListeners();
   }
 
@@ -61,6 +72,10 @@ export class Match {
     if (window.__pararLoopSingle) window.__pararLoopSingle();
     // a arma na tela é do single; no multiplayer quem manda é o HUD do MP
     if (this.game && this.game.viewmodel) this.game.viewmodel.visible = false;
+    // esconde o transito do single — no MP os carros vêm do servidor
+    if (this.game && this.game.cars) this.game.cars.group.visible = false;
+    // esconde o transito do single — no MP os carros vêm do servidor
+    if (this.game && this.game.cars) this.game.cars.group.visible = false;
 
     // esconde a tela de abertura do single e o HUD single
     const ab = document.getElementById('title-screen');
@@ -96,6 +111,8 @@ export class Match {
       if (k === 'shift') this.inp.run = true;
       if (k === ' ') { this.inp.jump = true; e.preventDefault(); }
       if (k === 'tab') { e.preventDefault(); this.scoreboard.alternar(); }
+      if (k === 'e') this._toggleCar = true;
+      if (k === 'e') this._toggleCar = true;
       this._norm();
     };
     this._ku = (e) => {
@@ -271,6 +288,9 @@ export class Match {
       const pos = this.snapBuf.ultimo() && eu ? { x: eu.x, z: eu.z } : null;
       this.brHud.atualizar(msg, this.meuId, pos);
     }
+    // carros + estado do veiculo do jogador local
+    if (msg.cars) this._aplicarCarros(msg.cars);
+    if (eu) this._emCarro = eu.inCar != null;
   }
 
   _garantirAvatar(id) {
@@ -314,7 +334,8 @@ export class Match {
     // câmera do jogador local (posição autoritativa interpolada)
     const eu = this.snapBuf.ler(this.meuId, alpha);
     if (eu) {
-      this.camera.position.set(eu.x, eu.y + EYE, eu.z);
+      const eye = this._emCarro ? 1.05 : EYE;
+      this.camera.position.set(eu.x, eu.y + eye, eu.z);
       this.yaw = eu.yaw ?? this.yaw;
       this.pitch = eu.pitch ?? this.pitch;
     }
@@ -333,9 +354,27 @@ export class Match {
         jump: this.inp.jump,
         fire: !!(this._fire || this._dragOn),
         ads: this.inp.ads,
+        car: this._toggleCar ? this._alvoCarro() : null,
       });
+      this._toggleCar = false;
       this._fire = false;   // tiro único por input (rajada via clique segura)
       this.inp.jump = false;
+    }
+    // rodas dos carros + dica de entrar/sair
+    for (const cr of this.carrosMp.values()) cr.mesh.spinWheels(dt);
+    if (this._emCarro) this._mostrarHint('🚗 E — sair do carro');
+    else {
+      const alvo = this._alvoCarro();
+      if (alvo != null) this._mostrarHint('🚗 E — entrar no carro');
+      else this._esconderHint();
+    }
+    // rodas dos carros + dica de entrar/sair
+    for (const cr of this.carrosMp.values()) cr.mesh.spinWheels(dt);
+    if (this._emCarro) this._mostrarHint('🚗 E — sair do carro');
+    else {
+      const alvo = this._alvoCarro();
+      if (alvo != null) this._mostrarHint('🚗 E — entrar no carro');
+      else this._esconderHint();
     }
     // ping a cada 2s
     this._pingAcc += dt;
@@ -400,6 +439,110 @@ export class Match {
     };
   }
 
+  // ------------------------------------------------------------ veiculos
+  _aplicarCarros(lista) {
+    for (const c of lista) {
+      let cr = this.carrosMp.get(c.id);
+      if (!cr) {
+        const mesh = new Car(c.cor || 0xe53935, Math.random);
+        this.game.gfx.scene.add(mesh.root);
+        cr = { mesh, x: c.x, y: c.y, z: c.z, playerId: null };
+        this.carrosMp.set(c.id, cr);
+      }
+      cr.x = c.x; cr.y = c.y; cr.z = c.z;
+      cr.playerId = c.playerId;
+      cr.mesh.root.position.set(c.x, c.y, c.z);
+      cr.mesh.yaw = c.yaw;
+      cr.mesh.syncTransform();
+      cr.mesh.speed = c.speed;
+    }
+  }
+
+  /** Carro livre mais proximo do jogador (raio 4.5) ou 0 (sair do atual). */
+  _alvoCarro() {
+    if (this._emCarro) return 0;
+    const snap = this.snapBuf.ultimo();
+    const eu = snap && snap.players ? snap.players.find((p) => p.id === this.meuId) : null;
+    if (!eu) return null;
+    let best = null, bestD = 4.5 * 4.5;
+    for (const [id, cr] of this.carrosMp) {
+      if (cr.playerId != null) continue;
+      const dx = cr.x - eu.x, dz = cr.z - eu.z;
+      const d = dx * dx + dz * dz;
+      if (d < bestD) { bestD = d; best = id; }
+    }
+    return best;
+  }
+
+  _mostrarHint(texto) {
+    let el = document.getElementById('mp-car-hint');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'mp-car-hint';
+      el.style.cssText = 'position:fixed;bottom:34%;left:50%;transform:translateX(-50%);background:rgba(5,10,18,.78);color:#ffd28a;padding:8px 16px;border-radius:20px;font:600 14px/1.2 system-ui,sans-serif;border:1px solid rgba(255,210,138,.35);z-index:99;pointer-events:none;text-align:center;';
+      document.body.appendChild(el);
+    }
+    el.textContent = texto;
+    el.style.display = '';
+  }
+
+  _esconderHint() {
+    const el = document.getElementById('mp-car-hint');
+    if (el) el.style.display = 'none';
+  }
+
+  // ------------------------------------------------------------ veiculos
+  _aplicarCarros(lista) {
+    for (const c of lista) {
+      let cr = this.carrosMp.get(c.id);
+      if (!cr) {
+        const mesh = new Car(c.cor || 0xe53935, Math.random);
+        this.game.gfx.scene.add(mesh.root);
+        cr = { mesh, x: c.x, y: c.y, z: c.z, playerId: null };
+        this.carrosMp.set(c.id, cr);
+      }
+      cr.x = c.x; cr.y = c.y; cr.z = c.z;
+      cr.playerId = c.playerId;
+      cr.mesh.root.position.set(c.x, c.y, c.z);
+      cr.mesh.yaw = c.yaw;
+      cr.mesh.syncTransform();
+      cr.mesh.speed = c.speed;
+    }
+  }
+
+  /** Carro livre mais proximo do jogador (raio 4.5) ou 0 (sair do atual). */
+  _alvoCarro() {
+    if (this._emCarro) return 0;
+    const snap = this.snapBuf.ultimo();
+    const eu = snap && snap.players ? snap.players.find((p) => p.id === this.meuId) : null;
+    if (!eu) return null;
+    let best = null, bestD = 4.5 * 4.5;
+    for (const [id, cr] of this.carrosMp) {
+      if (cr.playerId != null) continue;
+      const dx = cr.x - eu.x, dz = cr.z - eu.z;
+      const d = dx * dx + dz * dz;
+      if (d < bestD) { bestD = d; best = id; }
+    }
+    return best;
+  }
+
+  _mostrarHint(texto) {
+    let el = document.getElementById('mp-car-hint');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'mp-car-hint';
+      el.style.cssText = 'position:fixed;bottom:34%;left:50%;transform:translateX(-50%);background:rgba(5,10,18,.78);color:#ffd28a;padding:8px 16px;border-radius:20px;font:600 14px/1.2 system-ui,sans-serif;border:1px solid rgba(255,210,138,.35);z-index:99;pointer-events:none;text-align:center;';
+      document.body.appendChild(el);
+    }
+    el.textContent = texto;
+    el.style.display = '';
+  }
+
+  _esconderHint() {
+    const el = document.getElementById('mp-car-hint');
+    if (el) el.style.display = 'none';
+  }
+
   // ------------------------------------------------------------ sair
   sair() {
     this._rodando = false;
@@ -415,6 +558,16 @@ export class Match {
     document.removeEventListener('touchend', this._touchEnd);
     for (const rp of this.avatares.values()) rp.remover();
     this.avatares.clear();
+    // remove os carros do MP e devolve o transito do single
+    for (const cr of this.carrosMp.values()) cr.mesh.dispose(this.game.gfx.scene);
+    this.carrosMp.clear();
+    if (this.game && this.game.cars) this.game.cars.group.visible = true;
+    this._esconderHint();
+    // remove os carros do MP e devolve o transito do single
+    for (const cr of this.carrosMp.values()) cr.mesh.dispose(this.game.gfx.scene);
+    this.carrosMp.clear();
+    if (this.game && this.game.cars) this.game.cars.group.visible = true;
+    this._esconderHint();
     const hudMp = document.getElementById('mp-hud');
     if (hudMp) hudMp.classList.add('hidden');
     const joy = document.getElementById('mp-joy');

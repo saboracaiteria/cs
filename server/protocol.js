@@ -31,6 +31,8 @@ export const T = {
   PING: 'ping',            // { t, agora }  (cliente responde pong)
   PONG: 'pong',            // { t, agora }
   BOT_SAIU: 'botSaiu',     // { t, id }
+  CAR_JOIN: 'carJoin',     // { t, id, carId }
+  CAR_LEAVE: 'carLeave',   // { t, id }
 };
 
 /** Envia uma mensagem JSON segura (limite de tamanho). */

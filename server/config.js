@@ -34,6 +34,19 @@ export const PLAYER = {
   regenTime: 6,
 };
 
+// ---------------------------------------------------------------- veiculos MP
+export const CAR = {
+  radius: 2.1,
+  height: 1.6,
+  maxSpeed: 26,
+  accel: 14,
+  brake: 34,
+  steer: 1.9,
+  enterRange: 4.5,
+};
+export const NUM_CARS = 8;
+
+
 // ---------------------------------------------------------------- combate
 export const GAME = {
   totalTime: 600,

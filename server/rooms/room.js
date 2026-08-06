@@ -3,10 +3,11 @@
  * DM e BR herdam daqui e só acrescentam as regras do modo.
  */
 
-import { NET, MODES } from '../config.js';
+import { NET, MODES, CAR, NUM_CARS } from '../config.js';
 import { T, send, lobbyPlayer } from '../protocol.js';
 import { stepBody } from '../physics.js';
-import { makeRng, findFreeSpot } from '../util.js';
+import { createCars, updateCars } from '../cars.js';
+import { makeRng, findFreeSpot, dist2D } from '../util.js';
 
 let uid = 1000;
 
@@ -24,6 +25,8 @@ export class Room {
     this.countdownT = 0;
     this.elapsed = 0;
     this.world = null;          // preenchido no startGame
+    this.cars = [];             // veiculos do MP (server/cars.js)
+    this.cars = [];             // veiculos do MP (server/cars.js)
     this._lastTick = Date.now();
 
     this._inputLog = new Map(); // anti-flood: id -> {count, t0}
@@ -141,6 +144,7 @@ export class Room {
 
     this.elapsed += dt;
     this._step(dt);
+    this._stepCars(dt);
     this._broadcastSnapshot();
   }
 
@@ -149,6 +153,7 @@ export class Room {
     this.seq = 0;
     this.elapsed = 0;
     this._setupWorld();
+    this.cars = createCars(this.world, NUM_CARS);
     this._spawnAll();
     this._bcast(T.GAME_START, {
       modo: this.modo,
@@ -197,6 +202,7 @@ export class Room {
 
   _applyInput(p, msg) {
     if (!p.body) return;
+    if (msg.car != null) this._veiculo(p, msg.car);
     const r = stepBody(this.world, p.body, {
       moveX: clampNum(msg.moveX, -1, 1),
       moveZ: clampNum(msg.moveZ, -1, 1),
@@ -208,6 +214,132 @@ export class Room {
     p.body.moveX = clampNum(msg.moveX, -1, 1);
     p.body.moveZ = clampNum(msg.moveZ, -1, 1);
     if (r.fallDamage > 0) this._damage(p, null, r.fallDamage, 'queda');
+  }
+
+  /** Entra/sai do carro: msg.car = id do carro (entrar) ou 0 (sair). */
+  _veiculo(p, alvo) {
+    if (!this.cars || this.cars.length === 0) return;
+    if (this.flying && this.flying.has(p.id)) return;   // no aviao nao da
+    if (!p.body) return;
+    if (p.inCar == null) {
+      const c = this.cars.find((cc) => cc.id === alvo && cc.playerId == null);
+      if (!c) return;
+      const d = dist2D(p.body.pos.x, p.body.pos.z, c.x, c.z);
+      if (d > CAR.enterRange) return;
+      p.inCar = c.id;
+      c.playerId = p.id;
+      c.inp = { moveX: 0, moveZ: 0 };
+      this._bcast(T.CAR_JOIN, { id: p.id, carId: c.id });
+    } else {
+      this._sairCarro(p);
+    }
+  }
+
+  _sairCarro(p) {
+    const c = this.cars.find((cc) => cc.id === p.inCar);
+    if (c) {
+      c.playerId = null;
+      c.inp = null;
+      const pt = findFreeSpot(this.world.col, c.x + 3, c.z + 3, 0.6);
+      if (p.body) {
+        p.body.pos.x = pt.x;
+        p.body.pos.y = pt.y;
+        p.body.pos.z = pt.z;
+        p.body.vel = { x: 0, y: 0, z: 0 };
+      }
+    }
+    p.inCar = null;
+    this._bcast(T.CAR_LEAVE, { id: p.id });
+  }
+
+  /** Move os carros dirigidos e faz o motorista acompanhar o carro. */
+  _stepCars(dt) {
+    if (!this.cars || this.cars.length === 0) return;
+    for (const c of this.cars) {
+      if (c.playerId == null) { c.inp = null; continue; }
+      const p = this._all().find((pp) => pp.id === c.playerId);
+      c.inp = p && p.body
+        ? { moveX: p.body.moveX || 0, moveZ: p.body.moveZ || 0 }
+        : { moveX: 0, moveZ: 0 };
+    }
+    updateCars(this.world, this.cars, dt);
+    for (const p of this._all()) {
+      if (p.inCar != null && p.body) {
+        const c = this.cars.find((cc) => cc.id === p.inCar);
+        if (c) {
+          p.body.pos.x = c.x;
+          p.body.pos.y = c.y;
+          p.body.pos.z = c.z;
+          p.body.yaw = c.yaw;
+          p.body.pitch = 0;
+          p.body.onGround = true;
+          p.body.vel = { x: 0, y: 0, z: 0 };
+        }
+      }
+    }
+  }
+
+  /** Entra/sai do carro: msg.car = id do carro (entrar) ou 0 (sair). */
+  _veiculo(p, alvo) {
+    if (!this.cars || this.cars.length === 0) return;
+    if (this.flying && this.flying.has(p.id)) return;   // no aviao nao da
+    if (!p.body) return;
+    if (p.inCar == null) {
+      const c = this.cars.find((cc) => cc.id === alvo && cc.playerId == null);
+      if (!c) return;
+      const d = dist2D(p.body.pos.x, p.body.pos.z, c.x, c.z);
+      if (d > CAR.enterRange) return;
+      p.inCar = c.id;
+      c.playerId = p.id;
+      c.inp = { moveX: 0, moveZ: 0 };
+      this._bcast(T.CAR_JOIN, { id: p.id, carId: c.id });
+    } else {
+      this._sairCarro(p);
+    }
+  }
+
+  _sairCarro(p) {
+    const c = this.cars.find((cc) => cc.id === p.inCar);
+    if (c) {
+      c.playerId = null;
+      c.inp = null;
+      const pt = findFreeSpot(this.world.col, c.x + 3, c.z + 3, 0.6);
+      if (p.body) {
+        p.body.pos.x = pt.x;
+        p.body.pos.y = pt.y;
+        p.body.pos.z = pt.z;
+        p.body.vel = { x: 0, y: 0, z: 0 };
+      }
+    }
+    p.inCar = null;
+    this._bcast(T.CAR_LEAVE, { id: p.id });
+  }
+
+  /** Move os carros dirigidos e faz o motorista acompanhar o carro. */
+  _stepCars(dt) {
+    if (!this.cars || this.cars.length === 0) return;
+    for (const c of this.cars) {
+      if (c.playerId == null) { c.inp = null; continue; }
+      const p = this._all().find((pp) => pp.id === c.playerId);
+      c.inp = p && p.body
+        ? { moveX: p.body.moveX || 0, moveZ: p.body.moveZ || 0 }
+        : { moveX: 0, moveZ: 0 };
+    }
+    updateCars(this.world, this.cars, dt);
+    for (const p of this._all()) {
+      if (p.inCar != null && p.body) {
+        const c = this.cars.find((cc) => cc.id === p.inCar);
+        if (c) {
+          p.body.pos.x = c.x;
+          p.body.pos.y = c.y;
+          p.body.pos.z = c.z;
+          p.body.yaw = c.yaw;
+          p.body.pitch = 0;
+          p.body.onGround = true;
+          p.body.vel = { x: 0, y: 0, z: 0 };
+        }
+      }
+    }
   }
 
   _damage(alvo, por, dmg, arma = 'arma') {
@@ -222,6 +354,7 @@ export class Room {
   }
 
   _kill(morto, por, arma) {
+    if (morto.inCar != null) this._sairCarro(morto);
     if (morto.deaths != null) morto.deaths++;
     if (por && por.kills != null && por !== morto) por.kills++;
     this._bcast(T.DEATH, { id: morto.id, por: por ? por.id : null, arma });
@@ -284,9 +417,20 @@ export class Room {
       deaths: p.deaths || 0,
       moveX: p.body ? (p.body.moveX||0) : 0,
       moveZ: p.body ? (p.body.moveZ||0) : 0,
+      inCar: p.inCar ?? null,
     }));
     const snap = { t: T.SNAPSHOT, seq: this.seq, players };
     this._snapExtra(snap);
+    snap.cars = this.cars.map((c) => ({
+      id: c.id,
+      x: Math.round(c.x * 100) / 100,
+      y: Math.round(c.y * 100) / 100,
+      z: Math.round(c.z * 100) / 100,
+      yaw: Math.round(c.yaw * 1000) / 1000,
+      speed: Math.round(c.speed * 10) / 10,
+      playerId: c.playerId,
+      cor: c.cor,
+    }));
     this._bcast(T.SNAPSHOT, snap);
   }
   _snapExtra(snap) {}

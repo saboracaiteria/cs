@@ -1265,7 +1265,7 @@ export class Game {
   _killPed(ped, byBullet) {
     if (!ped || !ped.alive) return;
     const p = ped.human.root.position;
-    this.fx.explode(new THREE.Vector3(p.x, p.y + 0.9, p.z), 1.0);
+    this.fx.explode(new THREE.Vector3(p.x, p.y + 0.9, p.z), 0.5);
     this.audio.explosao(1);
     this.camera.addShake(byBullet ? 0.3 : 0.5);
     this.peds.remove(ped, true);                              // [29] repõe outra
@@ -1279,7 +1279,7 @@ export class Game {
     if (!car || !car.alive) return;
     if (car === this.playerCar) return;
     const p = car.root.position;
-    this.fx.explode(new THREE.Vector3(p.x, p.y + 0.8, p.z), 1.9);
+    this.fx.explode(new THREE.Vector3(p.x, p.y + 0.8, p.z), 0.95);
     this.audio.explosao(2);
     this.camera.addShake(byBullet ? 0.4 : 0.7);
     this.cars.remove(car, true);                              // [29] repõe outro
@@ -1738,7 +1738,7 @@ export class Game {
     this.camera.addShake(0.8);
 
     if (this.hearts <= 0) {                                   // [35]
-      this.fx.explode(this.player.position.clone().setY(this.player.position.y + 0.9), 1.4);
+      this.fx.explode(this.player.position.clone().setY(this.player.position.y + 0.9), 0.7);
       this.player.setVisible(false);
       this.gameOver('Você ficou sem corações. ' + reason);
     } else {
