@@ -14,6 +14,37 @@ import { SaciBot } from './ent/sacibot.js';
  * (braços, pernas, cabeça e cabelo de verdade). Expõe a mesma API
  * (`root`, `pivot`, `update`, `carrying`), então nada em volta mudou.
  */
+/**
+ * [27] Pistola voxel do Bob, desenhada ao longo de -Y do antebraço
+ * direito: quando o braço ergue para mirar, o cano aponta para a frente.
+ * Exportada para o multiplayer reusar (arma na mão dos avatares).
+ */
+export function makePistola() {
+  const g = new THREE.Group();
+  const mat = (hex, m, r) => new THREE.MeshStandardMaterial({ color: hex, metalness: m, roughness: r });
+  const ferro = mat(0x2a2f38, 0.45, 0.5);
+  const escuro = mat(0x16191f, 0.3, 0.6);
+  const dourado = mat(0xffb020, 0.7, 0.25);
+  const bloco = (w, h, d, x, y, z, m) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    g.add(mesh);
+    return mesh;
+  };
+  // cano (aponta para a frente quando o braço ergue)
+  bloco(0.05, 0.26, 0.06, 0, -0.46, 0, escuro);
+  // corpo da pistola
+  bloco(0.07, 0.14, 0.08, 0, -0.26, 0, ferro);
+  // coroa traseira / cão
+  bloco(0.055, 0.07, 0.055, 0, -0.16, 0, escuro);
+  // detalhe dourado no corpo
+  bloco(0.075, 0.05, 0.09, 0, -0.30, 0, dourado);
+  // guarda-mato
+  bloco(0.06, 0.05, 0.07, 0, -0.19, 0.02, escuro);
+  return g;
+}
+
 export class Player {
   constructor(scene, collision) {
     this.col = collision;
@@ -37,7 +68,7 @@ export class Player {
 
     // [27] a pistola do Bob, presa à mão direita: abaixada ao andar,
     // erguida na posição de tiro quando ele segura ATIRAR
-    this.pistola = this._makePistola();
+    this.pistola = makePistola();
     this.human.setWeapon(this.pistola);
 
     // o Loro Estocástico voa junto — mascote da comunidade, não enfeite
@@ -97,34 +128,6 @@ export class Player {
   /** [27] Posição de tiro: braços erguidos com a pistola. */
   setAiming(on) {
     this.human.aiming = on;
-  }
-
-  /** [27] Pistola voxel do Bob, desenhada ao longo de -Y do antebraço
-   * direito: quando o braço ergue para mirar, o cano aponta para a frente. */
-  _makePistola() {
-    const g = new THREE.Group();
-    const mat = (hex, m, r) => new THREE.MeshStandardMaterial({ color: hex, metalness: m, roughness: r });
-    const ferro = mat(0x2a2f38, 0.45, 0.5);
-    const escuro = mat(0x16191f, 0.3, 0.6);
-    const dourado = mat(0xffb020, 0.7, 0.25);
-    const bloco = (w, h, d, x, y, z, m) => {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
-      mesh.position.set(x, y, z);
-      mesh.castShadow = true;
-      g.add(mesh);
-      return mesh;
-    };
-    // cano (aponta para a frente quando o braço ergue)
-    bloco(0.05, 0.26, 0.06, 0, -0.46, 0, escuro);
-    // corpo da pistola
-    bloco(0.07, 0.14, 0.08, 0, -0.26, 0, ferro);
-    // coroa traseira / cão
-    bloco(0.055, 0.07, 0.055, 0, -0.16, 0, escuro);
-    // detalhe dourado no corpo
-    bloco(0.075, 0.05, 0.09, 0, -0.30, 0, dourado);
-    // guarda-mato
-    bloco(0.06, 0.05, 0.07, 0, -0.19, 0.02, escuro);
-    return g;
   }
 
   setVisible(v) {

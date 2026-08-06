@@ -10,10 +10,12 @@ import { criarScoreboard } from '../ui/scoreboard.js';
 import { criarBrHud } from '../ui/brHud.js';
 import { criarNetStatus } from '../ui/netStatus.js';
 import { Car } from '../ent/car.js';
+import * as THREE from '../../vendor/three.module.js';
 import { T } from './protocol.js';
+import { CAMERA } from '../config.js';
+import { clamp, damp } from '../utils.js';
 
 const INPUT_HZ = 20;
-const EYE = 1.62;
 
 export class Match {
   constructor(game, net, info) {
@@ -40,7 +42,11 @@ export class Match {
     // input local
     this.inp = { mx: 0, mz: 0, run: false, jump: false, fire: false, ads: false };
     this.yaw = Math.PI;
-    this.pitch = 0;
+    this.pitch = -0.22;
+    // câmera de ombro (terceira pessoa), igual à do single
+    this._camDist = CAMERA.defaultZoom;
+    this._camFocus = new THREE.Vector3();
+    this._camLook = new THREE.Vector3();
     this._sendAcc = 0;
     this._pingAcc = 0;
     this._seq = 0;
@@ -65,7 +71,8 @@ export class Match {
     // para o laço do single player ANTES de qualquer coisa: sem isto a câmera
     // do título (orbital) e a do multiplayer brigavam pelo mesmo canvas
     if (window.__pararLoopSingle) window.__pararLoopSingle();
-    // a arma na tela é do single; no multiplayer quem manda é o HUD do MP
+    // sem arma na tela: em terceira pessoa a pistola aparece na MÃO do Bob,
+    // que fica visível na frente da câmera com o papagaio voando ao lado
     if (this.game && this.game.viewmodel) this.game.viewmodel.visible = false;
     // esconde o transito e pedestres do single — no MP os carros vêm do servidor
     if (this.game && this.game.cars) this.game.cars.group.visible = false;
@@ -82,6 +89,7 @@ export class Match {
     const ns = document.getElementById('net-status');
     if (ns) ns.classList.remove('hidden');
     this.netStatus.setEstado('conectando');
+    if (this.modo === 'br') this.brHud.mostrar();
     const joy = document.getElementById('mp-joy');
     if (joy) joy.classList.remove('hidden');
     const look = document.getElementById('mp-look');
@@ -139,8 +147,10 @@ export class Match {
       }
       this._clampAim();
     };
-    this._cm = () => {
-      if (document.pointerLockElement) document.exitPointerLock?.();
+    // scroll do mouse aproxima/afasta a câmera (fora do carro)
+    this._zw = (e) => {
+      if (this._emCarro) return;
+      this._dist = clamp(this._dist - e.deltaY * 0.004, CAMERA.minZoom, CAMERA.maxZoom);
     };
 
     // touch: joystick esquerdo + olhar/atirar à direita
@@ -211,7 +221,7 @@ export class Match {
     window.addEventListener('pointerdown', this._pd);
     window.addEventListener('pointerup', this._pu);
     window.addEventListener('pointermove', this._pm);
-    document.addEventListener('pointerlockchange', this._cm);
+    window.addEventListener('wheel', this._zw, { passive: true });
     document.addEventListener('touchstart', this._touchStart, { passive: false });
     document.addEventListener('touchmove', this._touchMove, { passive: false });
     document.addEventListener('touchend', this._touchEnd, { passive: false });
@@ -223,7 +233,7 @@ export class Match {
   }
 
   _clampAim() {
-    this.pitch = Math.max(-1.4, Math.min(1.4, this.pitch));
+    this.pitch = Math.max(CAMERA.pitchMin, Math.min(CAMERA.pitchMax, this.pitch));
   }
 
   // ------------------------------------------------------- rede (msg)
@@ -248,6 +258,10 @@ export class Match {
         break;
       case T.LOOT_LIST:
         if (this.brHud) this.brHud.atualizar({ loot: (msg.itens || []).length }, this.meuId, null);
+        break;
+      case T.SPAWN:
+        // BR: o servidor avisa onde o avião está — o mesh é criado na hora
+        if (msg.aviao) this._aviao = { x: msg.x, z: msg.z, y: msg.y };
         break;
       case T.PLAYER_LEFT:
       case T.BOT_SAIU:
@@ -287,9 +301,11 @@ export class Match {
   }
 
   _garantirAvatar(id) {
-    if (this.avatares.has(id) || id === this.meuId) return;
+    if (this.avatares.has(id)) return;
     const info = this.nicks.get(id) || { nick: '?', bot: false };
-    const rp = new RemotePlayer(this.game.gfx.scene, { id, ...info });
+    // o jogador local também ganha avatar: o Bob com arma e o papagaio
+    // voando — a câmera de ombro mostra o corpo dele em terceira pessoa
+    const rp = new RemotePlayer(this.game.gfx.scene, { id, ...info }, { local: id === this.meuId });
     this.avatares.set(id, rp);
   }
 
@@ -321,18 +337,52 @@ export class Match {
       const d = this.snapBuf.ler(id, alpha);
       if (!d) continue;
       rp.aplicar(d);
+      // o avatar local gira com o mouse na hora (a posição continua vindo
+      // do servidor) — sem isto a câmera parece "travada" pela latência
+      if (rp.local) { rp.yaw = this.yaw; rp.pitch = this.pitch; }
       const vel = Math.hypot(d.moveX || 0, d.moveZ || 0);
       rp.update(dt, vel * 8);
+      // corpo do próprio jogador visível a pé; dentro do carro ele some
+      if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro;
     }
-    // câmera do jogador local (posição autoritativa interpolada)
+    // câmera de ombro em terceira pessoa, igual à do single: o mouse gira
+    // o olhar na hora (sem a latência do servidor) e a câmera se posiciona
+    // atrás e à direita do Bob, que fica visível com a arma na mão
     const eu = this.snapBuf.ler(this.meuId, alpha);
-    if (eu) {
-      const eye = this._emCarro ? 1.05 : EYE;
-      this.camera.position.set(eu.x, eu.y + eye, eu.z);
-      this.yaw = eu.yaw ?? this.yaw;
-      this.pitch = eu.pitch ?? this.pitch;
+    const foc = this._camFocus;
+    if (eu) foc.set(eu.x, eu.y + 1.48, eu.z);
+    else foc.set(0, 2, 0);
+    const noCarro = this._emCarro;
+    const ombro = noCarro ? 0 : CAMERA.shoulderX;
+    this._camDist = damp(this._camDist, noCarro ? CAMERA.carZoom : this._dist, 9, dt);
+    const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
+    const dir = new THREE.Vector3(-Math.sin(this.yaw) * cp, sp, -Math.cos(this.yaw) * cp);
+    let dist = this._camDist;
+    // olhar para cima encurta o braço: sem isto a câmera mergulha no chão
+    const t = (this.pitch - CAMERA.pitchTuckStart) / (CAMERA.pitchMax - CAMERA.pitchTuckStart);
+    dist *= 1 - clamp(t, 0, 1) * CAMERA.pitchTuck;
+    const back = dir.clone().negate();
+    const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+    const col = this.game.col;
+    // não deixa a câmera entrar dentro de prédio
+    if (col) {
+      const hit = col.raycast(
+        foc.x + right.x * ombro, foc.y, foc.z + right.z * ombro,
+        back.x, back.y, back.z, dist + 0.6,
+      );
+      if (hit) dist = Math.max(CAMERA.minZoom * 0.45, hit.t - 0.45);
     }
-    this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
+    this.camera.position.copy(foc).addScaledVector(back, dist).addScaledVector(right, ombro);
+    // e nunca abaixo do chão (a mira sobe junto com o empurrão)
+    let lift = 0;
+    if (col) {
+      const floor = col.groundHeightAt(this.camera.position.x, this.camera.position.z, this.camera.position.y) + 0.45;
+      lift = Math.max(0, floor - this.camera.position.y);
+      this.camera.position.y += lift;
+    }
+    this._camLook.copy(foc);
+    this._camLook.y += lift;
+    this.camera.lookAt(this._camLook);
 
     // envia input a INPUT_HZ
     this._sendAcc += dt;
@@ -353,22 +403,35 @@ export class Match {
       this._fire = false;   // tiro único por input (rajada via clique segura)
       this.inp.jump = false;
     }
-    // rodas dos carros + dica de entrar/sair
-    for (const cr of this.carrosMp.values()) cr.mesh.spinWheels(dt);
-    if (this._emCarro) this._mostrarHint('🚗 E — sair do carro');
+    // dicas: avião no BR (com distância até a zona), carros no DM
+    if (this.modo === 'br' && eu && eu.y > 25) {
+      const dz = Math.hypot(eu.x, eu.z);   // a zona começa centrada em (0,0)
+      this._mostrarHint(dz < 400 ? '🪂 ESPAÇO — pular AGORA (sobre a cidade)' : `🪂 ESPAÇO — pular do avião (zona a ${Math.round(dz)}m)`);
+    } else if (this._emCarro) this._mostrarHint('🚗 E — sair do carro');
     else {
       const alvo = this._alvoCarro();
       if (alvo != null) this._mostrarHint('🚗 E — entrar no carro');
       else this._esconderHint();
     }
-    // rodas dos carros + dica de entrar/sair
-    for (const cr of this.carrosMp.values()) cr.mesh.spinWheels(dt);
-    if (this._emCarro) this._mostrarHint('🚗 E — sair do carro');
-    else {
-      const alvo = this._alvoCarro();
-      if (alvo != null) this._mostrarHint('🚗 E — entrar no carro');
-      else this._esconderHint();
+    // avião do BR: a posição vem no snapshot; até o primeiro chegar,
+    // anima localmente com a MESMA física do servidor (z = x, 60 m/s)
+    if (this.modo === 'br') {
+      const snap = this.snapBuf.ultimo();
+      if (snap && snap.plane) {
+        this._aviao = { x: snap.plane.x, z: snap.plane.z, y: snap.plane.y };
+      } else if (this._aviao) {
+        this._aviao.x += 60 * dt;
+        this._aviao.z = this._aviao.x;
+        if (this._aviao.x > 1100) { this._aviao.x = -1100; this._aviao.z = -1100; }
+      }
+      if (this._aviao && !this._meshAviao) this._criarAviao();
+      if (this._meshAviao && this._aviao) {
+        this._meshAviao.position.set(this._aviao.x, this._aviao.y || 70, this._aviao.z);
+        this._meshAviao.rotation.y = Math.PI / 4;   // rota z = x: direção (+1,+1)
+      }
     }
+    // rodas dos carros
+    for (const cr of this.carrosMp.values()) cr.mesh.spinWheels(dt);
     // ping a cada 2s
     this._pingAcc += dt;
     if (this._pingAcc >= 2) {
@@ -395,6 +458,8 @@ export class Match {
   _morreu(por) {
     if (this._morto) return;
     this._morto = true;
+    const rp = this.avatares.get(this.meuId);
+    if (rp) rp.vivo = false;   // corpo e papagaio somem da cena
     const ov = document.getElementById('mp-overlay');
     if (ov) {
       ov.classList.remove('hidden');
@@ -409,6 +474,8 @@ export class Match {
 
   _revive() {
     this._morto = false;
+    const rp = this.avatares.get(this.meuId);
+    if (rp) rp.vivo = true;
     const ov = document.getElementById('mp-overlay');
     if (ov) ov.classList.add('hidden');
     if (this.modo === 'br') this.brHud.mostrar();
@@ -430,6 +497,37 @@ export class Match {
       ov.classList.add('hidden');
       this.sair();
     };
+  }
+
+  // ------------------------------------------------------------ aviao (BR)
+  _criarAviao() {
+    const g = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.55, metalness: 0.25 });
+    const matVerm = new THREE.MeshStandardMaterial({ color: 0xd23c3c, roughness: 0.6 });
+    const matEsc = new THREE.MeshStandardMaterial({ color: 0x22262e, roughness: 0.5, metalness: 0.4 });
+    // o jogador fica em pé no avião: com a câmera de ombro atrás dele, o
+    // corpo do Bob aparece acima da fuselagem, com as asas ao lado
+    const fus = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.5, 9), mat);
+    fus.position.y = 0.6;
+    g.add(fus);
+    const nariz = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.1, 2.4), matVerm);
+    nariz.position.set(0, 0.5, 5.6);
+    g.add(nariz);
+    const asas = new THREE.Mesh(new THREE.BoxGeometry(17, 0.28, 2.6), matVerm);
+    asas.position.set(0, 1.2, 0.4);
+    g.add(asas);
+    const cauda = new THREE.Mesh(new THREE.BoxGeometry(0.3, 2.6, 2), matVerm);
+    cauda.position.set(0, 2.4, -4.4);
+    g.add(cauda);
+    const leme = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.24, 1.6), matVerm);
+    leme.position.set(0, 1.4, -4.6);
+    g.add(leme);
+    const janela = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.5, 1.2), matEsc);
+    janela.position.set(0, 1.35, 2.2);
+    g.add(janela);
+    g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    this.game.gfx.scene.add(g);
+    this._meshAviao = g;
   }
 
   // ------------------------------------------------------------ veiculos
@@ -497,7 +595,7 @@ export class Match {
     window.removeEventListener('pointerdown', this._pd);
     window.removeEventListener('pointerup', this._pu);
     window.removeEventListener('pointermove', this._pm);
-    document.removeEventListener('pointerlockchange', this._cm);
+    window.removeEventListener('wheel', this._zw);
     document.removeEventListener('touchstart', this._touchStart);
     document.removeEventListener('touchmove', this._touchMove);
     document.removeEventListener('touchend', this._touchEnd);
@@ -506,6 +604,9 @@ export class Match {
     // remove os carros do MP e devolve o transito do single
     for (const cr of this.carrosMp.values()) cr.mesh.dispose(this.game.gfx.scene);
     this.carrosMp.clear();
+    // remove o avião do BR
+    if (this._meshAviao) { this.game.gfx.scene.remove(this._meshAviao); this._meshAviao = null; }
+    this._aviao = null;
     if (this.game && this.game.cars) this.game.cars.group.visible = true;
     if (this.game && this.game.peds) this.game.peds.group.visible = true;
     this._esconderHint();

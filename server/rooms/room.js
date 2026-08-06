@@ -83,7 +83,8 @@ export class Room {
     }
     this._bcast(T.PLAYER_LEFT, { id });
     this._log('saiu: id ' + id);
-    if (this.players.size === 0 && this.bots.size === 0) {
+    // sala órfã: sem humanos, os bots não seguram a sala — ela fecha de vez
+    if (this.players.size === 0) {
       this.manager.remove(this.salaId);
       this.stop();
     } else if (this.state === 'lobby') {
@@ -100,6 +101,8 @@ export class Room {
     const p = this.players.get(id);
     if (!p) return;
     p.pronto = !p.pronto;
+    // sem host (sala com bots órfãos): o primeiro humano a marcar pronto assume
+    if (![...this.players.values()].some((h) => h.host)) p.host = true;
     if (p.host && p.pronto) {
       const humans = [...this.players.values()];
       if (humans.length > 0 && humans.every((h) => h.pronto)) {

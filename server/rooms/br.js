@@ -10,6 +10,10 @@ import { WEAPONS, rollLoot } from '../weapons.js';
 import { makeRng, rngRange, rngInt, dist2D, findFreeSpot, clamp } from '../util.js';
 import { MODES } from '../config.js';
 
+// o avião percorre o MAPA VISÍVEL (terreno ±1300, domo do céu 1400):
+// começar a 2500 m deixava o jogador fora do mundo, numa tela preta
+const PLANE_LIM = 1100;
+
 export class BRRoom extends Room {
   constructor(salaId, manager) {
     super(salaId, manager, 'br');
@@ -36,7 +40,7 @@ export class BRRoom extends Room {
     for (const p of this._all()) {
       this.flying.add(p.id);
     }
-    this.plane = { x: -2500, z: -2500, dir: 1, y: MODES.br.planeHeight };
+    this.plane = { x: -PLANE_LIM, z: -PLANE_LIM, dir: 1, y: MODES.br.planeHeight };
     this._bcast(T.SPAWN, { aviao: true, x: this.plane.x, z: this.plane.z, y: this.plane.y });
   }
 
@@ -87,9 +91,9 @@ export class BRRoom extends Room {
   _step(dt) {
     // zona
     this._stepZone(dt);
-    // dano da zona
+    // dano da zona (no avião ou em queda de paraquedas não toma: o pouso é a decisão)
     for (const p of this._all()) {
-      if (!p.body || p.hp <= 0) continue;
+      if (!p.body || p.hp <= 0 || this.flying.has(p.id) || p._parachute) continue;
       const d = dist2D(p.body.pos.x, p.body.pos.z, this.zone.x, this.zone.z);
       if (d > this.zone.r) {
         this._damage(p, null, this.zoneDps * dt, 'zona');
@@ -105,9 +109,28 @@ export class BRRoom extends Room {
       p.body.pos.y = this.plane.y;
       p.body.vel = { x: 0, y: 0, z: 0 };
     }
+    // o avião cruza a cidade em diagonal (z = x) — a zona está no centro (0,0)
     this.plane.x += this.plane.dir * MODES.br.planeSpeed * dt;
-    this.plane.z += this.plane.dir * MODES.br.planeSpeed * dt * 0.7;
-    if (this.plane.x > 2500) this.plane.x = -2500;
+    this.plane.z = this.plane.x;
+    if (this.plane.x > PLANE_LIM) { this.plane.x = -PLANE_LIM; this.plane.z = -PLANE_LIM; }
+
+    // paraquedas: o tick manda na queda (velocidade constante) — não depende
+    // do input chegar; ao pousar, a zona volta a valer
+    for (const p of this._all()) {
+      if (!p._parachute || this.flying.has(p.id) || !p.body) continue;
+      const g = this.world.col.groundHeightAt(p.body.pos.x, p.body.pos.z, p.body.pos.y + 0.3);
+      const novoy = p.body.pos.y - MODES.br.parachuteSpeed * dt;
+      if (novoy <= g) {
+        p.body.pos.y = g;
+        p.body.vel.y = 0;
+        p.body.onGround = true;
+        p._parachute = false;
+      } else {
+        p.body.pos.y = novoy;
+        p.body.vel.y = 0;
+        p.body.onGround = false;
+      }
+    }
 
     // respawns (não há no BR — mortos ficam mortos)
     // bots pensam
@@ -247,6 +270,9 @@ export class BRRoom extends Room {
     snap.zone = { x: this.zone.x, z: this.zone.z, r: this.zone.r, tempo: Math.max(0, this.zone.tempo) };
     snap.loot = this.loot.length;
     snap.vivos = this._alive().length;
+    if (this.plane) {
+      snap.plane = { x: Math.round(this.plane.x * 100) / 100, z: Math.round(this.plane.z * 100) / 100, y: this.plane.y };
+    }
   }
 
 }
