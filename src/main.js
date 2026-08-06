@@ -27,8 +27,20 @@ export async function boot() {
 
   let last = performance.now();
   let acc = 0, frames = 0;
+  let ativo = true;
+
+  // o multiplayer para/retoma o laço do single (sem isto, dois laços
+  // escreviam no mesmo canvas e a tela do MP ficava só com o céu)
+  window.__pararLoopSingle = () => { ativo = false; };
+  window.__retomarLoopSingle = () => {
+    if (ativo) return;
+    ativo = true;
+    last = performance.now();
+    requestAnimationFrame(frame);
+  };
 
   function frame(now) {
+    if (!ativo) return;               // parado pelo multiplayer: não re-agenda
     requestAnimationFrame(frame);
 
     // dt limitado: se a aba ficar em segundo plano, nada "teleporta"

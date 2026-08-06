@@ -1,4 +1,3 @@
-import * as THREE from '../../vendor/three.module.js';
 /**
  * Match — partida multiplayer no cliente.
  * Renderiza os avatares (Human) na cena já construída pelo jogo single,
@@ -32,7 +31,9 @@ export class Match {
     this.brHud = criarBrHud();
     this.netStatus = criarNetStatus();
 
-    this.camera = new THREE.PerspectiveCamera(72, innerWidth / innerHeight, 0.1, 900);
+    // reusa a câmera do pipeline (composer) — renderizar com câmera própria
+    // fora do composer deixava a tela do MP só com o céu laranja
+    this.camera = this.game.gfx.camera;
     this.camera.rotation.order = 'YXZ';
 
     // input local
@@ -70,6 +71,12 @@ export class Match {
     if (joy) joy.classList.remove('hidden');
     const look = document.getElementById('mp-look');
     if (look) look.classList.remove('hidden');
+
+    // para o laço do single player: sem isto a câmera do título (orbital)
+    // e a do multiplayer brigavam pelo mesmo canvas a cada quadro
+    if (window.__pararLoopSingle) window.__pararLoopSingle();
+    // a arma na tela é do single; no multiplayer quem manda é o HUD do MP
+    if (this.game && this.game.viewmodel) this.game.viewmodel.visible = false;
 
     // avatares para os jogadores conhecidos
     for (const [id, info] of this.nicks) this._garantirAvatar(id, info);
@@ -291,7 +298,7 @@ export class Match {
     this._ult = now;
 
     this._update(dt);
-    this.game.gfx.renderer.render(this.game.gfx.scene, this.camera);
+    this.game.gfx.render();   // pipeline completo (composer): sem isto só o céu aparecia
   }
 
   _update(dt) {
@@ -418,6 +425,10 @@ export class Match {
     if (ov) ov.classList.add('hidden');
     const ab = document.getElementById('title-screen');
     if (ab) ab.classList.remove('hidden');
+    // devolve o laço e a câmera ao single player (tela de abertura girando)
+    if (window.__retomarLoopSingle) window.__retomarLoopSingle();
+    if (this.game && this.game.viewmodel) this.game.viewmodel.visible = true;
+    this.camera.rotation.order = 'XYZ';
     this.killfeed.limpar();
   }
 }
