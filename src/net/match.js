@@ -70,10 +70,6 @@ export class Match {
     if (joy) joy.classList.remove('hidden');
     const look = document.getElementById('mp-look');
     if (look) look.classList.remove('hidden');
-    const joy = document.getElementById('mp-joy');
-    if (joy) joy.classList.remove('hidden');
-    const look = document.getElementById('mp-look');
-    if (look) look.classList.remove('hidden');
 
     // avatares para os jogadores conhecidos
     for (const [id, info] of this.nicks) this._garantirAvatar(id, info);
@@ -414,10 +410,6 @@ export class Match {
     this.avatares.clear();
     const hudMp = document.getElementById('mp-hud');
     if (hudMp) hudMp.classList.add('hidden');
-    const joy = document.getElementById('mp-joy');
-    if (joy) joy.classList.add('hidden');
-    const look = document.getElementById('mp-look');
-    if (look) look.classList.add('hidden');
     const joy = document.getElementById('mp-joy');
     if (joy) joy.classList.add('hidden');
     const look = document.getElementById('mp-look');
