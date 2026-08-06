@@ -37,7 +37,7 @@ export const T = {
 export function send(ws, obj) {
   if (ws.readyState !== 1) return false;
   const s = JSON.stringify(obj);
-  if (s.length > 8192) return false;
+  if (s.length > 65536) return false;   // 64 KB — comporta o LOOT_LIST completo do BR
   ws.send(s);
   return true;
 }

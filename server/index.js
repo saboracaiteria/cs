@@ -112,7 +112,7 @@ function handle(ws, msg) {
       const nick = sanitizeNick(msg.nick) || 'Jogador';
       const modo = msg.modo === 'br' ? 'br' : 'dm';
       if (msg.v !== NET.version) {
-        send(ws, T.ERROR, { msg: 'Versão incompatível. Atualize o jogo.' });
+        send(ws, { t: T.ERROR, msg: 'Versão incompatível. Atualize o jogo.' });
         ws.close(4001, 'versao');
         return;
       }
@@ -142,7 +142,7 @@ function handle(ws, msg) {
       break;
     }
     case T.PING: {
-      send(ws, T.PONG, { agora: msg.agora });
+      send(ws, { t: T.PONG, agora: msg.agora });
       break;
     }
     case T.CHAT: {

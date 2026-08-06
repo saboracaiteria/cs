@@ -31,8 +31,7 @@ export class BRRoom extends Room {
   }
 
   _beginGame() {
-    this._spawnLoot();
-    super._beginGame();
+    super._beginGame(); // o super chama _setupWorld(), que já gera o loot
     // todos começam no avião
     for (const p of this._all()) {
       this.flying.add(p.id);

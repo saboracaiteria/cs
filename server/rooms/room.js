@@ -117,7 +117,7 @@ export class Room {
     if (humans.length === 0) return;
     // aguarda os humanos marcarem pronto? simplificação: host pode iniciar com 1
     if (humans.some((h) => !h.pronto)) {
-      send(p.client, T.ERROR, { msg: 'Aguardando todos marcarem PRONTO' });
+      send(p.client, { t: T.ERROR, msg: 'Aguardando todos marcarem PRONTO' });
       return;
     }
     this.state = 'countdown';
