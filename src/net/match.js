@@ -9,6 +9,7 @@ import { criarKillfeed } from '../ui/killfeed.js';
 import { criarScoreboard } from '../ui/scoreboard.js';
 import { criarBrHud } from '../ui/brHud.js';
 import { criarNetStatus } from '../ui/netStatus.js';
+import { criarPausa } from '../ui/pause.js';
 import { Car } from '../ent/car.js';
 import * as THREE from '../../vendor/three.module.js';
 import { T } from './protocol.js';
@@ -57,6 +58,10 @@ export class Match {
     this._rodando = false;
     this._raf = null;
     this._ult = 0;
+    this._pausado = false;      // pausa única (mesma tela/menus do solo)
+    this._zona = null;          // {x,z,r} da zona do BR (minimapa)
+    this._clockAcc = 0;
+    this._dist = CAMERA.defaultZoom;   // zoom da câmera (faltava init: NaN)
 
     // veiculos do MP (carros autoritativos vindos do servidor)
     this.carrosMp = new Map();   // id -> { mesh: Car, x, y, z, playerId }
@@ -78,11 +83,16 @@ export class Match {
     if (this.game && this.game.cars) this.game.cars.group.visible = false;
     if (this.game && this.game.peds) this.game.peds.group.visible = false;
 
-    // esconde a tela de abertura do single e o HUD single
+    // esconde a tela de abertura do single
     const ab = document.getElementById('title-screen');
     if (ab) ab.classList.add('hidden');
+
+    // MESMO HUD do modo solo no MP: corações (vida), minimapa, relógio, FPS,
+    // mira, dicas e avisos — some só o que não faz sentido (objetivo de
+    // missão e a fileira de pontos/tempo/entregas)
     const hud = document.getElementById('hud');
-    if (hud) hud.classList.add('hidden');
+    if (hud) hud.classList.remove('hidden');
+    this._prepararHudSolo();
 
     const hudMp = document.getElementById('mp-hud');
     if (hudMp) hudMp.classList.remove('hidden');
@@ -94,6 +104,24 @@ export class Match {
     if (joy) joy.classList.remove('hidden');
     const look = document.getElementById('mp-look');
     if (look) look.classList.remove('hidden');
+    // botão de pausa na tela (só no toque; no PC é ESC/Pause)
+    this._pausaBtn = document.getElementById('mp-pausa');
+    if (this._pausaBtn) {
+      this._pausaBtn.classList.toggle('hidden', !(this.game && this.game.toque));
+      this._pausaBtnHandler = () => this._togglePausa();
+      this._pausaBtn.addEventListener('click', this._pausaBtnHandler);
+    }
+
+    // pausa única — os MESMOS menus de OPÇÕES e CONTROLES do modo solo
+    this.pausa = criarPausa();
+    this.pausa.ligar({
+      retomar: () => this._retomar(),
+      opcoes: () => { if (this.game) this.game._abrirOpcoes(true); },
+      controles: () => { if (this.game && this.game.keys) this.game.keys.abrir(); },
+      sair: () => { this.pausa.esconder(); this.sair(); },
+    });
+    // [Android] botão voltar da barra de navegação abre/fecha a pausa
+    this._ligarBack();
 
     // avatares para os jogadores conhecidos
     for (const [id, info] of this.nicks) this._garantirAvatar(id, info);
@@ -105,6 +133,7 @@ export class Match {
 
   _ligarListeners() {
     this._kd = (e) => {
+      if (e.code === 'Escape' || e.code === 'Pause') { this._togglePausa(); return; }
       const k = e.key.toLowerCase();
       if (k === 'w' || k === 'arrowup') this.inp.mz += 1;
       if (k === 's' || k === 'arrowdown') this.inp.mz -= 1;
@@ -260,9 +289,8 @@ export class Match {
         if (this.brHud) this.brHud.atualizar({ loot: (msg.itens || []).length }, this.meuId, null);
         break;
       case T.SPAWN:
-        // BR: o servidor avisa onde o avião está — o mesh é criado na hora
-        if (msg.aviao) this._aviao = { x: msg.x, z: msg.z, y: msg.y };
-        break;
+        break;   // BR sem avião: os jogadores nascem espalhados pelo mapa
+
       case T.PLAYER_LEFT:
       case T.BOT_SAIU:
         this._removerAvatar(msg.id);
@@ -292,6 +320,7 @@ export class Match {
     this.scoreboard.atualizar((msg.players || []).map((p) => ({ ...p, local: p.id === this.meuId })));
     // BR
     if (this.modo === 'br') {
+      if (msg.zone) this._zona = { x: msg.zone.x, z: msg.zone.z, r: msg.zone.r };
       const pos = this.snapBuf.ultimo() && eu ? { x: eu.x, z: eu.z } : null;
       this.brHud.atualizar(msg, this.meuId, pos);
     }
@@ -326,11 +355,27 @@ export class Match {
     const dt = Math.min(0.05, Math.max(0.0001, (now - this._ult) / 1000));
     this._ult = now;
 
-    this._update(dt);
+    if (!this._pausado) this._update(dt);
     this.game.gfx.render();   // pipeline completo (composer): sem isto só o céu aparecia
   }
 
   _update(dt) {
+    if (this._pausado) return;   // pausa: congela o cliente (não envia input)
+
+    // HUD do solo vivo no MP: FPS e relógio (o laço do single está parado)
+    if (this.game && this.game.hud) {
+      this.game.hud.tickFPS(dt);
+      this._clockAcc += dt;
+      if (this._clockAcc >= 1) {
+        this._clockAcc = 0;
+        const d = new Date();
+        const h = d.getHours();
+        this.game.hud.setClock(
+          String(h).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'),
+          h >= 19 || h < 6,
+        );
+      }
+    }
     // interpola avatares
     const alpha = this.snapBuf.alpha();
     for (const [id, rp] of this.avatares) {
@@ -403,32 +448,18 @@ export class Match {
       this._fire = false;   // tiro único por input (rajada via clique segura)
       this.inp.jump = false;
     }
-    // dicas: avião no BR (com distância até a zona), carros no DM
-    if (this.modo === 'br' && eu && eu.y > 25) {
-      const dz = Math.hypot(eu.x, eu.z);   // a zona começa centrada em (0,0)
-      this._mostrarHint(dz < 400 ? '🪂 ESPAÇO — pular AGORA (sobre a cidade)' : `🪂 ESPAÇO — pular do avião (zona a ${Math.round(dz)}m)`);
-    } else if (this._emCarro) this._mostrarHint('🚗 E — sair do carro');
+    // dicas no MESMO lugar do HUD do solo: carros no DM, nada de avião no BR
+    if (this._emCarro) this._setHint('E — sair do carro');
     else {
       const alvo = this._alvoCarro();
-      if (alvo != null) this._mostrarHint('🚗 E — entrar no carro');
-      else this._esconderHint();
+      if (alvo != null) this._setHint('E — entrar no carro');
+      else this._setHint(null);
     }
-    // avião do BR: a posição vem no snapshot; até o primeiro chegar,
-    // anima localmente com a MESMA física do servidor (z = x, 60 m/s)
-    if (this.modo === 'br') {
-      const snap = this.snapBuf.ultimo();
-      if (snap && snap.plane) {
-        this._aviao = { x: snap.plane.x, z: snap.plane.z, y: snap.plane.y };
-      } else if (this._aviao) {
-        this._aviao.x += 60 * dt;
-        this._aviao.z = this._aviao.x;
-        if (this._aviao.x > 1100) { this._aviao.x = -1100; this._aviao.z = -1100; }
-      }
-      if (this._aviao && !this._meshAviao) this._criarAviao();
-      if (this._meshAviao && this._aviao) {
-        this._meshAviao.position.set(this._aviao.x, this._aviao.y || 70, this._aviao.z);
-        this._meshAviao.rotation.y = Math.PI / 4;   // rota z = x: direção (+1,+1)
-      }
+    // minimapa do solo no MP: posição do jogador + círculo da zona no BR
+    if (eu && this.game && this.game.minimap) {
+      const marks = { pickup: null, deliver: null, heli: null, portais: null };
+      if (this.modo === 'br' && this._zona) marks.zone = this._zona;
+      this.game.minimap.draw(dt, { x: eu.x, z: eu.z, yaw: this.yaw }, marks, null);
     }
     // rodas dos carros
     for (const cr of this.carrosMp.values()) cr.mesh.spinWheels(dt);
@@ -444,14 +475,10 @@ export class Match {
 
   // ------------------------------------------------------------ HUD
   _atualizarHud() {
-    const fill = document.getElementById('mp-hp-fill');
-    const val = document.getElementById('mp-hp-val');
-    const arma = document.getElementById('mp-arma');
-    if (fill) fill.style.width = Math.max(0, this._hp) + '%';
-    if (val) val.textContent = Math.max(0, Math.round(this._hp)) + ' HP';
-    if (arma) {
-      const nomes = { pistola: 'PISTOLA', metralhadora: 'METRALHADORA', sniper: 'SNIPER', shotgun: 'ESCADA' };
-      arma.innerHTML = (nomes[this._arma] || this._arma.toUpperCase()) + '<small>munição infinita</small>';
+    // a vida agora aparece nos corações do HUD do solo (0-100 -> 6 ❤)
+    if (this.game && this.game.hud) {
+      const cor = Math.max(0, Math.min(6, Math.ceil(this._hp / (100 / 6))));
+      this.game.hud.setHearts(cor);
     }
   }
 
@@ -499,37 +526,6 @@ export class Match {
     };
   }
 
-  // ------------------------------------------------------------ aviao (BR)
-  _criarAviao() {
-    const g = new THREE.Group();
-    const mat = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.55, metalness: 0.25 });
-    const matVerm = new THREE.MeshStandardMaterial({ color: 0xd23c3c, roughness: 0.6 });
-    const matEsc = new THREE.MeshStandardMaterial({ color: 0x22262e, roughness: 0.5, metalness: 0.4 });
-    // o jogador fica em pé no avião: com a câmera de ombro atrás dele, o
-    // corpo do Bob aparece acima da fuselagem, com as asas ao lado
-    const fus = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.5, 9), mat);
-    fus.position.y = 0.6;
-    g.add(fus);
-    const nariz = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.1, 2.4), matVerm);
-    nariz.position.set(0, 0.5, 5.6);
-    g.add(nariz);
-    const asas = new THREE.Mesh(new THREE.BoxGeometry(17, 0.28, 2.6), matVerm);
-    asas.position.set(0, 1.2, 0.4);
-    g.add(asas);
-    const cauda = new THREE.Mesh(new THREE.BoxGeometry(0.3, 2.6, 2), matVerm);
-    cauda.position.set(0, 2.4, -4.4);
-    g.add(cauda);
-    const leme = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.24, 1.6), matVerm);
-    leme.position.set(0, 1.4, -4.6);
-    g.add(leme);
-    const janela = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.5, 1.2), matEsc);
-    janela.position.set(0, 1.35, 2.2);
-    g.add(janela);
-    g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
-    this.game.gfx.scene.add(g);
-    this._meshAviao = g;
-  }
-
   // ------------------------------------------------------------ veiculos
   _aplicarCarros(lista) {
     for (const c of lista) {
@@ -565,25 +561,86 @@ export class Match {
     return best;
   }
 
-  _mostrarHint(texto) {
-    let el = document.getElementById('mp-car-hint');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'mp-car-hint';
-      el.style.cssText = 'position:fixed;bottom:34%;left:50%;transform:translateX(-50%);background:rgba(5,10,18,.78);color:#ffd28a;padding:8px 16px;border-radius:20px;font:600 14px/1.2 system-ui,sans-serif;border:1px solid rgba(255,210,138,.35);z-index:99;pointer-events:none;text-align:center;';
-      document.body.appendChild(el);
-    }
-    el.textContent = texto;
-    el.style.display = '';
-  }
-
-  _esconderHint() {
-    const el = document.getElementById('mp-car-hint');
-    if (el) el.style.display = 'none';
+  /** Dica contextual no MESMO lugar do HUD do solo. */
+  _setHint(texto) {
+    if (this.game && this.game.hud) this.game.hud.setPrompt(texto);
   }
 
   fimPartida(msg) {
     this._vencedor(msg);
+  }
+
+  // ------------------------------------------------------------ pausa
+  /** Pausa única — mesma tela e os mesmos menus de OPÇÕES/CONTROLES do solo. */
+  _togglePausa() {
+    // telas abertas fecham antes da pausa (mesma ordem do modo solo)
+    const opcoes = document.getElementById('options-screen');
+    if (opcoes && !opcoes.classList.contains('hidden')) {
+      if (this.game) this.game._abrirOpcoes(false);
+      return;
+    }
+    if (this.game && this.game.keys && this.game.keys.aberto) {
+      this.game.keys.fechar();
+      return;
+    }
+    const sb = document.getElementById('scoreboard');
+    if (sb && !sb.classList.contains('hidden')) { this.scoreboard.alternar(); return; }
+    const ov = document.getElementById('mp-overlay');
+    if (ov && !ov.classList.contains('hidden')) return;   // morte/vitória tem fluxo próprio
+    if (this._pausado) this._retomar();
+    else this._pausar();
+  }
+
+  _pausar() {
+    if (this._pausado) return;
+    this._pausado = true;
+    this._setHint(null);
+    if (this.pausa) this.pausa.mostrar();
+  }
+
+  _retomar() {
+    if (!this._pausado) return;
+    this._pausado = false;
+    if (this.pausa) this.pausa.esconder();
+  }
+
+  /** Mostra o HUD do single no MP: corações = vida, minimapa, relógio, FPS. */
+  _prepararHudSolo() {
+    const obj = document.getElementById('objective');
+    if (obj) obj.classList.add('hidden');
+    const sr = document.querySelector('#topleft .stat-row');
+    if (sr) sr.style.display = 'none';
+    for (const id of ['speedo', 'heli-panel', 'carrying', 'lock-on', 'missile-gauge']) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('hidden');
+    }
+    const barra = document.getElementById('mp-vida');
+    if (barra) barra.classList.add('hidden');
+    const armaEl = document.getElementById('mp-arma');
+    if (armaEl) armaEl.classList.add('hidden');
+    if (this.game && this.game.hud) {
+      this.game.hud.setHearts(6);
+      this.game.hud.setPrompt(null);
+    }
+  }
+
+  /** Devolve o HUD do solo ao estado de menu ao sair do MP. */
+  _restaurarHudSolo() {
+    const obj = document.getElementById('objective');
+    if (obj) obj.classList.remove('hidden');
+    const sr = document.querySelector('#topleft .stat-row');
+    if (sr) sr.style.display = '';
+  }
+
+  /** [Android] botão voltar da barra de navegação = pausa (sentinela no history). */
+  _ligarBack() {
+    this._backHandler = () => {
+      if (!this._rodando) return;
+      try { history.pushState(null, ''); } catch {}
+      this._togglePausa();
+    };
+    window.addEventListener('popstate', this._backHandler);
+    try { history.pushState(null, ''); } catch {}
   }
 
   // ------------------------------------------------------------ sair
@@ -604,12 +661,22 @@ export class Match {
     // remove os carros do MP e devolve o transito do single
     for (const cr of this.carrosMp.values()) cr.mesh.dispose(this.game.gfx.scene);
     this.carrosMp.clear();
-    // remove o avião do BR
-    if (this._meshAviao) { this.game.gfx.scene.remove(this._meshAviao); this._meshAviao = null; }
-    this._aviao = null;
     if (this.game && this.game.cars) this.game.cars.group.visible = true;
     if (this.game && this.game.peds) this.game.peds.group.visible = true;
-    this._esconderHint();
+    // pausa: desliga handlers do MP e devolve o comando ao modo solo
+    if (this._backHandler) { window.removeEventListener('popstate', this._backHandler); this._backHandler = null; }
+    if (this.pausa) {
+      this.pausa.esconder();
+      if (this.game && this.game._ligarPausaSolo) this.game._ligarPausaSolo();
+    }
+    if (this._pausaBtn && this._pausaBtnHandler) {
+      this._pausaBtn.removeEventListener('click', this._pausaBtnHandler);
+      this._pausaBtn.classList.add('hidden');
+    }
+    this._restaurarHudSolo();
+    const hud = document.getElementById('hud');
+    if (hud) hud.classList.add('hidden');
+    this._setHint(null);
     const hudMp = document.getElementById('mp-hud');
     if (hudMp) hudMp.classList.add('hidden');
     const joy = document.getElementById('mp-joy');

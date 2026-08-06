@@ -54,7 +54,7 @@ export class Input {
     window.addEventListener('keydown', (e) => {
       // ESC precisa passar mesmo com o cursor dentro de um campo de texto,
       // senão não dá para fechar o celular nem pausar enquanto digita [48][56]
-      if (e.code === 'Escape') {
+      if (e.code === 'Escape' || e.code === 'Pause') {
         if (this.onAcao) this.onAcao('menu', e);
         return;
       }

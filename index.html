@@ -352,6 +352,22 @@
   </div>
 </div>
 
+<!-- ==================== PAUSA (solo, DM e BR) ==================== -->
+<!--
+  A MESMA tela de pausa para os três modos, com os MESMOS menus de
+  configuração: OPÇÕES e CONTROLES são as telas do modo solo. Chega por
+  Pause/Break, ESC ou o botão voltar do Android.
+-->
+<div id="pause-screen" class="hidden">
+  <div class="pause-panel panel">
+    <h2>PAUSADO</h2>
+    <button type="button" id="pause-retomar" class="pause-btn">▶ RETOMAR</button>
+    <button type="button" id="pause-opcoes" class="pause-btn">⚙️ OPÇÕES</button>
+    <button type="button" id="pause-controles" class="pause-btn">🎮 CONTROLES</button>
+    <button type="button" id="pause-sair" class="pause-btn ghost">🚪 SAIR DA PARTIDA</button>
+  </div>
+</div>
+
 <!-- ==================== CONTROLES NA TELA (celular) ==================== -->
 <!--
   A ordem importa: a área de olhar é a camada de baixo e ocupa a tela
@@ -412,6 +428,7 @@
 </div>
 
 <div id="mp-hud" class="hidden">
+  <button type="button" id="mp-pausa" class="hidden" title="Pausa">☰</button>
   <div id="net-status"><span class="dot"></span><span class="ns-estado">off</span><span id="ns-ping">-- ms</span></div>
   <div id="killfeed"></div>
   <div id="mp-vida"><div id="mp-hp-bar"><div id="mp-hp-fill"></div></div><span id="mp-hp-val">100</span></div>

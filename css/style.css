@@ -723,7 +723,7 @@ kbd{
    fecha o painel antes de voltar ao jogo.
    ============================================================ */
 #options-screen, #keys-screen{
-  position:fixed; inset:0; z-index:52; display:flex;
+  position:fixed; inset:0; z-index:160; display:flex;
   align-items:flex-start; justify-content:center; padding:16px;
   overflow-y:auto; overflow-x:hidden;
   background:rgba(3,6,12,.74); backdrop-filter:blur(10px);
@@ -997,3 +997,31 @@ body.toque #dlg-text{font-size:clamp(15px,2vw,24px)}
   #phone-home{margin:7px auto 0}
   #phone-tip{font-size:10px}
 }
+
+/* ==================== PAUSA (solo, DM e BR) ==================== */
+/* z100: acima de todo o HUD (solo 10/20 e MP 95/96); OPÇÕES/CONTROLES
+   sobem para 160 e ficam por cima do painel quando abertos da pausa */
+#pause-screen{
+  position:fixed; inset:0; z-index:100; display:flex;
+  align-items:center; justify-content:center;
+  background:radial-gradient(circle at center, rgba(12,20,35,.82) 0%, rgba(3,6,12,.95) 100%);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+}
+.pause-panel{
+  display:flex; flex-direction:column; gap:12px;
+  min-width:min(360px, 88vw); padding:34px 40px;
+}
+.pause-panel h2{margin-bottom:6px}
+.pause-btn{
+  padding:14px 20px; font-size:15px; font-weight:900; letter-spacing:2px;
+  background:rgba(255,255,255,.07); border:1px solid var(--stroke); color:var(--ink);
+  border-radius:14px; cursor:pointer;
+  transition:background .15s, transform .12s, border-color .15s;
+}
+.pause-btn:hover{background:rgba(255,255,255,.14); border-color:rgba(255,255,255,.35)}
+.pause-btn:active{transform:scale(.97)}
+#pause-retomar{
+  background:linear-gradient(180deg,#ffc451,var(--accent)); color:#1a1000; border:none;
+  box-shadow:0 8px 24px rgba(255,176,32,.35);
+}
+#pause-sair{opacity:.85}

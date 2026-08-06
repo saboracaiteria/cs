@@ -25,7 +25,7 @@ export class Minimap {
 
   /**
    * @param {object} view {x, z, yaw}
-   * @param {object} marks {pickup:{x,z}|null, deliver:{x,z}|null, heli:{x,z}|null}
+   * @param {object} marks {pickup:{x,z}|null, deliver:{x,z}|null, heli:{x,z}|null, zone:{x,z,r}|null}
    * @param {object} ents {cars, peds}
    */
   draw(dt, view, marks, ents) {
@@ -127,6 +127,18 @@ export class Minimap {
     if (marks.heli) this._blip(ctx, TX, TY, marks.heli, '#25d0ff', 5, '🚁', px, pz, false);
     if (marks.pickup) this._blip(ctx, TX, TY, marks.pickup, '#ffb020', pulseR, 'C', px, pz, true);
     if (marks.deliver) this._blip(ctx, TX, TY, marks.deliver, '#3ddc84', pulseR, 'E', px, pz, true);
+
+    // ---- [BR] círculo da zona do battle royale no radar
+    if (marks.zone) {
+      const rp = Math.max(5, marks.zone.r * this.scale);
+      ctx.beginPath();
+      ctx.arc(TX(marks.zone.x, marks.zone.z), TY(marks.zone.x, marks.zone.z), rp, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,77,77,.15)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,77,77,.95)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
 
     ctx.restore();
 

@@ -132,7 +132,6 @@ function handle(ws, msg) {
       if (p && room.state === 'playing' && p.body) {
         room._applyInput(p, msg);
         if (msg.fire) room.onShoot(p, { yaw: msg.yaw, pitch: msg.pitch });
-        if (room.modo === 'br' && msg.jump && room.flying.has(p.id)) room.jump(p);
         if (room.modo === 'br' && msg.pickup) room.pickup(p);
       }
       break;

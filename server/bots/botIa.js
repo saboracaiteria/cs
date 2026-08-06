@@ -36,13 +36,6 @@ export function makeBot(nick, dificuldade = 'media') {
       if (!this.body || this.hp <= 0) return;
       const modo = room.modo;
 
-      // BR: no avião, espera sobrevoar a cidade e pula (espalhado por bot)
-      if (modo === 'br' && room.flying && room.flying.has(this.id)) {
-        const d = dist2D(this.body.pos.x, this.body.pos.z, room.zone.x, room.zone.z);
-        if (d < 140 + (Math.abs(this.id) % 4) * 120) room.jump(this);
-        return;
-      }
-
       // BR: prioridade é ficar dentro da zona
       let inZone = true;
       if (modo === 'br') {

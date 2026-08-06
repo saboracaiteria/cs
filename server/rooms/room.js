@@ -221,7 +221,6 @@ export class Room {
   /** Entra/sai do carro: msg.car = id do carro (entrar) ou 0 (sair). */
   _veiculo(p, alvo) {
     if (!this.cars || this.cars.length === 0) return;
-    if (this.flying && this.flying.has(p.id)) return;   // no aviao nao da
     if (!p.body) return;
     if (p.inCar == null) {
       const c = this.cars.find((cc) => cc.id === alvo && cc.playerId == null);

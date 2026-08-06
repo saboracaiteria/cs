@@ -32,6 +32,7 @@ import { Phone } from './ui/phone.js';
 import { Settings } from './settings.js';
 import { Keybinds } from './keys.js';
 import { KeysScreen } from './ui/keysscreen.js';
+import { criarPausa } from './ui/pause.js';
 import { TouchControls, ehToque } from './ui/touch.js';
 
 // ---- campanha: Bob em Busca da AGI Sagrada
@@ -94,6 +95,19 @@ export class Game {
     this.audio = new Audio();
     this.music = new Music(this.audio);
     this.dialogue.onLetra = () => this.audio.blip();
+
+    // tela de PAUSA única (solo, DM e BR): handlers ligados no _wireUI
+    // e o Match (MP) os substitui enquanto estiver ativo
+    this.pausa = criarPausa();
+
+    // [Android] botão voltar da barra de navegação = pausa (igual ao ESC)
+    window.addEventListener('popstate', () => {
+      if (this.state === 'playing' || this.state === 'paused') {
+        try { history.pushState(null, ''); } catch {}
+        if (this.state === 'paused') this.retomar();
+        else this.pausar();
+      }
+    });
 
     this._tmpV = new THREE.Vector3();
     this._focus = new THREE.Vector3();
@@ -351,7 +365,7 @@ export class Game {
      */
     this.input.onLockChange = (locked) => {
       if (!locked && this.state === 'playing' && !this.phone.open) {
-        this.toTitle();
+        this.pausar();
       }
     };
 
@@ -389,7 +403,8 @@ export class Game {
         if (this._opcoesAbertas) { this._abrirOpcoes(false); return; }
         if (this.plan.aberto) { this.plan.fechar(); return; }
         if (this.phone.open) { this.phone.close(); return; }
-        if (this.state === 'playing') this.toTitle();
+        if (this.pausa.aberto()) { this.retomar(); return; }
+        if (this.state === 'playing') this.pausar();
         // [62] no menu principal com partida em andamento, ESC volta para ela
         else if (this.state === 'title' && this.hasGame) this.resumeFromTitle();
         return;
@@ -521,6 +536,7 @@ export class Game {
     $('open-keys').addEventListener('click', () => this.keys.abrir());
     // trocou uma tecla: as dicas do HUD mudam junto, na hora
     this.keys.onMudou = () => this._atualizarRotulos();
+    this._ligarPausaSolo();
 
     // ---------------------------------------------------- celular
     this.phone.getContext = () => ({
@@ -617,6 +633,8 @@ export class Game {
 
     $('title-screen').classList.add('hidden');
     $('over-screen').classList.add('hidden');
+    // sentinela do botão voltar do Android: o primeiro "voltar" vira pausa
+    try { history.pushState(null, ''); } catch {}
     this._abrirOpcoes(false);
     this.keys.fechar();
     this.hud.show(true);
@@ -666,6 +684,35 @@ export class Game {
    * do jeito que estava; quem quiser retomar usa o botão "voltar ao jogo" (ou
    * ESC). Só `start()` reinicia de verdade.
    */
+  /** PAUSA: congela o mundo e abre o painel único (solo, DM e BR). */
+  pausar() {
+    if (this.state !== 'playing') return;
+    this.state = 'paused';
+    this.input.enabled = false;
+    this.input.releaseLock();
+    this.pausa.mostrar();
+  }
+
+  /** RETOMAR de onde parou. */
+  retomar() {
+    if (this.state !== 'paused') return;
+    this.state = 'playing';
+    this.pausa.esconder();
+    this.input.enabled = true;
+    if (!this.toque) this.input.requestLock();
+    this.music.tocar(this.emFase ? 'boss' : 'saopaulo');
+  }
+
+  /** Devolve a pausa ao comando do modo solo (após o MP sair). */
+  _ligarPausaSolo() {
+    this.pausa.ligar({
+      retomar: () => this.retomar(),
+      opcoes: () => this._abrirOpcoes(true),
+      controles: () => this.keys.abrir(),
+      sair: () => { this.pausa.esconder(); this.toTitle(); },
+    });
+  }
+
   toTitle() {
     this.music.tocar('abertura');
     this.state = 'title';
@@ -694,6 +741,7 @@ export class Game {
     this.state = 'playing';
     this.input.enabled = true;
     if (!this.toque) this.input.requestLock();
+    try { history.pushState(null, ''); } catch {}
     /*
      * Devolve a trilha de onde o jogador parou. Sem isto ele voltava
      * para o meio de uma luta de chefão ouvindo a música de abertura,

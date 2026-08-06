@@ -10,10 +10,6 @@ import { WEAPONS, rollLoot } from '../weapons.js';
 import { makeRng, rngRange, rngInt, dist2D, findFreeSpot, clamp } from '../util.js';
 import { MODES } from '../config.js';
 
-// o avião percorre o MAPA VISÍVEL (terreno ±1300, domo do céu 1400):
-// começar a 2500 m deixava o jogador fora do mundo, numa tela preta
-const PLANE_LIM = 1100;
-
 export class BRRoom extends Room {
   constructor(salaId, manager) {
     super(salaId, manager, 'br');
@@ -25,8 +21,6 @@ export class BRRoom extends Room {
     this.loot = [];            // {id,x,z,tipo,arma?}
     this.lootId = 1;
     this.supplyDrops = [];     // caixas raras
-    this.plane = null;         // {x,z,dir}
-    this.flying = new Set();   // ids em queda do avião
     this._lootSpawned = false;
   }
 
@@ -35,13 +29,9 @@ export class BRRoom extends Room {
   }
 
   _beginGame() {
-    super._beginGame(); // o super chama _setupWorld(), que já gera o loot
-    // todos começam no avião
-    for (const p of this._all()) {
-      this.flying.add(p.id);
-    }
-    this.plane = { x: -PLANE_LIM, z: -PLANE_LIM, dir: 1, y: MODES.br.planeHeight };
-    this._bcast(T.SPAWN, { aviao: true, x: this.plane.x, z: this.plane.z, y: this.plane.y });
+    // sem avião: todo mundo nasce espalhado pelo mapa, já no chão, e a
+    // zona encolhe no ritmo normal (o super chama _spawnAll)
+    super._beginGame();
   }
 
   _setupWorld() {
@@ -79,7 +69,7 @@ export class BRRoom extends Room {
   }
 
   _spawnPoint(p) {
-    // pouso: ponto aleatório na zona
+    // nascimento: ponto aleatório dentro do raio inicial da zona
     const r = this.zone.r * 0.6;
     const a = this.rng() * Math.PI * 2;
     const x = this.zone.x + Math.cos(a) * r * this.rng();
@@ -91,44 +81,12 @@ export class BRRoom extends Room {
   _step(dt) {
     // zona
     this._stepZone(dt);
-    // dano da zona (no avião ou em queda de paraquedas não toma: o pouso é a decisão)
+    // dano da zona: todo mundo no chão toma (sem avião, sem exceção)
     for (const p of this._all()) {
-      if (!p.body || p.hp <= 0 || this.flying.has(p.id) || p._parachute) continue;
+      if (!p.body || p.hp <= 0) continue;
       const d = dist2D(p.body.pos.x, p.body.pos.z, this.zone.x, this.zone.z);
       if (d > this.zone.r) {
         this._damage(p, null, this.zoneDps * dt, 'zona');
-      }
-    }
-    // queda do avião: jogadores escolhem quando pular; até lá o avião os carrega
-    for (const id of [...this.flying]) {
-      const p = this.players.get(id) || this.bots.get(id);
-      if (!p || !p.body) continue;
-      // enquanto voa, o corpo segue o avião
-      p.body.pos.x = this.plane.x;
-      p.body.pos.z = this.plane.z;
-      p.body.pos.y = this.plane.y;
-      p.body.vel = { x: 0, y: 0, z: 0 };
-    }
-    // o avião cruza a cidade em diagonal (z = x) — a zona está no centro (0,0)
-    this.plane.x += this.plane.dir * MODES.br.planeSpeed * dt;
-    this.plane.z = this.plane.x;
-    if (this.plane.x > PLANE_LIM) { this.plane.x = -PLANE_LIM; this.plane.z = -PLANE_LIM; }
-
-    // paraquedas: o tick manda na queda (velocidade constante) — não depende
-    // do input chegar; ao pousar, a zona volta a valer
-    for (const p of this._all()) {
-      if (!p._parachute || this.flying.has(p.id) || !p.body) continue;
-      const g = this.world.col.groundHeightAt(p.body.pos.x, p.body.pos.z, p.body.pos.y + 0.3);
-      const novoy = p.body.pos.y - MODES.br.parachuteSpeed * dt;
-      if (novoy <= g) {
-        p.body.pos.y = g;
-        p.body.vel.y = 0;
-        p.body.onGround = true;
-        p._parachute = false;
-      } else {
-        p.body.pos.y = novoy;
-        p.body.vel.y = 0;
-        p.body.onGround = false;
       }
     }
 
@@ -180,18 +138,6 @@ export class BRRoom extends Room {
     }
   }
 
-  /** Pular do avião: o corpo cai (sem dano de queda, tem paraquedas). */
-  jump(p) {
-    if (!this.flying.has(p.id)) return;
-    this.flying.delete(p.id);
-    if (!p.body) return;
-    p.body.pos.x = this.plane.x + rngRange(this.rng, -3, 3);
-    p.body.pos.z = this.plane.z + rngRange(this.rng, -3, 3);
-    p.body.pos.y = this.plane.y;
-    p.body.vel = { x: 0, y: -MODES.br.fallSpeed, z: 0 };
-    p._parachute = true;
-  }
-
   _onKill(morto, por) {
     // morto no BR: solta o loot que carregava (itens caem no chão)
     const drop = [
@@ -234,7 +180,7 @@ export class BRRoom extends Room {
 
     let best = null, bestT = Infinity;
     for (const alvo of this._all()) {
-      if (alvo === p || !alvo.body || alvo.hp <= 0 || this.flying.has(alvo.id)) continue;
+      if (alvo === p || !alvo.body || alvo.hp <= 0) continue;
       const t = raySphere(ox, oy, oz, dx, dy, dz, alvo.body.pos, 0.45);
       if (t !== null && t < bestT && t < maxT) {
         bestT = t;
@@ -270,9 +216,6 @@ export class BRRoom extends Room {
     snap.zone = { x: this.zone.x, z: this.zone.z, r: this.zone.r, tempo: Math.max(0, this.zone.tempo) };
     snap.loot = this.loot.length;
     snap.vivos = this._alive().length;
-    if (this.plane) {
-      snap.plane = { x: Math.round(this.plane.x * 100) / 100, z: Math.round(this.plane.z * 100) / 100, y: this.plane.y };
-    }
   }
 
 }
