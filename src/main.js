@@ -1,4 +1,5 @@
 import { Game } from './game.js';
+import { abrirModoSelect } from './modes/modeSelect.js';
 
 /**
  * Ponto de entrada: constrói o mundo, libera a tela de abertura [39]
@@ -16,6 +17,12 @@ export async function boot() {
 
   note.textContent = game.toque ? 'toque em INICIAR JOGO' : 'clique em INICIAR JOGO';
   startBtn.disabled = false;
+
+  const mpBtn = document.getElementById('mp-btn');
+  if (mpBtn) {
+    mpBtn.disabled = false;
+    mpBtn.addEventListener('click', () => abrirModoSelect(game));
+  }
   window.__cidade3d = game;        // útil para depurar no console
 
   let last = performance.now();

@@ -1,0 +1,43 @@
+/**
+ * Protocolo de mensagens do multiplayer (espelho do servidor).
+ * A versão precisa bater com NET.version do servidor (server/config.js).
+ */
+export const NET_VERSION = 1;
+
+export const T = {
+  // cliente -> servidor
+  HELLO: 'hello',          // { t, v, nick, modo }
+  INPUT: 'input',          // { t, seq, yaw, pitch, moveX, moveZ, run, jump, fire, ads }
+  READY: 'ready',          // { t }
+  LEAVE: 'leave',          // { t }
+  CHAT: 'chat',            // { t, msg }
+
+  // servidor -> cliente
+  WELCOME: 'welcome',      // { t, id, salaId, modo, cfg }
+  LOBBY: 'lobby',          // { t, jogadores:[{id,nick,pronto,host,bot,ping}], hostId, podeIniciar, state, countdown }
+  GAME_START: 'gameStart', // { t, modo, seed, jogadores:[{id,nick,bot}] }
+  SNAPSHOT: 'snap',        // { t, seq, players:[...], zone?, loot?, kills?, vivos? }
+  SPAWN: 'spawn',          // { t, id, x, y, z, yaw }
+  DAMAGE: 'damage',        // { t, alvo, por, dmg, hp, direcao:{x,z} }
+  DEATH: 'death',          // { t, id, por, arma }
+  KILL: 'kill',            // { t, id, por, arma }
+  RESPAWN: 'respawn',      // { t, id, x, y, z, yaw, invuln }
+  PLAYER_LEFT: 'left',     // { t, id }
+  ZONE: 'zone',            // { t, x, z, r, proxX, proxZ, proxR, tempo }
+  LOOT_LIST: 'lootList',   // { t, itens:[{id,x,z,tipo}] }
+  LOOT_TAKEN: 'lootTaken', // { t, id, porId }
+  WINNER: 'winner',        // { t, id, nick }
+  ERROR: 'error',          // { t, msg }
+  PING: 'ping',            // { t, agora }
+  PONG: 'pong',            // { t, agora }
+  BOT_SAIU: 'botSaiu',     // { t, id }
+};
+
+/** Envia JSON seguro (espelho do send() do servidor). */
+export function enviar(ws, obj) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+  const s = JSON.stringify(obj);
+  if (s.length > 8192) return false;
+  ws.send(s);
+  return true;
+}

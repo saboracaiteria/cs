@@ -18,6 +18,7 @@ r<!DOCTYPE html>
 <meta property="og:locale" content="pt_BR">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="./css/style.css">
+<link rel="stylesheet" href="./css/multiplayer.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏺</text></svg>">
 </head>
 <body>
@@ -215,6 +216,7 @@ r<!DOCTYPE html>
     <!-- [62] só aparece quando existe uma partida em andamento por trás do menu -->
     <button id="resume-title-btn" class="hidden">VOLTAR AO JOGO</button>
     <button id="start-btn">INICIAR JOGO</button>
+    <button id="mp-btn" type="button" disabled>🌐 MULTIJOGADOR</button>
     <div id="start-warn" class="hidden">apaga o Plano da AGI e recomeça do zero</div>
 
     <div id="title-links">
@@ -382,6 +384,57 @@ r<!DOCTYPE html>
   </div>
 </div>
 
+
+<!-- ==================== MULTIJOGADOR (Fase 7) ==================== -->
+<div id="mode-select" class="hidden">
+  <div class="mp-modal">
+    <h2>🌐 MODO DE JOGO</h2>
+    <label class="mp-field"><span>SEU NOME</span><input id="mp-nick" type="text" maxlength="14" placeholder="Jogador" value="Jogador"></label>
+    <div class="mp-cards">
+      <button type="button" class="mp-card" id="mp-missoes"><b>📜 MISSÕES</b><span>Campanha solo — o jogo original</span></button>
+      <button type="button" class="mp-card" id="mp-dm"><b>⚔️ MULTIPLAYER</b><span>Mata-mata até 8 no servidor</span></button>
+      <button type="button" class="mp-card" id="mp-br"><b>🪂 BATTLE ROYALE</b><span>Zona encolhendo, loot, último vivo</span></button>
+    </div>
+    <div class="mp-rodape"><button type="button" class="mp-fechar">VOLTAR</button></div>
+  </div>
+</div>
+
+<div id="lobby-screen" class="hidden">
+  <div class="mp-modal mp-lobby">
+    <div class="lobby-head"><h2 id="lobby-modo">MULTIPLAYER</h2><div id="lobby-countdown" class="lobby-cd"></div></div>
+    <ul id="lobby-list" class="lobby-list"></ul>
+    <div class="lobby-botoes">
+      <button type="button" id="mp-pronto">MARCAR PRONTO</button>
+      <button type="button" id="mp-iniciar" style="display:none">INICIAR PARTIDA</button>
+      <button type="button" id="mp-sair">SAIR</button>
+    </div>
+  </div>
+</div>
+
+<div id="mp-hud" class="hidden">
+  <div id="net-status"><span id="ns-ping">-- ms</span></div>
+  <div id="killfeed"></div>
+  <div id="mp-vida"><div id="mp-hp-bar"><div id="mp-hp-fill"></div></div><span id="mp-hp-val">100</span></div>
+  <div id="mp-arma">🔫 pistola</div>
+  <div id="br-hud" class="hidden">
+    <div class="br-linha">ZONA <b id="br-zona">—</b></div>
+    <div class="br-linha">VIVOS <b id="br-vivos">0</b></div>
+    <div class="br-linha">PRÓXIMA <b id="br-tempo">—</b></div>
+    <div class="br-linha">LOOT <b id="br-loot">0</b></div>
+  </div>
+  <div id="scoreboard" class="hidden"><div class="sb-head">PLACAR</div><div id="sb-rows"></div></div>
+</div>
+
+<div id="mp-joy" class="hidden"><div class="knob"></div></div>
+<div id="mp-look" class="hidden"></div>
+
+<div id="mp-overlay" class="hidden">
+  <div class="ov-titulo"></div>
+  <div class="ov-sub"></div>
+  <div class="ov-kills"></div>
+  <button type="button" class="mp-btn" style="display:none">SAIR DA PARTIDA</button>
+</div>
+<!-- ==================== FIM MULTIJOGADOR ==================== -->
 <div id="fatal" class="hidden"></div>
 
 <script type="module">

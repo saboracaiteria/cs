@@ -1,0 +1,263 @@
+/**
+ * Sala BATTLE ROYALE — zona encolhendo, loot, queda de avião, último vivo.
+ * O mapa é o MESMO da cidade (a CollisionWorld do cliente regenerada aqui).
+ */
+
+import { Room } from './room.js';
+import { T, send } from '../protocol.js';
+import { buildWorld } from '../world/world.js';
+import { WEAPONS, rollLoot } from '../weapons.js';
+import { makeRng, rngRange, rngInt, dist2D, findFreeSpot, clamp } from '../util.js';
+import { MODES } from '../config.js';
+
+export class BRRoom extends Room {
+  constructor(salaId, manager) {
+    super(salaId, manager, 'br');
+    this.world = buildWorld();
+    this.rng = makeRng(Date.now() & 0xffffffff);
+    this.zone = { x: 0, z: 0, r: 210, proxX: 0, proxZ: 0, proxR: 150, tempo: 45 };
+    this.zoneStep = 0;
+    this.zoneDps = MODES.br.zoneDpsBase;
+    this.loot = [];            // {id,x,z,tipo,arma?}
+    this.lootId = 1;
+    this.supplyDrops = [];     // caixas raras
+    this.plane = null;         // {x,z,dir}
+    this.flying = new Set();   // ids em queda do avião
+    this._lootSpawned = false;
+  }
+
+  canJoin() {
+    return this.state === 'lobby' && this.totalSlots < this.cfg.maxPlayers;
+  }
+
+  _beginGame() {
+    this._spawnLoot();
+    super._beginGame();
+    // todos começam no avião
+    for (const p of this._all()) {
+      this.flying.add(p.id);
+    }
+    this.plane = { x: -2500, z: -2500, dir: 1, y: MODES.br.planeHeight };
+    this._bcast(T.SPAWN, { aviao: true, x: this.plane.x, z: this.plane.z, y: this.plane.y });
+  }
+
+  _setupWorld() {
+    this._spawnLoot();
+  }
+
+  _spawnLoot() {
+    // 60 pontos de loot espalhados pela cidade (+ arredores)
+    const cfg = MODES.br;
+    const spots = [];
+    const rng = makeRng(20260725);
+    for (let i = 0; i < 60; i++) {
+      const x = rngRange(rng, -210, 210);
+      const z = rngRange(rng, -210, 210);
+      if (this.world.col.isBlocked(x, z, 0.8)) continue;
+      spots.push({ x, z, y: this.world.col.groundHeightAt(x, z) });
+    }
+    for (const s of spots) {
+      const n = rngInt(rng, 1, cfg.lootPerSpawn);
+      for (let k = 0; k < n; k++) {
+        const item = rollLoot(rng);
+        this.loot.push({
+          id: this.lootId++,
+          x: s.x + rngRange(rng, -1.5, 1.5),
+          y: s.y + 0.4,
+          z: s.z + rngRange(rng, -1.5, 1.5),
+          tipo: item.tipo,
+          arma: item.arma,
+          qtd: item.qtd,
+          hp: item.hp,
+        });
+      }
+    }
+    this._bcast(T.LOOT_LIST, { itens: this.loot });
+  }
+
+  _spawnPoint(p) {
+    // pouso: ponto aleatório na zona
+    const r = this.zone.r * 0.6;
+    const a = this.rng() * Math.PI * 2;
+    const x = this.zone.x + Math.cos(a) * r * this.rng();
+    const z = this.zone.z + Math.sin(a) * r * this.rng();
+    const pt = findFreeSpot(this.world.col, x, z, 0.6, 20);
+    return pt;
+  }
+
+  _step(dt) {
+    // zona
+    this._stepZone(dt);
+    // dano da zona
+    for (const p of this._all()) {
+      if (!p.body || p.hp <= 0) continue;
+      const d = dist2D(p.body.pos.x, p.body.pos.z, this.zone.x, this.zone.z);
+      if (d > this.zone.r) {
+        this._damage(p, null, this.zoneDps * dt, 'zona');
+      }
+    }
+    // queda do avião: jogadores escolhem quando pular; até lá o avião os carrega
+    for (const id of [...this.flying]) {
+      const p = this.players.get(id) || this.bots.get(id);
+      if (!p || !p.body) continue;
+      // enquanto voa, o corpo segue o avião
+      p.body.pos.x = this.plane.x;
+      p.body.pos.z = this.plane.z;
+      p.body.pos.y = this.plane.y;
+      p.body.vel = { x: 0, y: 0, z: 0 };
+    }
+    this.plane.x += this.plane.dir * MODES.br.planeSpeed * dt;
+    this.plane.z += this.plane.dir * MODES.br.planeSpeed * dt * 0.7;
+    if (this.plane.x > 2500) this.plane.x = -2500;
+
+    // respawns (não há no BR — mortos ficam mortos)
+    // bots pensam
+    for (const b of this.bots.values()) {
+      if (b.think) b.think(dt, this);
+      if (b.body && b.invuln > 0) b.invuln -= dt;
+    }
+    // humanos: inputs chegam via websocket
+    for (const p of this.players.values()) {
+      if (p.invuln > 0) p.invuln -= dt;
+    }
+
+    // vencedor
+    const vivos = this._alive();
+    if (vivos.length === 1 && this.totalSlots > 1) {
+      this._endGame(vivos[0]);
+    }
+  }
+
+  _stepZone(dt) {
+    const cfg = MODES.br;
+    this.zone.tempo -= dt;
+    if (this.zone.tempo <= 0 && this.zoneStep < cfg.zoneSteps) {
+      this.zoneStep++;
+      // novo raio = fração do anterior
+      const shrink = [1.0, 0.72, 0.5, 0.32, 0.18, 0.08][Math.min(this.zoneStep, 5)];
+      this.zone.proxR = Math.max(cfg.zoneFinalR, this.zone.r * shrink);
+      // centro novo: puxa para um ponto aleatório dentro da zona atual
+      const a = this.rng() * Math.PI * 2;
+      const d = this.zone.r * 0.3;
+      this.zone.proxX = clamp(this.zone.x + Math.cos(a) * d, -220, 220);
+      this.zone.proxZ = clamp(this.zone.z + Math.sin(a) * d, -220, 220);
+      this.zone.tempo = cfg.zoneStepTime;
+      this.zoneDps = cfg.zoneDpsBase + this.zoneStep * 2.5;
+      this._bcast(T.ZONE, {
+        x: this.zone.x, z: this.zone.z, r: this.zone.r,
+        proxX: this.zone.proxX, proxZ: this.zone.proxZ, proxR: this.zone.proxR,
+        tempo: this.zone.tempo, dps: this.zoneDps,
+      });
+    }
+    // a zona atual desliza suavemente até a próxima
+    if (this.zoneStep > 0) {
+      const step = dt / 6;   // 6s de transição
+      this.zone.x += (this.zone.proxX - this.zone.x) * step;
+      this.zone.z += (this.zone.proxZ - this.zone.z) * step;
+      this.zone.r += (this.zone.proxR - this.zone.r) * step;
+    }
+  }
+
+  /** Pular do avião: o corpo cai (sem dano de queda, tem paraquedas). */
+  jump(p) {
+    if (!this.flying.has(p.id)) return;
+    this.flying.delete(p.id);
+    if (!p.body) return;
+    p.body.pos.x = this.plane.x + rngRange(this.rng, -3, 3);
+    p.body.pos.z = this.plane.z + rngRange(this.rng, -3, 3);
+    p.body.pos.y = this.plane.y;
+    p.body.vel = { x: 0, y: -MODES.br.fallSpeed, z: 0 };
+    p._parachute = true;
+  }
+
+  _onKill(morto, por) {
+    // morto no BR: solta o loot que carregava (itens caem no chão)
+    const drop = [
+      { id: this.lootId++, x: morto.body.pos.x, y: morto.body.pos.y + 0.4, z: morto.body.pos.z, tipo: 'arma', arma: morto.arma || 'pistola' },
+    ];
+    if (morto._medkits) {
+      drop.push({ id: this.lootId++, x: morto.body.pos.x + 0.5, y: morto.body.pos.y + 0.4, z: morto.body.pos.z, tipo: 'cura', hp: 50 });
+    }
+    this.loot.push(...drop);
+    this._bcast(T.LOOT_LIST, { itens: this.loot });
+  }
+
+  _endGame(vencedor) {
+    this.state = 'ended';
+    this._bcast(T.WINNER, { id: vencedor.id, nick: vencedor.nick });
+    this._log('BR encerrado — vencedor: ' + vencedor.nick);
+    setTimeout(() => {
+      this.manager.remove(this.salaId);
+      this.stop();
+    }, 15_000);
+  }
+
+  /** Tiro no BR (igual ao DM, mas com os loots no caminho). */
+  onShoot(p, aim) {
+    if (!p.body || p.hp <= 0) return;
+    const W = WEAPONS[p.arma] || WEAPONS.pistola;
+    const now = Date.now();
+    if (now - (p._lastFire || 0) < W.cooldown * 1000) return;
+    p._lastFire = now;
+
+    const ox = p.body.pos.x, oy = p.body.pos.y + 1.5, oz = p.body.pos.z;
+    const spread = W.spread * (Math.random() - 0.5);
+    const yaw = aim.yaw + spread, pitch = aim.pitch + spread;
+    const dx = -Math.sin(yaw) * Math.cos(pitch);
+    const dy = Math.sin(pitch);
+    const dz = -Math.cos(yaw) * Math.cos(pitch);
+
+    const hitWorld = this.world.col.raycast(ox, oy, oz, dx, dy, dz, W.range);
+    const maxT = hitWorld ? Math.max(0.5, hitWorld.t - 0.3) : W.range;
+
+    let best = null, bestT = Infinity;
+    for (const alvo of this._all()) {
+      if (alvo === p || !alvo.body || alvo.hp <= 0 || this.flying.has(alvo.id)) continue;
+      const t = raySphere(ox, oy, oz, dx, dy, dz, alvo.body.pos, 0.45);
+      if (t !== null && t < bestT && t < maxT) {
+        bestT = t;
+        best = alvo;
+      }
+    }
+    if (best) this._damage(best, p, W.damage, p.arma);
+  }
+
+  /** Pegar loot próximo. */
+  pickup(p) {
+    if (!p.body) return;
+    for (let i = 0; i < this.loot.length; i++) {
+      const it = this.loot[i];
+      const d = dist2D(p.body.pos.x, p.body.pos.z, it.x, it.z);
+      if (d < 3.0) {
+        this.loot.splice(i, 1);
+        this._bcast(T.LOOT_TAKEN, { id: it.id, porId: p.id });
+        if (it.tipo === 'arma') p.arma = it.arma;
+        else if (it.tipo === 'cura') {
+          p.hp = Math.min(100, p.hp + (it.hp || 50));
+          p._medkits = (p._medkits || 0) + 1;
+        } else if (it.tipo === 'armadura') {
+          p.hp = Math.min(100, p.hp + (it.hp || 50));
+        }
+        return { item: it };
+      }
+    }
+    return null;
+  }
+
+  _snapExtra(snap) {
+    snap.zone = { x: this.zone.x, z: this.zone.z, r: this.zone.r, tempo: Math.max(0, this.zone.tempo) };
+    snap.loot = this.loot.length;
+    snap.vivos = this._alive().length;
+  }
+
+}
+
+function raySphere(ox, oy, oz, dx, dy, dz, c, r) {
+  const lx = ox - c.x, ly = oy - c.y, lz = oz - c.z;
+  const b = 2 * (lx * dx + ly * dy + lz * dz);
+  const cc = lx * lx + ly * ly + lz * lz - r * r;
+  const disc = b * b - 4 * cc;
+  if (disc < 0) return null;
+  const t = (-b - Math.sqrt(disc)) / 2;
+  return t > 0 ? t : null;
+}
