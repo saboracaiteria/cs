@@ -267,6 +267,10 @@
 #ns-ping.ns-ok { color: #4ade80; }
 #ns-ping.ns-meio { color: #ffcf5c; }
 #ns-ping.ns-ruim { color: #ff6b5e; }
+#net-status .ns-estado { color: #8aa0b5; }
+
+#net-status .ns-estado { color: #8aa0b5; }
+
 
 /* overlays de morte e vencedor */
 .mp-overlay {

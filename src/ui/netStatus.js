@@ -8,7 +8,7 @@ export function criarNetStatus() {
   const pingEl = document.getElementById('ns-ping');
 
   function setPing(ms) {
-    if (ms == null) return;
+    if (ms == null || !pingEl) return;
     pingEl.textContent = `${ms}ms`;
     pingEl.className = ms < 80 ? 'ns-ok' : ms < 200 ? 'ns-meio' : 'ns-ruim';
   }
@@ -16,7 +16,8 @@ export function criarNetStatus() {
   function setEstado(estado) {
     const nomes = { off: 'desconectado', conectando: 'conectando…', aberto: 'online', erro: 'erro' };
     el.dataset.estado = estado;
-    el.querySelector('.ns-estado').textContent = nomes[estado] || estado;
+    const se = el.querySelector('.ns-estado');
+    if (se) se.textContent = nomes[estado] || estado;
   }
 
   return { setPing, setEstado };

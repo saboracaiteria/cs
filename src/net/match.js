@@ -56,6 +56,12 @@ export class Match {
 
   // ------------------------------------------------------------- setup
   iniciar() {
+    // para o laço do single player ANTES de qualquer coisa: sem isto a câmera
+    // do título (orbital) e a do multiplayer brigavam pelo mesmo canvas
+    if (window.__pararLoopSingle) window.__pararLoopSingle();
+    // a arma na tela é do single; no multiplayer quem manda é o HUD do MP
+    if (this.game && this.game.viewmodel) this.game.viewmodel.visible = false;
+
     // esconde a tela de abertura do single e o HUD single
     const ab = document.getElementById('title-screen');
     if (ab) ab.classList.add('hidden');
@@ -71,12 +77,6 @@ export class Match {
     if (joy) joy.classList.remove('hidden');
     const look = document.getElementById('mp-look');
     if (look) look.classList.remove('hidden');
-
-    // para o laço do single player: sem isto a câmera do título (orbital)
-    // e a do multiplayer brigavam pelo mesmo canvas a cada quadro
-    if (window.__pararLoopSingle) window.__pararLoopSingle();
-    // a arma na tela é do single; no multiplayer quem manda é o HUD do MP
-    if (this.game && this.game.viewmodel) this.game.viewmodel.visible = false;
 
     // avatares para os jogadores conhecidos
     for (const [id, info] of this.nicks) this._garantirAvatar(id, info);
