@@ -199,13 +199,27 @@ export class GameCamera {
 
     // não deixa a câmera entrar dentro de prédio
     const back = dir.clone().negate();
+
+    /*
+     * [Ombro] Over-the-shoulder a pé, estilo COD Mobile: a câmera desloca
+     * para o lado DIREITO do Bob — o lado da pistola — e o braço com a
+     * arma fica visível no canto da tela em vez de escondido atrás do
+     * corpo. O deslocamento entra na ORIGEM do raycast: a colisão protege
+     * também a trajetória lateral, e a câmera não afunda numa parede ao
+     * passar perto de um prédio.
+     */
+    const ombro = this.mode === 'foot' ? CAMERA.shoulderX : 0;
+    const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+    const baseX = this._smoothFocus.x + right.x * ombro;
+    const baseZ = this._smoothFocus.z + right.z * ombro;
+
     const hit = this.col.raycast(
-      this._smoothFocus.x, this._smoothFocus.y, this._smoothFocus.z,
+      baseX, this._smoothFocus.y, baseZ,
       back.x, back.y, back.z, dist + 0.6,
     );
     if (hit) dist = Math.max(CAMERA.minZoom * 0.45, hit.t - 0.45);
 
-    this._pos.copy(this._smoothFocus).addScaledVector(back, dist);
+    this._pos.copy(this._smoothFocus).addScaledVector(back, dist).addScaledVector(right, ombro);
     // e nunca abaixo do chão
     const floor = this.col.groundHeightAt(this._pos.x, this._pos.z, this._pos.y) + 0.45;
     const lift = Math.max(0, floor - this._pos.y);
@@ -290,7 +304,6 @@ export class GameCamera {
     this.shake = Math.max(0, this.shake - dt * 2.4);
   }
 
-  /**
   /**
    * [37][42] Raio de tiro que passa exatamente pela mira, posicionada
    * a 62% da largura (NDC x = +0.24) e 2/5 do topo (NDC y = +0.2) — o

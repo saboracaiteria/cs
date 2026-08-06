@@ -88,10 +88,28 @@ export const CAMERA = {
   far: 2600,
   minZoom: 2.6,                // [12] scroll do mouse
   maxZoom: 16,
-  defaultZoom: 6.2,
+  /**
+   * [Ombro] Zoom padrão a pé — bem perto (3.6): o Bob preenche a tela e o
+   * braço direito com a pistola aparece no canto, estilo COD Mobile. O
+   * scroll do mouse ainda afasta até `maxZoom` quando o jogador quiser.
+   */
+  defaultZoom: 3.6,
   carZoom: 11,
   heliZoom: 18,
   cableZoom: 12,               // [54] dentro do bondinho
+  /**
+   * [Ombro] Over-the-shoulder estilo COD Mobile: quanto a câmera desloca
+   * para o lado DIREITO do Bob (o lado da pistola) no modo a pé. É o que
+   * põe o braço e a mão segurando a arma visíveis no canto da tela — sem
+   * isto, o braço direito fica escondido atrás do corpo.
+   */
+  shoulderX: 1.35,
+  /**
+   * [Ombro] Quanto o CORPO do Bob gira para a esquerda em relação à
+   * câmera (rad) no modo a pé. Expõe o ombro direito e a pistola para a
+   * câmera deslocada, deixando o braço em perfil em vez de de costas.
+   */
+  bodyTurn: 0.30,
   /**
    * [11][14] Limites da inclinação da câmera, em radianos.
    * pitchMax 1.35 ≈ 77° para cima: dá para ver o topo dos prédios, o Cristo
@@ -131,9 +149,12 @@ export const CAMERA = {
    * a distância de terceira pessoa encolhe até `adsZoom`. A mira (que no
    * jogo fica a 62% da tela) desliza para o centro — é o "fixar a mira" —
    * e o espalhamento da bala cai para `spreadAds`: mirou, atira reto.
+   *
+   * [Ombro] Ficou mais curto que o defaultZoom novo (3.6): mirar ainda
+   * aproxima de verdade, e o braço com a pistola domina o canto da tela.
    */
   adsFov: 54,
-  adsZoom: 4.6,
+  adsZoom: 2.9,
   adsSpeed: 9,
   /**
    * [FPS] Coice leve e controlável.

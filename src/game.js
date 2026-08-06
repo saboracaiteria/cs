@@ -360,6 +360,21 @@ export class Game {
       if (this.state === 'playing' && !this.phone.open) this.input.requestLock();
     });
 
+
+    // ---------------------------------------------------- [Áudio] primeiro gesto
+    /*
+     * O navegador só deixa o WebAudio tocar depois de um gesto do usuário.
+     * O clique no botão INICIAR costuma bastar — mas no celular (e em
+     * páginas HTTPS como o GitHub Pages) o `click` sintetizado nem sempre
+     * conta como gesto confiável, e o AudioContext nasce suspenso: jogo
+     * mudo mesmo clicando. A solução é acordar o áudio no PRIMEIRO
+     * pointerdown/tecla em QUALQUER lugar da tela (dispara antes do click
+     * e cobre toque, caneta e mouse), não só no botão.
+     */
+    document.addEventListener('pointerdown', () => this.audio.acordar(), true);
+    document.addEventListener('keydown', () => this.audio.acordar(), true);
+
+
     // ---------------------------------------------------- ações (teclado e toque)
     /*
      * Chega AÇÃO, não tecla: 'acao', 'atirar', 'pular'. Quem traduziu foi

@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three.module.js';
-import { PLAYER, CURB_H } from './config.js';
+import { PLAYER, CURB_H, CAMERA } from './config.js';
 import { clamp, damp, dampAngle } from './utils.js';
 import { Human } from './ent/human.js';
 import { Loro } from './ent/loro.js';
@@ -209,8 +209,12 @@ export class Player {
      *
      * A frente da câmera no chão é (-sin, -cos) e o personagem olha para +Z,
      * logo a rotação do corpo é o yaw da câmera + PI.
+     *
+     * [Ombro] Soma `CAMERA.bodyTurn`: o corpo fica levemente virado para a
+     * esquerda em relação à câmera, expondo o ombro direito e a pistola —
+     * a câmera deslocada (over-the-shoulder) vê o braço em perfil.
      */
-    this.yaw = dampAngle(this.yaw, camYaw + Math.PI, PLAYER.turnSmooth, dt);
+    this.yaw = dampAngle(this.yaw, camYaw + Math.PI + CAMERA.bodyTurn, PLAYER.turnSmooth, dt);
     if (mag > 0.001) this._move.set(dx, 0, dz);
 
     // ------------------------------------------------ [36] pulo e gravidade
@@ -335,7 +339,9 @@ export class Player {
     if (this.pos.y < floor) { this.pos.y = floor; this.vy = Math.max(0, this.vy); }
     if (this.pos.y > 430) { this.pos.y = 430; this.vy = Math.min(0, this.vy); }
 
-    this.yaw = dampAngle(this.yaw, camYaw + Math.PI, PLAYER.turnSmooth, dt);
+    // [Ombro] mesma rotação com corpo levemente de lado, para a arma
+    // continuar visível também no modo deus
+    this.yaw = dampAngle(this.yaw, camYaw + Math.PI + CAMERA.bodyTurn, PLAYER.turnSmooth, dt);
     this.grounded = false;
     this.inWater = false;
 
