@@ -715,7 +715,6 @@ export class Match {
     }
     this._mpBtns = [];
     const pad = document.getElementById("mp-pad");
-    const pad = document.getElementById("mp-pad");
     if (pad) pad.classList.add("hidden");
     const ov = document.getElementById('mp-overlay');
     if (ov) ov.classList.add('hidden');
