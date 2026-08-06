@@ -175,7 +175,13 @@ setInterval(() => {
 
 // simulação das salas (tick rate) — O LOOP DO JOGO
 setInterval(() => {
-  for (const room of manager.rooms.values()) try { try { room.tick(); } catch (e) { console.error('[tick erro]', e); } } catch (e) { console.error('[tick erro]', e); }
+  for (const room of manager.rooms.values()) {
+    try {
+      room.tick();
+    } catch (e) {
+      console.error('[tick erro]', e);
+    }
+  }
 }, Math.round(1000 / NET.tickRate));
 
 httpServer.listen(NET.port, () => {

@@ -57,11 +57,6 @@ export class Match {
     this._emCarro = false;
     this._toggleCar = false;
 
-    // veiculos do MP (carros autoritativos vindos do servidor)
-    this.carrosMp = new Map();   // id -> { mesh: Car, x, y, z, playerId }
-    this._emCarro = false;
-    this._toggleCar = false;
-
     this._ligarListeners();
   }
 
@@ -72,10 +67,9 @@ export class Match {
     if (window.__pararLoopSingle) window.__pararLoopSingle();
     // a arma na tela é do single; no multiplayer quem manda é o HUD do MP
     if (this.game && this.game.viewmodel) this.game.viewmodel.visible = false;
-    // esconde o transito do single — no MP os carros vêm do servidor
+    // esconde o transito e pedestres do single — no MP os carros vêm do servidor
     if (this.game && this.game.cars) this.game.cars.group.visible = false;
-    // esconde o transito do single — no MP os carros vêm do servidor
-    if (this.game && this.game.cars) this.game.cars.group.visible = false;
+    if (this.game && this.game.peds) this.game.peds.group.visible = false;
 
     // esconde a tela de abertura do single e o HUD single
     const ab = document.getElementById('title-screen');
@@ -111,7 +105,6 @@ export class Match {
       if (k === 'shift') this.inp.run = true;
       if (k === ' ') { this.inp.jump = true; e.preventDefault(); }
       if (k === 'tab') { e.preventDefault(); this.scoreboard.alternar(); }
-      if (k === 'e') this._toggleCar = true;
       if (k === 'e') this._toggleCar = true;
       this._norm();
     };
@@ -491,56 +484,8 @@ export class Match {
     if (el) el.style.display = 'none';
   }
 
-  // ------------------------------------------------------------ veiculos
-  _aplicarCarros(lista) {
-    for (const c of lista) {
-      let cr = this.carrosMp.get(c.id);
-      if (!cr) {
-        const mesh = new Car(c.cor || 0xe53935, Math.random);
-        this.game.gfx.scene.add(mesh.root);
-        cr = { mesh, x: c.x, y: c.y, z: c.z, playerId: null };
-        this.carrosMp.set(c.id, cr);
-      }
-      cr.x = c.x; cr.y = c.y; cr.z = c.z;
-      cr.playerId = c.playerId;
-      cr.mesh.root.position.set(c.x, c.y, c.z);
-      cr.mesh.yaw = c.yaw;
-      cr.mesh.syncTransform();
-      cr.mesh.speed = c.speed;
-    }
-  }
-
-  /** Carro livre mais proximo do jogador (raio 4.5) ou 0 (sair do atual). */
-  _alvoCarro() {
-    if (this._emCarro) return 0;
-    const snap = this.snapBuf.ultimo();
-    const eu = snap && snap.players ? snap.players.find((p) => p.id === this.meuId) : null;
-    if (!eu) return null;
-    let best = null, bestD = 4.5 * 4.5;
-    for (const [id, cr] of this.carrosMp) {
-      if (cr.playerId != null) continue;
-      const dx = cr.x - eu.x, dz = cr.z - eu.z;
-      const d = dx * dx + dz * dz;
-      if (d < bestD) { bestD = d; best = id; }
-    }
-    return best;
-  }
-
-  _mostrarHint(texto) {
-    let el = document.getElementById('mp-car-hint');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'mp-car-hint';
-      el.style.cssText = 'position:fixed;bottom:34%;left:50%;transform:translateX(-50%);background:rgba(5,10,18,.78);color:#ffd28a;padding:8px 16px;border-radius:20px;font:600 14px/1.2 system-ui,sans-serif;border:1px solid rgba(255,210,138,.35);z-index:99;pointer-events:none;text-align:center;';
-      document.body.appendChild(el);
-    }
-    el.textContent = texto;
-    el.style.display = '';
-  }
-
-  _esconderHint() {
-    const el = document.getElementById('mp-car-hint');
-    if (el) el.style.display = 'none';
+  fimPartida(msg) {
+    this._vencedor(msg);
   }
 
   // ------------------------------------------------------------ sair
@@ -562,11 +507,7 @@ export class Match {
     for (const cr of this.carrosMp.values()) cr.mesh.dispose(this.game.gfx.scene);
     this.carrosMp.clear();
     if (this.game && this.game.cars) this.game.cars.group.visible = true;
-    this._esconderHint();
-    // remove os carros do MP e devolve o transito do single
-    for (const cr of this.carrosMp.values()) cr.mesh.dispose(this.game.gfx.scene);
-    this.carrosMp.clear();
-    if (this.game && this.game.cars) this.game.cars.group.visible = true;
+    if (this.game && this.game.peds) this.game.peds.group.visible = true;
     this._esconderHint();
     const hudMp = document.getElementById('mp-hud');
     if (hudMp) hudMp.classList.add('hidden');

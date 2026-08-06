@@ -11,11 +11,11 @@ function check(cond, nome) { log((cond ? 'PASSOU' : 'FALHOU') + ': ' + nome); if
 function conectar(nome) {
   return new Promise((resolve) => {
     const ws = new WebSocket(URL);
-    const bag = { msgs: [], close: null, erros: 0 };
+    const bag = { ws, msgs: [], close: null, erros: 0 };
     ws.on('message', (d) => { try { bag.msgs.push(JSON.parse(d.toString())); } catch { bag.erros++; } });
-    ws.on('close', (c, r) => { bag.close = { c, r: r.toString() }; resolve(bag); });
+    ws.on('close', (c, r) => { bag.close = { c, r: r.toString() }; });
     ws.on('error', () => { bag.erros++; });
-    ws.on('open', () => { bag.ws = ws; resolve(bag); });
+    ws.on('open', () => { resolve(bag); });
   });
 }
 

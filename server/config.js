@@ -119,3 +119,18 @@ export const PLATOS = [
   { id: 'pelourinho', x: -121.6, z: -435.0, rot: -0.25, hx: 62, hz: 34, fade: 26 },
   { id: 'museu', x: -424.3, z: 140.8, rot: 0.42, hx: 58, hz: 52, fade: 28 },
 ];
+
+export const CABLE = {
+  rise: 9,
+  halfX: 10, halfZ: 8,
+  deckOver: 1,
+  cabinFloor: 5.1,
+  dock: 4.6,
+  cableSep: 1.7,
+  dwell: 7,
+  boardDwell: 1.8,
+  speed: 8.5,
+  rampLen: 42, rampHalfW: 2.4,
+  boardRange: 4.6,
+};
+

@@ -7,6 +7,7 @@
 import { CollisionWorld } from './collision.js';
 import { terrainHeight, bridgeY, onBridge, LAKE, BRIDGE } from './terrain.js';
 import { buildCity } from './city.js';
+import { buildLandmarksCollision, buildIMGBuildingsCollision, buildBrazilLandmarksCollision } from './landmarksCollision.js';
 import { CURB_H, HALF } from '../config.js';
 
 export function buildWorld() {
@@ -37,6 +38,11 @@ export function buildWorld() {
 
   // cidade (prédios + calçadas) — mesma seed do cliente
   const blocks = buildCity(col);
+
+  // marcos do mapa (Rio, IMG e Brasil)
+  buildLandmarksCollision(col);
+  buildIMGBuildingsCollision(col);
+  buildBrazilLandmarksCollision(col);
 
   return { col, blocks, terrainHeight };
 }

@@ -26,7 +26,6 @@ export class Room {
     this.elapsed = 0;
     this.world = null;          // preenchido no startGame
     this.cars = [];             // veiculos do MP (server/cars.js)
-    this.cars = [];             // veiculos do MP (server/cars.js)
     this._lastTick = Date.now();
 
     this._inputLog = new Map(); // anti-flood: id -> {count, t0}
@@ -214,69 +213,6 @@ export class Room {
     p.body.moveX = clampNum(msg.moveX, -1, 1);
     p.body.moveZ = clampNum(msg.moveZ, -1, 1);
     if (r.fallDamage > 0) this._damage(p, null, r.fallDamage, 'queda');
-  }
-
-  /** Entra/sai do carro: msg.car = id do carro (entrar) ou 0 (sair). */
-  _veiculo(p, alvo) {
-    if (!this.cars || this.cars.length === 0) return;
-    if (this.flying && this.flying.has(p.id)) return;   // no aviao nao da
-    if (!p.body) return;
-    if (p.inCar == null) {
-      const c = this.cars.find((cc) => cc.id === alvo && cc.playerId == null);
-      if (!c) return;
-      const d = dist2D(p.body.pos.x, p.body.pos.z, c.x, c.z);
-      if (d > CAR.enterRange) return;
-      p.inCar = c.id;
-      c.playerId = p.id;
-      c.inp = { moveX: 0, moveZ: 0 };
-      this._bcast(T.CAR_JOIN, { id: p.id, carId: c.id });
-    } else {
-      this._sairCarro(p);
-    }
-  }
-
-  _sairCarro(p) {
-    const c = this.cars.find((cc) => cc.id === p.inCar);
-    if (c) {
-      c.playerId = null;
-      c.inp = null;
-      const pt = findFreeSpot(this.world.col, c.x + 3, c.z + 3, 0.6);
-      if (p.body) {
-        p.body.pos.x = pt.x;
-        p.body.pos.y = pt.y;
-        p.body.pos.z = pt.z;
-        p.body.vel = { x: 0, y: 0, z: 0 };
-      }
-    }
-    p.inCar = null;
-    this._bcast(T.CAR_LEAVE, { id: p.id });
-  }
-
-  /** Move os carros dirigidos e faz o motorista acompanhar o carro. */
-  _stepCars(dt) {
-    if (!this.cars || this.cars.length === 0) return;
-    for (const c of this.cars) {
-      if (c.playerId == null) { c.inp = null; continue; }
-      const p = this._all().find((pp) => pp.id === c.playerId);
-      c.inp = p && p.body
-        ? { moveX: p.body.moveX || 0, moveZ: p.body.moveZ || 0 }
-        : { moveX: 0, moveZ: 0 };
-    }
-    updateCars(this.world, this.cars, dt);
-    for (const p of this._all()) {
-      if (p.inCar != null && p.body) {
-        const c = this.cars.find((cc) => cc.id === p.inCar);
-        if (c) {
-          p.body.pos.x = c.x;
-          p.body.pos.y = c.y;
-          p.body.pos.z = c.z;
-          p.body.yaw = c.yaw;
-          p.body.pitch = 0;
-          p.body.onGround = true;
-          p.body.vel = { x: 0, y: 0, z: 0 };
-        }
-      }
-    }
   }
 
   /** Entra/sai do carro: msg.car = id do carro (entrar) ou 0 (sair). */
