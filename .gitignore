@@ -1,0 +1,16 @@
+# Backups e artefatos temporários de edição
+*.bak
+*.bak2
+*.new
+*.new2
+*.final
+*.awk
+*.tmp
+
+# Memória interna da IDE (não é parte do jogo)
+.codexide/
+
+# Logs e sistema
+*.log
+.DS_Store
+Thumbs.db

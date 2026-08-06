@@ -241,6 +241,19 @@ export class TouchControls {
     for (const b of this.el.querySelectorAll('[data-acao],[data-segura]')) {
       const acao = b.dataset.acao;
       const segura = b.dataset.segura;
+      /*
+       * [COD Mobile] O botão de TIRO também é o analógico de mira:
+       * o dedo FIRME atira sem parar; DESLIZANDO o dedo, a câmera gira
+       * e a mira acompanha o arrasto — dá para reposicionar o tiro no
+       * inimigo e segurar o recuo sem largar o gatilho.
+       *
+       * O botão fica no lugar (não é arrastável pela tela): quem anda
+       * é o olhar, como num FPS. Os outros botões de segurar (pular,
+       * descer) e os de toque rápido continuam como sempre foram.
+       */
+      const mira = segura === 'atirar';
+      let ancora = null;   // último ponto do dedo no gatilho
+      let pend = { x: 0, y: 0 };   // delta acumulado desde o último movimento entregue
 
       b.addEventListener('pointerdown', (e) => {
         e.preventDefault();
@@ -250,11 +263,26 @@ export class TouchControls {
         navigator.vibrate?.(10);
         if (segura) this.input.toque[segura] = true;
         else if (acao) this.input.acaoDeToque(acao, e);
+        if (mira) { ancora = { x: e.clientX, y: e.clientY }; pend = { x: 0, y: 0 }; }
+      });
+
+      b.addEventListener('pointermove', (e) => {
+        if (!mira || !ancora) return;
+        pend.x += e.clientX - ancora.x;
+        pend.y += e.clientY - ancora.y;
+        ancora = { x: e.clientX, y: e.clientY };
+        // micro-tremor do polegar parado não mexe na mira; passou disso,
+        // o dedo deslizando gira a câmera (a mira acompanha o arrasto).
+        if (Math.hypot(pend.x, pend.y) < 3) return;
+        this.input.olhar(pend.x * SENS_OLHAR, pend.y * SENS_OLHAR);
+        pend = { x: 0, y: 0 };
       });
 
       const solta = (e) => {
         b.classList.remove('press');
         if (segura) this.input.toque[segura] = false;
+        ancora = null;
+        pend = { x: 0, y: 0 };
         e.preventDefault();
       };
       b.addEventListener('pointerup', solta);

@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import * as THREE from '../../vendor/three.module.js';
+import { mergeGeometries } from '../../vendor/jsm/utils/BufferGeometryUtils.js';
 import { makeRng, rngRange, rngInt, clamp, lerp, smoothstep } from '../utils.js';
 import { terrainHeight } from './terrain.js';
 import {

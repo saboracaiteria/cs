@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+r<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -19,14 +19,6 @@
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="./css/style.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏺</text></svg>">
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://unpkg.com/three@0.180.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.180.0/examples/jsm/"
-  }
-}
-</script>
 </head>
 <body>
 
@@ -396,6 +388,8 @@
   import { boot } from './src/main.js';
   boot().catch((err) => {
     console.error(err);
+    // [DIAG] titulo vira o erro + stack para leitura via snapshot
+    document.title = 'ERRO: ' + (err && err.message) + ' || ' + (err && err.stack ? err.stack.split('\n').slice(1, 4).join(' ~ ') : '') + ' || DIAG: ' + (window.__diag || 'nada');
     const el = document.getElementById('fatal');
     el.classList.remove('hidden');
     el.innerHTML = '<h3>Falha ao iniciar</h3><pre>' + (err && err.stack || err) + '</pre>' +

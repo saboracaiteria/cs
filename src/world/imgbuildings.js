@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../../vendor/three.module.js';
 import { CURB_H, BLOCK_INNER } from '../config.js';
 import { voxMaterial } from '../ent/voxel.js';
 

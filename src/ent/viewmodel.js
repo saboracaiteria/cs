@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../../vendor/three.module.js';
 import { voxMaterial, VX } from './voxel.js';
 
 /**
@@ -6,9 +6,9 @@ import { voxMaterial, VX } from './voxel.js';
  *  A arma na tela (viewmodel)
  * ============================================================
  *
- * O canto inferior direito da tela, estilo Doom: a mão do Bob segurando
- * o **Prompt Mágico** — o tablet-pergaminho dourado que, no roteiro,
- * materializa os prompts que ele digita.
+ * O canto inferior direito da tela, estilo COD Mobile: a mão do Bob
+ * segurando a **pistola** — a mesma que ele ergue na posição de tiro
+ * em terceira pessoa quando segura ATIRAR.
  *
  * ---- COMO ELA FICA SEMPRE NA FRENTE ----
  * A arma é filha da CÂMERA, não da cena. Assim ela acompanha o olhar de
@@ -26,6 +26,8 @@ import { voxMaterial, VX } from './voxel.js';
  */
 
 const POS_REPOUSO = new THREE.Vector3(0.26, -0.22, -0.52);
+/** [FPS] Mirando (ADS): a arma sobe para o centro da tela, estilo COD Mobile. */
+const POS_ADS = new THREE.Vector3(0.16, -0.18, -0.42);   // [FPS] mirando: ergue um pouco, SEM sair do lado direito da tela
 
 export class ViewModel {
   constructor(camera, scene) {
@@ -50,6 +52,8 @@ export class ViewModel {
     this.t = 0;
     this.coice = 0;      // 0..1, decai depois do tiro
     this.balanco = 0;
+    this.ads = 0;        // 0..1, quão erguida a arma está no zoom de mira
+    this._adsQuero = false;
   }
 
   _montar() {
@@ -66,24 +70,26 @@ export class ViewModel {
 
     const pele = voxMaterial(0xd9a066);
     const manga = voxMaterial(0x6b4423);          // jaqueta de couro do Bob
-    const dourado = voxMaterial(0xffb020, { metal: 0.6, aspereza: 0.28, emissivo: 0.55 });
-    const moldura = voxMaterial(0x8a6a2e, { metal: 0.7, aspereza: 0.3 });
+    const ferro = voxMaterial(0x2a2f38, { metal: 0.45, aspereza: 0.5 });
+    const escuro = voxMaterial(0x16191f, { metal: 0.3, aspereza: 0.6 });
+    const dourado = voxMaterial(0xffb020, { metal: 0.7, aspereza: 0.28, emissivo: 0.55 });
 
     // antebraço entrando pelo canto da tela
     bloco(4, 4, 12, 0, -3, 4, manga);
-    // mão
+    // mão segurando a coronha
     bloco(4.4, 4.4, 4, 0, -1.4, -2, pele);
-    // o Prompt Mágico: moldura + tela acesa virada para o jogador
-    bloco(9, 11, 1.2, 0, 2.2, -3.4, moldura);
-    this.tela = bloco(7.6, 9.4, 0.5, 0, 2.2, -4.1, dourado);
-
-    // três "linhas de prompt" que piscam na tela
-    this.linhas = [];
-    for (let i = 0; i < 3; i++) {
-      const l = bloco(5.2 - i * 1.2, 0.9, 0.3, -0.6 + i * 0.3, 4.4 - i * 2, -4.5,
-        voxMaterial(0xfff0c0, { emissivo: 1.5 }));
-      this.linhas.push(l);
-    }
+    // corpo da pistola
+    bloco(5, 7, 3, 0, -0.5, -4.5, ferro);
+    // coroa traseira / cão
+    bloco(4, 3.4, 3, 0, 2.6, -4.5, escuro);
+    // cano apontando para o centro da tela
+    bloco(3, 3, 12, 0, 0.9, -9.5, escuro);
+    // mira
+    bloco(1.4, 1.6, 2, 0, 3.7, -8, escuro);
+    // detalhe dourado na lateral do corpo
+    bloco(5.4, 1.4, 3.4, 0, -2.2, -4.5, dourado);
+    // guarda-mato + gatilho
+    bloco(2.6, 3, 2.6, 0, -3.8, -4, escuro);
   }
 
   set visible(v) { this.root.visible = v; }
@@ -91,6 +97,9 @@ export class ViewModel {
 
   /** Chamado a cada tiro. */
   darCoice() { this.coice = 1; }
+
+  /** [FPS] Zoom de mira: a arma sobe para o centro da tela. */
+  setAds(on) { this._adsQuero = !!on; }
 
   /**
    * @param {number} vel  velocidade do jogador (dá o balanço do passo)
@@ -106,21 +115,21 @@ export class ViewModel {
     const bx = Math.sin(this.t * 7.5) * 0.014 * b;
     const by = Math.abs(Math.cos(this.t * 7.5)) * 0.016 * b;
 
+    // [FPS] zoom de mira: a arma desliza do canto para o centro
+    this.ads = damp(this.ads, this._adsQuero ? 1 : 0, 10, dt);
+    const a = this.ads;
+    const pos = new THREE.Vector3().lerpVectors(POS_REPOUSO, POS_ADS, a);
+
     // coice: recua e levanta o bico
     const c = this.coice * this.coice;
     this.root.position.set(
-      POS_REPOUSO.x + bx,
-      POS_REPOUSO.y - by + c * 0.03,
-      POS_REPOUSO.z + c * 0.10,
+      pos.x + bx,
+      pos.y - by + c * 0.03,
+      pos.z + c * 0.10,
     );
-    this.root.rotation.x = c * 0.42;
-    this.root.rotation.z = Math.sin(this.t * 3.7) * 0.02 * b;
+    this.root.rotation.x = c * 0.42 + a * 0.08;
+    this.root.rotation.z = Math.sin(this.t * 3.7) * 0.02 * b * (1 - a);
 
-    // as linhas de prompt piscam em cadência própria
-    for (let i = 0; i < this.linhas.length; i++) {
-      const on = Math.sin(this.t * (3.1 + i * 1.7)) > -0.35;
-      this.linhas[i].visible = on;
-    }
   }
 }
 

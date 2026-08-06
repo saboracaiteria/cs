@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import * as THREE from '../../vendor/three.module.js';
+import { mergeGeometries } from '../../vendor/jsm/utils/BufferGeometryUtils.js';
 import { GRID, CELL, ROAD_H, LANE, CAR, PALETTE, STOP_LINE } from '../config.js';
 import {
   nodeCoord, makeRng, rngPick, rngInt, rngRange, DIRS, clamp, dampAngle, dist2Sq, swapRemove,

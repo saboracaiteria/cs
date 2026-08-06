@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import * as THREE from '../../vendor/three.module.js';
+import { mergeGeometries } from '../../vendor/jsm/utils/BufferGeometryUtils.js';
 import { HALF, PLATOS } from '../config.js';
 import { clamp, smoothstep, lerp, makeRng } from '../utils.js';
 import { grassTexture, asphaltTexture, waterNormalTexture } from '../gfx/textures.js';

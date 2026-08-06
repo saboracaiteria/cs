@@ -30,15 +30,21 @@ button{font-family:var(--font)}
 /* ------------------------- HUD ------------------------- */
 #hud{position:fixed; inset:0; pointer-events:none; z-index:10}
 
-/* [42] mira a 2/5 (40%) do topo da tela */
+/* [42] mira estilo COD Mobile: 62% da largura, 40% do topo */
 #crosshair{
-  position:absolute; left:50%; top:40%;
+  position:absolute; left:62%; top:40%;
   transform:translate(-50%,-50%);
   width:64px; height:64px;
   filter:drop-shadow(0 0 3px rgba(0,0,0,.9));
   transition:transform .06s ease-out;
 }
 #crosshair.recoil{transform:translate(-50%,-50%) scale(1.28)}
+/* [FPS] zoom de mira (ADS): a mira desliza para o centro da tela */
+/* [FPS] ADS: a mira NÃO anda de lugar — fica no ombro. O anel só
+   clareia/engrossa para sinalizar que o zoom de mira está ativo. */
+#crosshair.ads .ch-ring{stroke:rgba(255,225,150,.95); stroke-width:1.7}
+#crosshair.ads .ch-line{stroke:rgba(255,225,150,.85)}
+#crosshair.ads .ch-dot{fill:#ffd778}
 .ch-ring{fill:none; stroke:rgba(255,255,255,.55); stroke-width:1.2}
 .ch-dot{fill:var(--accent)}
 .ch-line{stroke:rgba(255,255,255,.9); stroke-width:2; stroke-linecap:round}
@@ -853,6 +859,12 @@ body.toque #keys-touch{display:block}
   transition:transform .07s, background .07s;
 }
 .tc-btn.press{transform:scale(.92); background:rgba(255,255,255,.26)}
+/* [COD Mobile] o botão de TIRO também é o analógico de mira: deslizar o
+   dedo no gatilho gira a câmera e a mira acompanha (o botão fica fixo) */
+.tc-btn[data-segura="atirar"]{touch-action:none}
+/* [COD Mobile] o botão de TIRO também é o analógico de mira: deslizar o
+   dedo no gatilho gira a câmera e a mira acompanha (o botão fica fixo) */
+.tc-btn[data-segura="atirar"]{touch-action:none}
 .tc-fogo{
   right:16px; bottom:20px; width:94px; height:94px; font-size:13px;
   border-color:rgba(255,77,77,.6); background:rgba(255,77,77,.24); color:#ffdede;

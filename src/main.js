@@ -12,7 +12,7 @@ export async function boot() {
   startBtn.disabled = true;
 
   const game = new Game(canvas);
-  await game.build((label) => { note.textContent = label; });
+  await game.build((label) => { note.textContent = label; try { document.title = 'BOOT: ' + label; } catch {} });
 
   note.textContent = game.toque ? 'toque em INICIAR JOGO' : 'clique em INICIAR JOGO';
   startBtn.disabled = false;

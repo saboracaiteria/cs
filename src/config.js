@@ -123,6 +123,33 @@ export const CAMERA = {
    * deixa o caminho à frente livre. 0.20 ≈ 11° de inclinação.
    */
   heliFrameLift: 0.20,
+
+  /**
+   * [FPS] Zoom de mira (ADS), estilo COD Mobile.
+   *
+   * Segurar o tiro fecha a câmera: o FOV aperta (fov -> adsFov) e, a pé,
+   * a distância de terceira pessoa encolhe até `adsZoom`. A mira (que no
+   * jogo fica a 62% da tela) desliza para o centro — é o "fixar a mira" —
+   * e o espalhamento da bala cai para `spreadAds`: mirou, atira reto.
+   */
+  adsFov: 54,
+  adsZoom: 4.6,
+  adsSpeed: 9,
+  /**
+   * [FPS] Coice leve e controlável.
+   *
+   * Cada tiro empurra a inclinação para cima (`recoilPitch`) com uma
+   * deriva lateral aleatória (`recoilYaw`); o coice relaxa sozinho com
+   * `recoilRecover`. O jogador compensa puxando o mouse para baixo —
+   * é o controle de recuo dos FPS, e é o que permite reposicionar a
+   * mira enquanto atira.
+   */
+  recoilPitch: 0.005,
+  recoilYaw: 0.0022,
+  recoilRecover: 5.0,
+  /** [FPS] Espalhamento da bala: sem mirar (cintura) vs mirando (ADS). */
+  spreadHip: 0.012,
+  spreadAds: 0.0015,
 };
 
 // ---------------------------------------------------------------- veículos

@@ -1,7 +1,7 @@
-import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import * as THREE from '../../vendor/three.module.js';
+import { mergeGeometries } from '../../vendor/jsm/utils/BufferGeometryUtils.js';
 import { PALETTE } from '../config.js';
-import { clamp, rngPick, rngRange } from '../utils.js';
+import { clamp, damp, rngPick, rngRange } from '../utils.js';
 import { numberTexture } from '../gfx/textures.js';
 
 /**
@@ -96,18 +96,41 @@ export class Human {
       sphere(0.095, SHOULDER_X, SHOULDER_Y, 0, this.shirt),
       sphere(0.095, -SHOULDER_X, SHOULDER_Y, 0, this.shirt),
       box(0.10, 0.11, 0.10, 0, 1.455, 0, this.skin),                // pescoço
-      sphere(HEAD_R, 0, HEAD_Y, 0.006, this.skin, HEAD_SY, 1.04),   // cabeça
     ];
-    // cabelo: calota por cima da cabeça
-    const hairGeo = new THREE.SphereGeometry(HEAD_R * 1.06, 12, 9, 0, Math.PI * 2, 0, Math.PI * 0.58);
-    hairGeo.scale(1, HEAD_SY * 0.96, 1.04);
-    hairGeo.translate(0, HEAD_Y + 0.02, 0);
-    bodyParts.push(paint(hairGeo, this.hair));
 
     this.body = new THREE.Mesh(mergeGeometries(bodyParts, false), this.material);
     this.body.castShadow = true;               // [44]
     this.body.receiveShadow = true;
     this.pivot.add(this.body);
+
+    /*
+     * [FPS] A CABEÇA virou um grupo próprio, girando no pescoço (antes era
+     * fundida no tronco). É o que deixa o Bob — e qualquer NPC — OLHAR para
+     * onde a mira aponta: `lookPitch`/`lookYaw` são preenchidos pelo jogo a
+     * cada quadro com a inclinação da câmera + o desvio fixo da mira acima
+     * do ombro, e a cabeça acompanha suavemente. Ao atirar, o coice sobe a
+     * mira e a cabeça sobe junto.
+     */
+    const HEAD_PIVOT_Y = 1.47;                 // base do pescoço
+    const headParts = [
+      sphere(HEAD_R, 0, HEAD_Y - HEAD_PIVOT_Y, 0.006, this.skin, HEAD_SY, 1.04),
+    ];
+    const hairGeo = new THREE.SphereGeometry(HEAD_R * 1.06, 12, 9, 0, Math.PI * 2, 0, Math.PI * 0.58);
+    hairGeo.scale(1, HEAD_SY * 0.96, 1.04);
+    hairGeo.translate(0, HEAD_Y + 0.02 - HEAD_PIVOT_Y, 0);
+    headParts.push(paint(hairGeo, this.hair));
+
+    this.head = new THREE.Group();
+    this.head.position.y = HEAD_PIVOT_Y;
+    const headMesh = new THREE.Mesh(mergeGeometries(headParts, false), this.material);
+    headMesh.castShadow = this.fullShadow;     // só o jogador projeta a cabeça
+    headMesh.receiveShadow = true;
+    this.head.add(headMesh);
+    this.pivot.add(this.head);
+
+    // [FPS] foco da mira, em radianos (preenchido de fora pelo jogo)
+    this.lookPitch = 0;    // + = olhando para cima
+    this.lookYaw = 0;      // + = virando a cabeça para a direita (lado da mira)
 
     // ------------------------------------------------------------ braços
     this.armL = this._makeArm(1);
@@ -141,6 +164,8 @@ export class Human {
     this.phase = rngRange(rng, 0, Math.PI * 2);
     this.carrying = false;
     this.armGesture = 0;
+    this.aiming = false;    // [27] mirando: braços erguidos à frente com a arma
+    this.weapon = null;     // arma presa à mão direita (antebraço)
   }
 
   _makeArm(side) {
@@ -195,10 +220,22 @@ export class Human {
   }
 
   /**
+   * [27] Prende a arma na mão direita (antebraço). Ela aponta para onde
+   * o braço aponta: erguida na posição de tiro, abaixada ao lado do
+   * corpo quando o personagem só anda.
+   */
+  setWeapon(weapon) {
+    this.weapon = weapon;
+    this.armR.fore.add(weapon);
+    weapon.visible = !this.carrying;
+  }
+
+  /**
    * [18] Anima a caminhada. `speed` em m/s; 0 = parado (respiração leve).
    */
   update(dt, speed) {
     const moving = speed > 0.15;
+    if (this.weapon) this.weapon.visible = !this.carrying;
     const cadence = moving ? clamp(speed * 2.35, 2.2, 11) : 1.6;
     this.phase += dt * cadence;
 
@@ -223,6 +260,18 @@ export class Human {
       this.armR.group.rotation.z = -0.22;
       this.armL.fore.rotation.x = -0.55;
       this.armR.fore.rotation.x = -0.55;
+    } else if (this.aiming) {
+      // [27] posição de tiro: braços estendidos à frente segurando a pistola
+      // [FPS] o cano acompanha o foco da mira: câmera subiu, o braço ergue
+      // um pouco mais; desceu, a arma abaixa junto — a arma SEMPRE aponta
+      // para onde a mira está
+      const apAim = clamp(this.lookPitch, -0.7, 0.7);
+      this.armR.group.rotation.x = -1.45 - apAim;
+      this.armR.group.rotation.z = 0.10;
+      this.armR.fore.rotation.x = -0.12;
+      this.armL.group.rotation.x = -1.45 - apAim * 0.85;
+      this.armL.group.rotation.z = -0.30;   // a mão esquerda cruza e segura a frente
+      this.armL.fore.rotation.x = -0.12;
     } else if (this.armGesture > 0) {
       // acenando (usado quando o NPC é alvo da missão)
       const w = Math.sin(this.phase * 3.2) * 0.5;
@@ -244,6 +293,20 @@ export class Human {
     // balanço do corpo
     this.pivot.position.y = moving ? Math.abs(Math.sin(this.phase)) * 0.038 * amp : 0;
     this.pivot.rotation.z = moving ? Math.sin(this.phase) * 0.035 * amp : 0;
+
+    /*
+     * [FPS] A cabeça obedece ao foco da mira.
+     *
+     * Olhou para cima/baixo com a câmera, o Bob inclina a cabeça no mesmo
+     * sentido (com um pouco de atraso, `damp`); virou para os lados, a
+     * cabeça gira acompanhando — ele nunca mais fica "travado olhando para
+     * frente" enquanto a mira anda pela tela. O coice também sobe a cabeça
+     * a cada tiro, porque o jogo manda o pitch efetivo (com recuo).
+     */
+    const hp = clamp(this.lookPitch, -1.1, 1.1);
+    const hy = clamp(this.lookYaw, -0.5, 0.5);
+    this.head.rotation.x = damp(this.head.rotation.x, -hp * 0.85, 14, dt);
+    this.head.rotation.y = damp(this.head.rotation.y, hy, 14, dt);
   }
 
   /** Pose de queda/atropelamento antes de explodir. */

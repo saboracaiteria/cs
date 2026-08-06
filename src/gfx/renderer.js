@@ -1,9 +1,9 @@
-import * as THREE from 'three';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import * as THREE from '../../vendor/three.module.js';
+import { EffectComposer } from '../../vendor/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from '../../vendor/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from '../../vendor/jsm/postprocessing/UnrealBloomPass.js';
+import { SMAAPass } from '../../vendor/jsm/postprocessing/SMAAPass.js';
+import { OutputPass } from '../../vendor/jsm/postprocessing/OutputPass.js';
 import { QUALITY, CAMERA, NIGHT, PRESETS, DEFAULT_PRESET } from '../config.js';
 
 /**
@@ -35,7 +35,14 @@ export class Graphics {
     // [44] sombras suaves
     this.renderer.shadowMap.enabled = this.preset.shadows;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.shadowMap.autoUpdate = true;
+    /*
+     * [perf] Sombra SOB DEMANDA: o game marca requestShadow() a cada 2
+     * frames, em vez de o three re-renderizar o passe TODO frame.
+     */
+    this.renderer.shadowMap.autoUpdate = false;
+    // [perf] resolucao dinamica (multiplicador sobre o renderScale do perfil)
+    this._dynScale = 1;
+    this._dynFloor = 0.75;
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(
@@ -64,7 +71,27 @@ export class Graphics {
    */
   _pixelRatioFor(preset) {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    return Math.max(0.5, dpr * preset.renderScale);
+    return Math.max(0.5, dpr * preset.renderScale * (this._dynScale || 1));
+  }
+
+  /** [perf] Resolucao dinamica em tempo real (DRS). */
+  setDynamicScale(f) {
+    const next = Math.max(this._dynFloor, Math.min(1, f));
+    if (Math.abs(next - this._dynScale) < 0.02) return;
+    this._dynScale = next;
+    const w = window.innerWidth, h = window.innerHeight;
+    this.renderer.setPixelRatio(this._pixelRatioFor(this.preset));
+    this.renderer.setSize(w, h);
+    this.composer.setPixelRatio(this._pixelRatioFor(this.preset));
+    this.composer.setSize(w, h);
+  }
+
+  /** [perf] Escala dinamica atual (1 = teto do perfil). */
+  get dynamicScale() { return this._dynScale; }
+
+  /** [perf] Pede a re-renderizacao do mapa de sombras no proximo frame. */
+  requestShadow() {
+    this.renderer.shadowMap.needsUpdate = true;
   }
 
   buildComposer() {
@@ -119,6 +146,7 @@ export class Graphics {
    */
   applyPreset(preset, scene) {
     this.preset = preset;
+    this._dynScale = 1;      // [perf] trocar de perfil reinicia a escala dinamica
 
     this.renderer.setPixelRatio(this._pixelRatioFor(preset));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -149,6 +177,8 @@ export class Graphics {
   }
 
   resize() {
+    // guarda: o preview pode disparar 'resize' antes de a camera existir
+    if (!this.camera) return;
     const w = window.innerWidth, h = window.innerHeight;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();

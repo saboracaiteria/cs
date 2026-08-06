@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../../vendor/three.module.js';
 import { GRID, CURB_H, PED, WALK_OFF } from '../config.js';
 import { nodeCoord, makeRng, rngRange, rngInt, dist2Sq, swapRemove } from '../utils.js';
 import { Human } from './human.js';

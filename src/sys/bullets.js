@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../../vendor/three.module.js';
 import { GAME, PED, CAR } from '../config.js';
 
 const MAX_BULLETS = 64;
@@ -79,7 +79,7 @@ export class BulletSystem {
     b.p.copy(origin).addScaledVector(direction, 1.2);
     b.v.copy(direction).multiplyScalar(GAME.bulletSpeed);
 
-    this.fx.impact(b.p, direction, { r: 3.0, g: 2.4, b: 1.2 });
+    this.fx.impact(b.p, direction, { r: 3.0, g: 2.4, b: 1.2 }, 0.1);   // brilho do cano 90% menor
     return true;
   }
 

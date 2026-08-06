@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import * as THREE from '../../vendor/three.module.js';
+import { mergeGeometries } from '../../vendor/jsm/utils/BufferGeometryUtils.js';
 import { CELL, ROAD_W, BLOCK_INNER, CURB_H, QUALITY, PROP_OFF, NIGHT } from '../config.js';
 import { makeRng, rngRange, rngInt, dist2Sq } from '../utils.js';
 import { glowTexture } from '../gfx/textures.js';

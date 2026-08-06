@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../../vendor/three.module.js';
 import { puffTexture } from '../gfx/textures.js';
 
 const MAX_PARTICLES = 1600;
@@ -276,17 +276,22 @@ export class FX {
     l.light.position.set(pos.x, pos.y + 1.2, pos.z);
   }
 
-  /** Faíscas de impacto de bala. [37] */
-  impact(pos, normal, color = null) {
+  /**
+   * Faíscas de impacto de bala. [37]
+   * `esc` (0..1) escala quantidade/vida/tamanho: o brilho do cano da arma
+   * usa 0.1 — 90% menos partículas e menos lag no tiro.
+   */
+  impact(pos, normal, color = null, esc = 1) {
     const c = color || { r: 3.0, g: 2.0, b: 0.8 };
-    for (let i = 0; i < 9; i++) {
+    const n = Math.max(1, Math.round(9 * esc));
+    for (let i = 0; i < n; i++) {
       const sp = 3 + Math.random() * 9;
       this._emit(pos.x, pos.y, pos.z, {
         vx: normal.x * sp + (Math.random() - 0.5) * 5,
         vy: normal.y * sp + (Math.random() - 0.5) * 5 + 1,
         vz: normal.z * sp + (Math.random() - 0.5) * 5,
-        life: 0.18 + Math.random() * 0.25,
-        size: 0.34,
+        life: (0.18 + Math.random() * 0.25) * esc,
+        size: 0.34 * Math.max(esc, 0.5),
         drag: 3.5,
         gravity: -12,
         r: c.r, g: c.g, b: c.b,

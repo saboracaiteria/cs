@@ -168,6 +168,11 @@ export class HUD {
     this.el.crosshair.style.opacity = v ? '1' : '0';
   }
 
+  /** [FPS] Zoom de mira: a mira desliza do canto (62%, 2/5) para o centro. */
+  setAds(on) {
+    this.el.crosshair.classList.toggle('ads', on);
+  }
+
   // ------------------------------------------------------------------ [28] velocímetro
   showSpeedo(on) {
     this.el.speedo.classList.toggle('hidden', !on);
@@ -297,5 +302,6 @@ export class HUD {
     this.showHeliPanel(false);
     this.setGod(false);
     this.setPrompt(null);
+    this.el.crosshair.classList.remove('ads');   // [FPS] reset devolve a mira ao canto
   }
 }

@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.js';
 import {
   PLAYER, CAMERA, CAR, HELI, GAME, DAY, CURB_H, QUALITY,
   PRESETS, DEFAULT_PRESET, POPULATIONS, DEFAULT_POPULATION, CABLE,
@@ -73,6 +73,7 @@ export class Game {
     this.toque = false;
 
     this.gfx = new Graphics(canvas);
+    window.__diag = 'gfx=' + !!this.gfx + ' scene=' + !!(this.gfx && this.gfx.scene) + ' cam=' + !!(this.gfx && this.gfx.camera);
     this.col = new CollisionWorld();
     this.col.terrainFn = terrainHeight;
 
@@ -98,6 +99,14 @@ export class Game {
     this._focus = new THREE.Vector3();
     this._aimOrigin = new THREE.Vector3();
     this._aimDir = new THREE.Vector3();
+
+    // ---- [perf] telemetria do frame: sombra diferida + resolucao dinamica
+    this._lastT = 0;       // timestamp do frame anterior
+    this._frameMs = 0;     // duracao do ultimo frame completo (update+render)
+    this._ema = 0;         // media exponencial do frame time
+    this._boostT = 0;      // tempo acumulado com folga para devolver resolucao
+    this._shadowTick = 0;  // alterna a atualizacao do mapa de sombras
+    this._aimTick = 0;     // alterna o trace da mira
   }
 
   // ==================================================================
@@ -577,6 +586,7 @@ export class Game {
     this.mode = 'foot';
     this.god = false;
     this.cableCabin = null;
+    this.camera.setAds(false);            // [FPS] partida nova nunca abre mirando
     this.hud.setGod(false);
 
     // uma partida nova não pode começar dentro de uma arena: se o jogador
@@ -644,6 +654,7 @@ export class Game {
   toTitle() {
     this.music.tocar('abertura');
     this.state = 'title';
+    this.camera.setAds(false);            // [FPS] ao sair para o menu, solta a mira
     this.input.enabled = false;
     this.input.releaseLock();
     this.hud.show(false);
@@ -1134,9 +1145,25 @@ export class Game {
 
     if (!this.bullets.canFire) return;
     const { origin, direction } = this.camera.aimRay(this._aimOrigin, this._aimDir);
+
+    /*
+     * [FPS] Espalhamento da bala. Sem mirar (cintura) o tiro sai com uma
+     * folga aleatória; mirando (ADS) o zoom "fixa a mira" e a bala vai
+     * quase reta para o ponto do centro. É o que dá valor ao zoom: sem
+     * ele, mirar não mudaria nada além da estética.
+     */
+    const spread = this.camera.isAds ? CAMERA.spreadAds : CAMERA.spreadHip;
+    if (spread > 0) {
+      direction.x += (Math.random() - 0.5) * 2 * spread;
+      direction.y += (Math.random() - 0.5) * 2 * spread;
+      direction.z += (Math.random() - 0.5) * 2 * spread;
+      direction.normalize();
+    }
+
     if (this.bullets.fire(origin, direction)) {               // [37][38][41]
       this.hud.recoil();
       this.camera.addShake(0.16);
+      this.camera.addRecoil();          // [FPS] coice leve: a mira sobe, você puxa para baixo
       this.audio.tiro();
       if (this.viewmodel) this.viewmodel.darCoice();
       this._companheiroAtaca();
@@ -1400,6 +1427,7 @@ export class Game {
       this.audio.missil();
       this.hud.recoil();
       this.camera.addShake(0.3);
+      this.camera.addRecoil();
       if (this.viewmodel) this.viewmodel.darCoice();
     }
   }
@@ -1706,7 +1734,48 @@ export class Game {
   // ==================================================================
   //  loop
   // ==================================================================
+  /**
+   * [perf] Duas alavancas invisiveis para segurar 60 FPS SEM perder qualidade:
+   *
+   * 1. SOMBRA DIFERIDA: o passe de sombra e o custo mais pesado da cena
+   *    (milhares de casters no frustum da luz). Com `autoUpdate = false`,
+   *    so re-renderizamos a cada 2 frames — a sombra fica 1 frame atrasada
+   *    (invisivel) e o custo cai pela metade.
+   *
+   * 2. RESOLUCAO DINAMICA: media exponencial do frame time. Passou de 60 FPS,
+   *    reduz o renderScale; com folga consistente, devolve ao teto do perfil.
+   *    Qualidade maxima sempre que o hardware aguenta, sem tocar em NENHUMA
+   *    logica de jogo.
+   */
+  _adaptative() {
+    // ---- sombra a cada 2 frames (1/2 do custo do passe)
+    this._shadowTick = (this._shadowTick || 0) + 1;
+    if (this._shadowTick & 1) this.gfx.requestShadow();
+
+    // ---- resolucao dinamica com histerese (nao fica oscilando)
+    const ema = this._ema ? this._ema * 0.88 + this._frameMs * 0.12 : this._frameMs;
+    this._ema = ema;
+    if (ema > 15.5) {
+      // passou do alvo de 60 FPS: reduz a escala e espera estabilizar
+      this.gfx.setDynamicScale(this.gfx.dynamicScale * 0.9);
+      this._boostT = 0;
+    } else if (ema < 13.5) {
+      // com folga consistente, devolve resolucao aos poucos
+      this._boostT = (this._boostT || 0) + this._frameMs / 1000;
+      if (this._boostT > 0.9) {
+        this._boostT = 0;
+        this.gfx.setDynamicScale(this.gfx.dynamicScale * 1.05);
+      }
+    }
+  }
+
   update(dt) {
+    // [perf] mede o frame ANTERIOR completo (update + render do ciclo passado)
+    const now = performance.now();
+    if (this._lastT) this._frameMs = Math.min(100, now - this._lastT);
+    this._lastT = now;
+    if (this._frameMs > 0) this._adaptative();
+
     this.hud.tickFPS(dt);
     if (this.state === 'playing') this._updatePlaying(dt);
     else if (this.state === 'title') this._updateTitle(dt);
@@ -1835,23 +1904,47 @@ export class Game {
     // ------------------------------------------------ jogador / veículos
     if (this.mode === 'foot') {
       const inp = blocked ? EMPTY_INPUT : this.input;
+      // [FPS] o Bob SEMPRE olha para onde a mira aponta: a cabeça sobe,
+      // desce e gira acompanhando o foco (câmera + desvio da mira + coice)
+      this.player.human.lookPitch = this.camera.aimPitch;
+      this.player.human.lookYaw = this.camera.aimYaw;
       if (this.god) this.player.updateFly(dt, inp, this.camera.yaw);
       else this.player.update(dt, inp, this.camera.yaw);
       this.player.focusPoint(this._focus);
+      /*
+       * [27][FPS] Segurou ATIRAR (botão da tela, tecla E ou mouse):
+       * os braços erguem com a pistola, a câmera fecha o zoom de mira
+       * (ADS — o "zoom que fixa a mira") e a arma na tela sobe para o
+       * centro. Soltou, tudo volta ao normal sozinho.
+       */
+      const aimando = !blocked && (this.input.toque.atirar
+        || this.input.mouseDown || this.input.segurando('atirar'));
+      this.player.setAiming(aimando);
+      this.camera.setAds(aimando);
+      if (this.viewmodel) this.viewmodel.setAds(aimando);
     } else if (this.mode === 'cable') {
       // [54] o corpo olha para onde a câmera aponta; a POSIÇÃO é acertada
       // depois que a cabine anda, mais abaixo
       this.player.yaw = dampAngle(this.player.yaw, this.camera.yaw + Math.PI, PLAYER.turnSmooth, dt);
+      this.player.human.lookPitch = 0;
+      this.player.human.lookYaw = 0;
       this.player.human.update(dt, 0);
+      this.player.setAiming(false);
+      this.camera.setAds(false);
     } else if (this.mode === 'car') {
       this._updatePlayerCar(dt, blocked);
       const p = this.playerCar.root.position;
       this._focus.set(p.x, p.y + 1.5, p.z);
+      this.player.human.lookPitch = 0;
+      this.player.human.lookYaw = 0;
       this.player.human.update(dt, 0);
+      this.player.setAiming(false);
+      this.camera.setAds(false);
     } else {
       this._updateHeliControls(dt, blocked);
       const p = this.heli.root.position;
       this._focus.set(p.x, p.y + 1.2, p.z);
+      this.camera.setAds(false);
     }
 
     // ------------------------------------------------ mundo
@@ -1872,6 +1965,7 @@ export class Game {
       this.player.teleport(this._tmpV.x, this._tmpV.z, this._tmpV.y);
       this.player.human.root.rotation.y = this.player.yaw;
       this.player.focusPoint(this._focus);
+      this.player.setAiming(false);   // [27] na cabine do teleférico o Bob não ergue a pistola
     }
     this.terrain.update(dt);
     this.traffic.update(dt, night);                           // [4]
@@ -2203,6 +2297,8 @@ export class Game {
 
     // ---- mira só faz sentido quando dá para atirar
     this.hud.setCrosshairVisible(true);
+    // [FPS] com o zoom de mira fechado, a mira desliza para o centro
+    this.hud.setAds(this.camera.isAds);
     this._updateAimFeedback();
   }
 
@@ -2263,6 +2359,9 @@ export class Game {
 
   /** [37] Realça a mira quando ela está sobre uma pessoa ou carro. */
   _updateAimFeedback() {
+    // [perf] metade dos traces: o realce da mira 1 frame atrasado e invisivel
+    this._aimTick = (this._aimTick || 0) + 1;
+    if (this._aimTick & 1) return;
     const { origin, direction } = this.camera.aimRay(this._aimOrigin, this._aimDir);
     const hit = this.bullets._trace(origin, direction, 220);
     this.hud.setOnTarget(!!hit && (hit.kind === 'ped' || hit.kind === 'car'));
