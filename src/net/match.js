@@ -101,9 +101,9 @@ export class Match {
     this.netStatus.setEstado('conectando');
     if (this.modo === 'br') this.brHud.mostrar();
     const joy = document.getElementById('mp-joy');
-    if (joy) joy.classList.remove('hidden');
+    if (joy) joy.classList.toggle('hidden', !(this.game && this.game.toque));
     const look = document.getElementById('mp-look');
-    if (look) look.classList.remove('hidden');
+    if (look) look.classList.toggle('hidden', !(this.game && this.game.toque));
     // botão de pausa na tela (só no toque; no PC é ESC/Pause)
     this._pausaBtn = document.getElementById('mp-pausa');
     if (this._pausaBtn) {
