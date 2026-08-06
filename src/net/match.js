@@ -67,6 +67,7 @@ export class Match {
     this.carrosMp = new Map();   // id -> { mesh: Car, x, y, z, playerId }
     this._emCarro = false;
     this._toggleCar = false;
+    this._fireBtn = false;   // gatilho do botão ATIRAR do toque (segurar = rajada)
 
     this._ligarListeners();
   }
@@ -104,6 +105,8 @@ export class Match {
     if (joy) joy.classList.toggle('hidden', !(this.game && this.game.toque));
     const look = document.getElementById('mp-look');
     if (look) look.classList.toggle('hidden', !(this.game && this.game.toque));
+    const pad = document.getElementById("mp-pad");
+    if (pad) pad.classList.toggle("hidden", !(this.game && this.game.toque));
     // botão de pausa na tela (só no toque; no PC é ESC/Pause)
     this._pausaBtn = document.getElementById('mp-pausa');
     if (this._pausaBtn) {
@@ -245,6 +248,25 @@ export class Match {
       }
     };
 
+    // botões de ação do toque (ATIRAR/PULAR/AÇÃO/CORRER) — mesmo padrão do solo
+    this._mpBtns = [];
+    const ligaBtn = (id, down, up) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const d = (ev) => { ev.preventDefault(); ev.stopPropagation(); down(); el.classList.add('press'); };
+      const u = (ev) => { ev.preventDefault(); ev.stopPropagation(); if (up) up(); el.classList.remove('press'); };
+      el.addEventListener('touchstart', d, { passive: false });
+      el.addEventListener('touchend', u, { passive: false });
+      el.addEventListener('touchcancel', u, { passive: false });
+      el.addEventListener('mousedown', d);
+      el.addEventListener('mouseup', u);
+      el.addEventListener('mouseleave', u);
+      this._mpBtns.push({ el, d, u });
+    };
+    ligaBtn('mp-atirar', () => { this._fireBtn = true; }, () => { this._fireBtn = false; });
+    ligaBtn('mp-pular', () => { this.inp.jump = true; }, () => { this.inp.jump = false; });
+    ligaBtn('mp-acao', () => { this._toggleCar = true; });
+    ligaBtn('mp-correr', () => { this.inp.run = true; }, () => { this.inp.run = false; });
     window.addEventListener('keydown', this._kd);
     window.addEventListener('keyup', this._ku);
     window.addEventListener('pointerdown', this._pd);
@@ -440,7 +462,7 @@ export class Match {
         moveZ: this.inp.mz,
         run: this.inp.run,
         jump: this.inp.jump,
-        fire: !!(this._fire || this._dragOn),
+        fire: !!(this._fire || this._dragOn || this._fireBtn),
         ads: this.inp.ads,
         car: this._toggleCar ? this._alvoCarro() : null,
       });
@@ -683,6 +705,18 @@ export class Match {
     if (joy) joy.classList.add('hidden');
     const look = document.getElementById('mp-look');
     if (look) look.classList.add('hidden');
+    for (const b of this._mpBtns) {
+      b.el.removeEventListener("touchstart", b.d);
+      b.el.removeEventListener("touchend", b.u);
+      b.el.removeEventListener("touchcancel", b.u);
+      b.el.removeEventListener("mousedown", b.d);
+      b.el.removeEventListener("mouseup", b.u);
+      b.el.removeEventListener("mouseleave", b.u);
+    }
+    this._mpBtns = [];
+    const pad = document.getElementById("mp-pad");
+    const pad = document.getElementById("mp-pad");
+    if (pad) pad.classList.add("hidden");
     const ov = document.getElementById('mp-overlay');
     if (ov) ov.classList.add('hidden');
     const ab = document.getElementById('title-screen');

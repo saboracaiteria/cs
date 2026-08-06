@@ -444,12 +444,12 @@
 
 <div id="mp-joy" class="hidden"><div class="knob"></div></div>
 <div id="mp-look" class="hidden"></div>
-
-<div id="mp-overlay" class="hidden">
-  <div class="ov-titulo"></div>
-  <div class="ov-sub"></div>
-  <div class="ov-kills"></div>
-  <button type="button" class="mp-btn" style="display:none">SAIR DA PARTIDA</button>
+<!-- botões de ação do toque: ATIRAR/PULAR/AÇÃO/CORRER (mesmo padrão do modo solo) -->
+<div id="mp-pad" class="hidden">
+  <button type="button" class="tc-btn tc-fogo" id="mp-atirar" data-segura="atirar">ATIRAR</button>
+  <button type="button" class="tc-btn tc-pular" id="mp-pular">PULAR</button>
+  <button type="button" class="tc-btn tc-acao" id="mp-acao">AÇÃO</button>
+  <button type="button" class="tc-btn tc-sec tc-descer" id="mp-correr" title="Correr">⚡</button>
 </div>
 <!-- ==================== FIM MULTIJOGADOR ==================== -->
 <div id="fatal" class="hidden"></div>
