@@ -117,10 +117,10 @@ function handle(ws, msg) {
         return;
       }
       const room = manager.join(ws, nick, modo);
-      // bots preenchem vagas quando faltam humanos (até minPlayers)
+      // bots preenchem TODAS as vagas — jogar sozinho funciona (partida cheia de bots)
       const cfg = MODES[modo];
       const rng = makeRng(Date.now() & 0xffffffff);
-      while (room.totalSlots < cfg.minPlayers) {
+      while (room.totalSlots < cfg.maxPlayers) {
         const bot = makeBot(pickBotName(rng));
         room.addBot(bot);
       }
