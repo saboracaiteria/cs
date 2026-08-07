@@ -56,7 +56,7 @@ export class SnapshotBuffer {
       let dy = ay - (ant.yaw ?? ay);
       while (dy > Math.PI) dy -= Math.PI * 2;
       while (dy < -Math.PI) dy += Math.PI * 2;
-      yaw = (ant.yaw ?? ay) + dy * k;
+      yaw = (ant.yaw ?? ay) + dy * alpha;
     }
     return { ...a, ...pos, yaw, pitch: a.pitch ?? 0 };
   }
