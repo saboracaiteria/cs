@@ -57,26 +57,45 @@ export class RemotePlayer {
 
   /** Aplica dados do snapshot (posição já interpolada). */
   aplicar(d) {
-    this.x = d.x; this.y = d.y; this.z = d.z;
+    this._tX = d.x; this._tZ = d.z;
+    this._tY = d.y;   // alvos suavizados no update (degraus do servidor tremiam)
     this.yaw = d.yaw ?? this.yaw;
     this.pitch = d.pitch ?? this.pitch;
     this.hp = d.hp ?? this.hp;
     this.vivo = (d.hp ?? 1) > 0;
   }
 
-  /** Animação por quadro. */
-  update(dt, speed = 0) {
+  /** Animação por quadro. `animar=false` (LOD) ainda segue a posição. */
+  update(dt, speed = 0, animar = true) {
+    // suaviza X/Z: o servidor manda a 30 Hz em degraus e a rede entrega com
+    // jitter (o snapshot interpolado para e pula) — o damp mantém o corpo
+    // em movimento contínuo até o alvo; teleporte (respawn/carro) vai direto
+    const dx = (this._tX ?? this.x) - this.x;
+    const dz = (this._tZ ?? this.z) - this.z;
+    if (Math.abs(dx) > 2 || Math.abs(dz) > 2) { this.x += dx; this.z += dz; }
+    else {
+      // o avatar local usa damp mais forte: ele anda a 29 m/s e um atraso
+      // grande faria o corpo "escorregar" ao parar de correr
+      const k = Math.min(1, (this.local ? 40 : 18) * dt);
+      this.x += dx * k;
+      this.z += dz * k;
+    }
     this.root.position.set(this.x, this.y, this.z);
     // mesma convenção do single: o corpo olha para +Z em yaw 0 (câmera olha -Z).
     // O avatar local ainda ganha o bodyTurn (leve giro para expor a pistola),
     // exatamente como o Bob do modo solo.
     this.root.rotation.y = this.yaw + Math.PI + (this.local ? CAMERA.bodyTurn : 0);
+    // suaviza o Y: o servidor manda degraus de 0,01 m e o corpo "tremia" ao
+    // andar; pulo/queda (variação grande) passa direto (não achata a parábola)
+    const dy = (this._tY ?? this.y) - this.y;
+    this.y += Math.abs(dy) < 0.08 ? dy * Math.min(1, 18 * dt) : dy;
+    if (!animar) return;   // posição segue; passos/asa em câmera lenta
     this.human.lookYaw = 0;
     this.human.lookPitch = this.pitch;
     this.human.update(dt, speed);
     if (!this.local) this.root.visible = this.vivo;
-    this.loro.visible = this.vivo;
-    if (this.vivo) {
+    this.loro.visible = this.vivo && !this._loroSkip;
+    if (this.vivo && !this._loroSkip) {
       if (this._loroYaw == null) this._loroYaw = this.yaw + Math.PI;
       let d = this.yaw + Math.PI - this._loroYaw;
       while (d > Math.PI) d -= Math.PI * 2;

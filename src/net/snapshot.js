@@ -4,18 +4,26 @@
  * a posição de cada jogador entre o snap anterior e o atual (latência zero
  * de movimento para o olho).
  */
+// intervalo nominal entre snapshots do servidor (30 Hz). O alpha NÃO usa o
+// intervalo entre CHEGADAS: com jitter de rede (Wi-Fi/celular) o movimento
+// engasgava — acelerava e congelava a cada pacote atrasado
+const TICK_MS = 1000 / 30;
+
 export class SnapshotBuffer {
   constructor() {
-    this.anterior = null;   // {t, data}
-    this.atual = null;      // {t, data}
-    this.t = 0;             // tempo entre os dois (s)
+    this.anterior = null;   // {t, data, seq}
+    this.atual = null;      // {t, data, seq}
+    this.t = TICK_MS;       // duração da interpolação (ms)
   }
 
   /** Empurra um snap novo (já parseado). */
   push(snap, agoraMs = performance.now()) {
     if (this.atual) this.anterior = this.atual;
-    this.atual = { t: agoraMs, data: snap };
-    this.t = Math.max(0.001, this.atual.t - (this.anterior ? this.anterior.t : this.atual.t));
+    this.atual = { t: agoraMs, data: snap, seq: snap.seq ?? 0 };
+    // duração = nº de ticks ENTRE os dois snaps (seq) × tick nominal; se um
+    // pacote se perdeu, a interpolação continua na velocidade real do jogo
+    const dSeq = this.anterior ? Math.max(1, (snap.seq ?? 0) - (this.anterior.seq ?? 0)) : 1;
+    this.t = Math.max(0.001, dSeq * TICK_MS);
   }
 
   /** Fator de interpolação 0..1 entre anterior e atual. */

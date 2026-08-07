@@ -78,6 +78,16 @@ export class Match {
     this._recoilP = 0;       // coice acumulado na inclinação (rad)
     this._recoilY = 0;       // coice acumulado na deriva lateral (rad)
     this._shake = 0;         // tremida do tiro
+    // [FPS] vetores temporários reutilizados — sem new Vector3 por frame
+    // (alocação/GC derrubava o FPS no MP, que já roda 8 avatares extras)
+    this._vNdc = new THREE.Vector3(0.24, 0.2, 0.5);
+    this._vDir = new THREE.Vector3();
+    this._vBack = new THREE.Vector3();
+    this._vRight = new THREE.Vector3();
+    this._vT0 = new THREE.Vector3();
+    this._vT1 = new THREE.Vector3();
+    this._vT2 = new THREE.Vector3();
+    this._animF = 0;         // contador p/ LOD de animação (avatares distantes)
 
     this._ligarListeners();
   }
@@ -510,6 +520,7 @@ export class Match {
     }
     // interpola avatares
     const alpha = this.snapBuf.alpha();
+    this._animF++;
     for (const [id, rp] of this.avatares) {
       const d = this.snapBuf.ler(id, alpha);
       if (!d) continue;
@@ -529,7 +540,13 @@ export class Match {
       }
       // velocidades do MP/BR (12.8/29 — DOBRADAS vs solo 6.4/14.5)
       const vel = Math.hypot(d.moveX || 0, d.moveZ || 0) * (d.run ? 29 : 12.8);
-      rp.update(dt, vel);
+      // [FPS] LOD de animação: avatar longe anima a cada 3º frame (a posição
+      // continua seguindo a 60fps; só os passos/asa ficam em câmera lenta)
+      const distCam = rp.local ? 0 : Math.hypot(rp.x - this.camera.position.x, rp.z - this.camera.position.z);
+      rp._loroSkip = !rp.local && distCam > 45;   // papagaio longe some da cena
+      // fase por id: cada avatar longe anima em frames diferentes (em vez de
+      // todos no mesmo, o que "pulava" a animação em rajada)
+      rp.update(dt, vel, rp.local || distCam < 28 || (this._animF + id) % 3 === 0);
       // corpo do próprio jogador visível a pé; dentro do carro ele some
       if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro;
     }
@@ -538,7 +555,11 @@ export class Match {
     // atrás e à direita do Bob, que fica visível com a arma na mão
     const eu = this.snapBuf.ler(this.meuId, alpha);
     const foc = this._camFocus;
-    if (eu) foc.set(eu.x, eu.y + 1.48, eu.z);
+    // o foco segue o CORPO VISUAL do Bob (posição suavizada pelo damp), não o
+    // snap cru — o alvo da câmera fica contínuo mesmo com jitter de rede
+    const rpLoc = this.avatares.get(this.meuId);
+    if (rpLoc) foc.set(rpLoc.x, rpLoc.y + 1.48, rpLoc.z);
+    else if (eu) foc.set(eu.x, eu.y + 1.48, eu.z);
     else foc.set(0, 2, 0);
     // [câmera] amortecimento do foco IGUAL ao do modo solo (camera.js lag):
     // sem este suavizador a câmera do MP acompanhava o jogador SEM atraso e
@@ -554,8 +575,8 @@ export class Match {
     // aimRay do solo). yaw/pitch puro aponta para o CENTRO da tela, e a mira
     // fica deslocada no ombro: a bala errava tudo que se apontava.
     this.camera.updateMatrixWorld();
-    const ndcM = new THREE.Vector3(0.24, 0.2, 0.5).unproject(this.camera);
-    this._fireDir = ndcM.sub(this.camera.position).normalize();
+    this._vNdc.set(0.24, 0.2, 0.5).unproject(this.camera);
+    this._fireDir = this._vNdc.sub(this.camera.position).normalize();
     // [tiro] tracer local — dano é autoritativo do servidor (feedback igual ao solo)
     if ((this._fire || this._fireBtn) && foc) {
       const agoraT = performance.now();
@@ -569,16 +590,18 @@ export class Match {
         // origem da câmera (fpx/fpy/fpz) e esta MESMA direção. Sem o deslocamento,
         // o traço começava atrás do ombro da câmera e o tiro parecia sair de trás
         // do corpo do jogador.
-        const oT = this.camera.position.clone();
+        const oT = this._vT0.copy(this.camera.position);
         const tIni = Math.max(0, (foc.x - oT.x) * dxT + (foc.y - oT.y) * dyT + (foc.z - oT.z) * dzT - 0.2);
         oT.addScaledVector(this._fireDir, tIni);
         const colT = this.game.col;
-        let fimT = null;
+        const fimT = this._vT1;
         if (colT) {
           const hitT = colT.raycast(oT.x, oT.y, oT.z, dxT, dyT, dzT, 160);
-          if (hitT) fimT = new THREE.Vector3(oT.x + dxT * hitT.t, oT.y + dyT * hitT.t, oT.z + dzT * hitT.t);
+          if (hitT) fimT.set(oT.x + dxT * hitT.t, oT.y + dyT * hitT.t, oT.z + dzT * hitT.t);
+          else fimT.copy(oT).addScaledVector(this._fireDir, 160);
+        } else {
+          fimT.copy(oT).addScaledVector(this._fireDir, 160);
         }
-        if (!fimT) fimT = oT.clone().add(new THREE.Vector3(dxT, dyT, dzT).multiplyScalar(160));
         if (!this._tracer) {
           const gT = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
           this._tracer = new THREE.Line(gT, new THREE.LineBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0.85 }));
@@ -591,7 +614,7 @@ export class Match {
         posT.needsUpdate = true;
         this._tracer.visible = true;
         this._tracerVida = 0.08;
-        this.game.bullets?.fire(oT, new THREE.Vector3(dxT, dyT, dzT));
+        this.game.bullets?.fire(oT, this._vT2.set(dxT, dyT, dzT));
         if (this.game && this.game.audio) this.game.audio.tiro();
         // [FPS] tremida e coice da câmera, iguais ao solo
         this._shake = Math.min(1.4, this._shake + 0.16);
@@ -634,13 +657,13 @@ export class Match {
       9, dt,
     );
     const cp = Math.cos(pitchE), sp = Math.sin(pitchE);
-    const dir = new THREE.Vector3(-Math.sin(yawE) * cp, sp, -Math.cos(yawE) * cp);
+    const dir = this._vDir.set(-Math.sin(yawE) * cp, sp, -Math.cos(yawE) * cp);
     let dist = this._camDist;
     // olhar para cima encurta o braço: sem isto a câmera mergulha no chão
     const t = (pitchE - CAMERA.pitchTuckStart) / (CAMERA.pitchMax - CAMERA.pitchTuckStart);
     dist *= 1 - clamp(t, 0, 1) * CAMERA.pitchTuck;
-    const back = dir.clone().negate();
-    const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+    const back = this._vBack.copy(dir).negate();
+    const right = this._vRight.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
     const col = this.game.col;
     // não deixa a câmera entrar dentro de prédio
     if (col) {
