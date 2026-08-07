@@ -38,7 +38,7 @@ export class RemotePlayer {
       pants: this.local ? 0x3d4a5c : (h % 2 ? 0x23252e : 0x3a3d45),
       skin: this.local ? 0xd9a066 : 0xe8b48c,
       hair: this.local ? 0x2a1f14 : [0x1c1e24, 0x4a2f1f, 0x6b4a2f][h % 3],
-      fullShadow: false,
+      fullShadow: !!opts.local,
     });
     // arma na mão — a mesma pistola do personagem principal
     this.human.setWeapon(makePistola());
@@ -73,7 +73,14 @@ export class RemotePlayer {
     this.human.update(dt, speed);
     if (!this.local) this.root.visible = this.vivo;
     this.loro.visible = this.vivo;
-    if (this.vivo) this.loro.update(dt, this.root.position, this.yaw + Math.PI, speed);
+    if (this.vivo) {
+      if (this._loroYaw == null) this._loroYaw = this.yaw + Math.PI;
+      let d = this.yaw + Math.PI - this._loroYaw;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      this._loroYaw += d * Math.min(1, 12 * dt);
+      this.loro.update(dt, this.root.position, this._loroYaw, speed);
+    }
   }
 
   remover() {

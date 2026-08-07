@@ -49,7 +49,16 @@ export class SnapshotBuffer {
     const pos = this.posicao(id, alpha);
     const a = this.atual ? this.atual.data.players.find((p) => p.id === id) : null;
     if (!pos || !a) return null;
-    return { ...a, ...pos, yaw: a.yaw ?? 0, pitch: a.pitch ?? 0 };
+    const ant = this.anterior ? this.anterior.data.players.find((p) => p.id === id) : null;
+    const ay = a.yaw ?? 0;
+    let yaw = ay;
+    if (ant) {
+      let dy = ay - (ant.yaw ?? ay);
+      while (dy > Math.PI) dy -= Math.PI * 2;
+      while (dy < -Math.PI) dy += Math.PI * 2;
+      yaw = (ant.yaw ?? ay) + dy * k;
+    }
+    return { ...a, ...pos, yaw, pitch: a.pitch ?? 0 };
   }
 
   limpar() {

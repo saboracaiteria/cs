@@ -67,7 +67,7 @@ export function updateCars(world, cars, dt) {
 
     // esterço proporcional à velocidade
     if (Math.abs(c.speed) > 0.4) {
-      const steer = clamp(inp.moveX, -1, 1) * CAR.steer * Math.min(1, Math.abs(c.speed) / 9);
+      const steer = -clamp(inp.moveX, -1, 1) * CAR.steer * Math.min(1, Math.abs(c.speed) / 9);
       c.yaw += steer * dt * (c.speed >= 0 ? 1 : -1);
     }
 
