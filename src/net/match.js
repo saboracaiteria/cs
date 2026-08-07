@@ -108,7 +108,6 @@ export class Match {
     const pad = document.getElementById("mp-pad");
     if (pad) pad.classList.toggle("hidden", !(this.game && this.game.toque));
     if (this.game && this.game.toque && this.game._telaCheia) this.game._telaCheia();
-    if (this.game && this.game.toque && this.game._telaCheia) this.game._telaCheia();
     // botão de pausa na tela (só no toque; no PC é ESC/Pause)
     this._pausaBtn = document.getElementById('mp-pausa');
     if (this._pausaBtn) {
