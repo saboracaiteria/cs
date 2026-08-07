@@ -518,9 +518,14 @@ export class Match {
         const rpLoc = this.avatares.get(this.meuId);
         if (rpLoc) rpLoc.setAiming(true);
         const dxT = this._fireDir.x, dyT = this._fireDir.y, dzT = this._fireDir.z;
-        // a bala nasce na CÂMERA (a linha EXATA da mira — a mesma origem que o
-        // servidor usa via fpx/fpy/fpz): o dano cai onde o tracer/bala aponta
+        // a bala/tracer VISUAL nascem à FRENTE do peito do Bob, na linha EXATA
+        // da mira (câmera→NDC): o dano do servidor não muda — ele valida com a
+        // origem da câmera (fpx/fpy/fpz) e esta MESMA direção. Sem o deslocamento,
+        // o traço começava atrás do ombro da câmera e o tiro parecia sair de trás
+        // do corpo do jogador.
         const oT = this.camera.position.clone();
+        const tIni = Math.max(0, (foc.x - oT.x) * dxT + (foc.y - oT.y) * dyT + (foc.z - oT.z) * dzT - 0.2);
+        oT.addScaledVector(this._fireDir, tIni);
         const colT = this.game.col;
         let fimT = null;
         if (colT) {

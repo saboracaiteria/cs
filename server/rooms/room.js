@@ -363,7 +363,7 @@ export class Room {
     let best = null, bestT = Infinity;
     for (const alvo of this._all()) {
       if (alvo === p || !alvo.body || alvo.hp <= 0) continue;
-      const t = raySphere(ox, oy, oz, dx, dy, dz, alvo.body.pos, 0.45);
+      const t = rayCapsule(ox, oy, oz, dx, dy, dz, alvo.body.pos);
       if (t !== null && t < bestT && t < maxT) {
         bestT = t;
         best = { alvo };
@@ -495,4 +495,19 @@ function raySphere(ox, oy, oz, dx, dy, dz, c, r) {
   if (disc < 0) return null;
   const t = (-b - Math.sqrt(disc)) / 2;
   return t > 0 ? t : null;
+}
+
+/**
+ * Hitbox humano: cápsula de 3 esferas sobre o chão — pés, tronco e cabeça.
+ * Uma esfera única centrada em body.pos (o CHÃO) só cobria os pés, e o tiro
+ * no peito passava por cima dela: o alvo só morria mirando na base.
+ */
+function rayCapsule(ox, oy, oz, dx, dy, dz, pos) {
+  const esferas = [[0.35, 0.38], [0.95, 0.52], [1.6, 0.32]];
+  let menor = null;
+  for (const [h, r] of esferas) {
+    const t = raySphere(ox, oy, oz, dx, dy, dz, { x: pos.x, y: pos.y + h, z: pos.z }, r);
+    if (t !== null && (menor === null || t < menor)) menor = t;
+  }
+  return menor;
 }

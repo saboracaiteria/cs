@@ -323,8 +323,11 @@
 /* Status de Conexão (Ping & Estado) */
 #net-status {
   position: fixed;
-  top: max(18px, env(safe-area-inset-top));
-  left: 220px;
+  /* canto sup. direito, abaixo do ☰ de pausa (44px) e acima do killfeed:
+     não fica em cima de corações/relógio/BR-hud como ficava em left:220px */
+  top: calc(max(18px, env(safe-area-inset-top)) + 54px);
+  right: max(20px, env(safe-area-inset-right));
+  left: auto;
   z-index: 96;
   display: flex;
   align-items: center;

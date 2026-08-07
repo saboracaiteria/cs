@@ -7,7 +7,7 @@ export const WEAPONS = {
   pistola: {
     id: 'pistola',
     nome: 'Pistola',
-    damage: 24,
+    damage: 34,
     range: 90,
     cooldown: 0.16,       // cadência ~375 RPM (igual à campanha)
     headshotMult: 2.0,
@@ -17,7 +17,7 @@ export const WEAPONS = {
   metralhadora: {
     id: 'metralhadora',
     nome: 'Metralhadora',
-    damage: 14,
+    damage: 20,
     range: 110,
     cooldown: 0.09,
     headshotMult: 1.8,
@@ -26,7 +26,7 @@ export const WEAPONS = {
   escopeta: {
     id: 'escopeta',
     nome: 'Escopeta',
-    damage: 11,            // por pellet (8 pellets)
+    damage: 12,            // por pellet (8 pellets = 96)
     pellets: 8,
     range: 40,
     cooldown: 0.85,
@@ -36,7 +36,7 @@ export const WEAPONS = {
   rifle: {
     id: 'rifle',
     nome: 'Rifle de Precisão',
-    damage: 85,
+    damage: 100,
     range: 300,
     cooldown: 1.4,
     headshotMult: 2.5,
