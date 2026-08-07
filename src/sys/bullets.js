@@ -44,6 +44,8 @@ export class BulletSystem {
     this.targets = { peds: null, cars: null, foes: null };
     /** Veículo pilotado pelo jogador: os tiros saem de dentro dele e não devem acertá-lo. */
     this.ignoreCar = null;
+    /** Inimigo que dispara (o próprio Bob no MP): a bala nasce no peito dele e não pode acertá-lo. */
+    this.ignoreFoe = null;
 
     this._tmp = new THREE.Vector3();
     this._q = new THREE.Quaternion();
@@ -148,7 +150,7 @@ export class BulletSystem {
     // --- inimigos da campanha (arena de fase)
     if (this.targets.foes) {
       for (const foe of this.targets.foes) {
-        if (!foe.vivo) continue;
+        if (!foe.vivo || foe === this.ignoreFoe) continue;
         const c = foe.root.position;
         const t = this._segSphere(
           from, dir, dist, c.x, c.y + foe.alturaAlvo, c.z, foe.raioAcerto,

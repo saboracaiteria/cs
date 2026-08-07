@@ -23,10 +23,9 @@ export const PLAYER = {
   radius: 0.42,
   height: 1.78,
   eye: 1.62,
-  // ~20% mais lento que o solo (6.4/14.5) a pedido: no MP a sensação de
-  // velocidade com latência é maior, e os duelos ficam mais justos
-  walkSpeed: 5.1,
-  runSpeed: 11.6,
+  // DOBRADA a pedido (2x o solo 6.4/14.5): no MP/BR o Bob é mais veloz
+  walkSpeed: 12.8,
+  runSpeed: 29.0,
   accel: 58,
   jumpSpeed: 7.4,
   gravity: 26,

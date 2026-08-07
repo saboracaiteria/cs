@@ -81,23 +81,30 @@ export function stepBody(world, body, inp, dt) {
   // ---- gravidade
   body.vel.y -= P.gravity * dt;
 
-  // ---- integração
-  body.pos.x += body.vel.x * dt;
-  body.pos.z += body.vel.z * dt;
-  body.pos.y += body.vel.y * dt;
+  // ---- integração SUBDIVIDIDA: com a velocidade dobrada o passo por tick
+  // chega a ~1 m — sub-passos de 0.3 m garantem que postes/árvores finos
+  // não sejam pulados por cima
+  const dist = Math.hypot(body.vel.x, body.vel.y, body.vel.z) * dt;
+  const sub = Math.max(1, Math.ceil(dist / 0.3));
+  const sdt = dt / sub;
+  for (let i = 0; i < sub; i++) {
+    body.pos.x += body.vel.x * sdt;
+    body.pos.z += body.vel.z * sdt;
+    body.pos.y += body.vel.y * sdt;
 
-  // ---- chão
-  const g = groundY(world, body.pos.x, body.pos.z, body.pos.y + 0.3);
-  if (body.pos.y <= g) {
-    body.pos.y = g;
-    body.vel.y = 0;
-    body.onGround = true;
-  } else {
-    body.onGround = false;
+    // ---- chão
+    const g = groundY(world, body.pos.x, body.pos.z, body.pos.y + 0.3);
+    if (body.pos.y <= g) {
+      body.pos.y = g;
+      body.vel.y = 0;
+      body.onGround = true;
+    } else {
+      body.onGround = false;
+    }
+
+    // ---- colisão com sólidos (prédios, postes, guarda-corpo)
+    col.resolveCircle(body.pos, P.radius, P.height);
   }
-
-  // ---- colisão com sólidos (prédios, postes, guarda-corpo)
-  col.resolveCircle(body.pos, P.radius, P.height);
 
   // ---- limite do mundo (nunca deixa fugir do mapa)
   const LIM = 2500;

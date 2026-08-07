@@ -69,6 +69,13 @@ export class Match {
     this._toggleCar = false;
     this._fireBtn = false;   // gatilho do botão ATIRAR do toque (segurar = rajada)
 
+    // [FPS] ADS e coice da câmera, iguais ao solo (o camera.update do single
+    // não roda no MP — o estado é replicado aqui)
+    this._adsAmt = 0;        // 0..1, quão fechado está o zoom de mira
+    this._recoilP = 0;       // coice acumulado na inclinação (rad)
+    this._recoilY = 0;       // coice acumulado na deriva lateral (rad)
+    this._shake = 0;         // tremida do tiro
+
     this._ligarListeners();
   }
 
@@ -482,8 +489,8 @@ export class Match {
       } else if (rp.vivo) {
         rp._explodiu = false;
       }
-      // velocidades do MP/BR (5.1/11.6 — ~20% abaixo do solo 6.4/14.5)
-      const vel = Math.hypot(d.moveX || 0, d.moveZ || 0) * (d.run ? 11.6 : 5.1);
+      // velocidades do MP/BR (12.8/29 — DOBRADAS vs solo 6.4/14.5)
+      const vel = Math.hypot(d.moveX || 0, d.moveZ || 0) * (d.run ? 29 : 12.8);
       rp.update(dt, vel);
       // corpo do próprio jogador visível a pé; dentro do carro ele some
       if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro;
@@ -504,12 +511,15 @@ export class Match {
         this._lastTiroT = agoraT;
         const rpLoc = this.avatares.get(this.meuId);
         if (rpLoc) rpLoc.setAiming(true);
-        const dirT = new THREE.Vector3();
-        this.camera.getWorldDirection(dirT);
-        const dxT = dirT.x;
-        const dyT = dirT.y;
-        const dzT = dirT.z;
-        const oT = this.camera.position.clone().addScaledVector(dirT, 0.6);
+        // direção do tiro = yaw/pitch PUROS, mesma fórmula do servidor (o
+        // recuo da câmera é visual; a bala sai reta na mira)
+        const cpT = Math.cos(this.pitch), spT = Math.sin(this.pitch);
+        const dxT = -Math.sin(this.yaw) * cpT;
+        const dyT = spT;
+        const dzT = -Math.cos(this.yaw) * cpT;
+        // a bala nasce no PEITO do Bob — antes nascia na câmera, atrás dele,
+        // e o "fogo do cano" aparecia saindo das costas do player
+        const oT = new THREE.Vector3(foc.x, foc.y + 0.02, foc.z);
         const colT = this.game.col;
         let fimT = null;
         if (colT) {
@@ -531,6 +541,10 @@ export class Match {
         this._tracerVida = 0.08;
         this.game.bullets?.fire(oT, new THREE.Vector3(dxT, dyT, dzT));
         if (this.game && this.game.audio) this.game.audio.tiro();
+        // [FPS] tremida e coice da câmera, iguais ao solo
+        this._shake = Math.min(1.4, this._shake + 0.16);
+        this._recoilP += CAMERA.recoilPitch * (0.8 + Math.random() * 0.45);
+        this._recoilY += (Math.random() - 0.5) * 2 * CAMERA.recoilYaw;
       }
     }
     if (this._tracer) {
@@ -546,12 +560,32 @@ export class Match {
     this._sincronizarAlvosBala();
     if (this.game && this.game.bullets) this.game.bullets.update(dt);
     if (this.game && this.game.fx) this.game.fx.update(dt);
-    this._camDist = damp(this._camDist, noCarro ? CAMERA.carZoom : this._dist, 9, dt);
-    const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
-    const dir = new THREE.Vector3(-Math.sin(this.yaw) * cp, sp, -Math.cos(this.yaw) * cp);
+    // ---- [FPS] ADS, coice e tremida replicados do camera.update do SOLO
+    // (o GameCamera não roda no MP — a câmera aqui é a THREE pura)
+    const aimando = !!(this._fire || this._fireBtn);
+    this._adsAmt = damp(this._adsAmt, aimando ? 1 : 0, CAMERA.adsSpeed, dt);
+    const fovA = CAMERA.fov + (CAMERA.adsFov - CAMERA.fov) * this._adsAmt;
+    if (Math.abs(this.camera.fov - fovA) > 0.01) {
+      this.camera.fov = fovA;
+      this.camera.updateProjectionMatrix();
+    }
+    // o coice relaxa sozinho; em disparo contínuo ele empina
+    const recA = Math.exp(-CAMERA.recoilRecover * dt);
+    this._recoilP *= recA;
+    this._recoilY *= recA;
+    // olhar EFETIVO = olhar do jogador + coice (puxar o mouse anula o recuo)
+    const yawE = this.yaw + this._recoilY;
+    const pitchE = clamp(this.pitch + this._recoilP, CAMERA.pitchMin, CAMERA.pitchMax);
+    this._camDist = damp(
+      this._camDist,
+      noCarro ? CAMERA.carZoom : (aimando ? Math.min(this._dist, CAMERA.adsZoom) : this._dist),
+      9, dt,
+    );
+    const cp = Math.cos(pitchE), sp = Math.sin(pitchE);
+    const dir = new THREE.Vector3(-Math.sin(yawE) * cp, sp, -Math.cos(yawE) * cp);
     let dist = this._camDist;
     // olhar para cima encurta o braço: sem isto a câmera mergulha no chão
-    const t = (this.pitch - CAMERA.pitchTuckStart) / (CAMERA.pitchMax - CAMERA.pitchTuckStart);
+    const t = (pitchE - CAMERA.pitchTuckStart) / (CAMERA.pitchMax - CAMERA.pitchTuckStart);
     dist *= 1 - clamp(t, 0, 1) * CAMERA.pitchTuck;
     const back = dir.clone().negate();
     const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
@@ -575,6 +609,14 @@ export class Match {
     this._camLook.copy(foc);
     this._camLook.y += lift;
     this.camera.lookAt(this._camLook);
+    // [FPS] tremida do tiro (mesma _applyShake do solo)
+    if (this._shake > 0.001) {
+      const s = this._shake;
+      this.camera.position.x += (Math.random() - 0.5) * s * 0.5;
+      this.camera.position.y += (Math.random() - 0.5) * s * 0.5;
+      this.camera.position.z += (Math.random() - 0.5) * s * 0.5;
+      this._shake = Math.max(0, this._shake - dt * 2.4);
+    }
 
     // envia input a INPUT_HZ
     this._sendAcc += dt;
@@ -742,6 +784,9 @@ export class Match {
     }
     bul.targets.cars = cars.length ? { cars } : null;
     bul.ignoreCar = meuCarro;   // bala não acerta o próprio carro (sai de dentro dele)
+    // bala nasce no PEITO do Bob, que está na lista de avatares (foes) —
+    // sem isto o _segSphere devolve t=0 e o tiro se auto-acerta
+    bul.ignoreFoe = this.avatares.get(this.meuId)?._alvo || null;
   }
 
   /** Carro livre mais proximo do jogador (raio 4.5) ou 0 (sair do atual). */
@@ -872,6 +917,7 @@ export class Match {
       bul.setTargets(this.game.peds, this.game.cars);
       bul.setFoes(null);
       bul.ignoreCar = null;
+      bul.ignoreFoe = null;
       if (this._bulletsAntes) {
         bul.onHitFoe = this._bulletsAntes.onHitFoe;
         bul.onHitCar = this._bulletsAntes.onHitCar;
