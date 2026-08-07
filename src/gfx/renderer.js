@@ -71,15 +71,6 @@ export class Graphics {
       this.resize();
       console.warn('[gfx] contexto WebGL restaurado');
     });
-    document.addEventListener('fullscreenchange', this._onResize);
-    this.renderer.domElement.addEventListener('webglcontextlost', (e) => {
-      e.preventDefault();
-      console.warn('[gfx] contexto WebGL perdido — tentando restaurar...');
-    });
-    this.renderer.domElement.addEventListener('webglcontextrestored', () => {
-      this.resize();
-      console.warn('[gfx] contexto WebGL restaurado');
-    });
   }
 
   /**
