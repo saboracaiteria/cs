@@ -1,5 +1,5 @@
 /** Utilidades puras do servidor (sem THREE). */
-import { CELL, HALF } from './config.js';
+import { CELL, HALF, GRID } from './config.js';
 
 export const TAU = Math.PI * 2;
 export const smoothstep = (t) => t * t * (3 - 2 * t);
@@ -36,14 +36,35 @@ export const nodeCoord = (i) => i * CELL - HALF;
 /** Ponto livre perto de uma coordenada (tentativas até achar). */
 export function findFreeSpot(col, x, z, r = 0.5, tries = 12) {
   const rng = makeRng((Math.abs(x) * 131 + Math.abs(z) * 17 + 7) >>> 0);
-  for (let i = 0; i < tries; i++) {
-    const px = x + rngRange(rng, -3, 3);
-    const pz = z + rngRange(rng, -3, 3);
-    if (!col.isBlocked(px, pz, r)) {
-      const y = col.groundHeightAt(px, pz);
-      return { x: px, y, z: pz };
+  // busca em anéis de raio crescente: um ponto sorteado no meio de um
+  // quarteirão (prédio de 36 m) só escapa chegando à rua (≤ 32 m)
+  const aneis = [3, 8, 16, 28, 44];
+  for (const raio of aneis) {
+    for (let i = 0; i < tries; i++) {
+      const a = rng() * Math.PI * 2;
+      const px = x + Math.cos(a) * raio * Math.sqrt(rng());
+      const pz = z + Math.sin(a) * raio * Math.sqrt(rng());
+      if (!col.isBlocked(px, pz, r) && !col.isInWater(px, pz)) {
+        const y = col.groundHeightAt(px, pz);
+        return { x: px, y, z: pz };
+      }
     }
   }
-  // último recurso: usa o ponto original mesmo que bloqueado (fica fora do chão)
-  return { x, y: col.groundHeightAt(x, z) + 2, z };
+  // último recurso: o cruzamento de rua mais próximo (a malha de 64 m sempre
+  // tem rua aberta); se nem isso existir, nasce no topo do prédio, fora de
+  // qualquer colisão — nunca mais dentro de um sólido
+  const gi = Math.round((x + HALF) / CELL);
+  const gj = Math.round((z + HALF) / CELL);
+  for (let d = 0; d <= GRID + 1; d++) {
+    for (let i = gi - d; i <= gi + d; i++) {
+      for (let j = gj - d; j <= gj + d; j++) {
+        if (Math.max(Math.abs(i - gi), Math.abs(j - gj)) !== d) continue;
+        const px = i * CELL - HALF, pz = j * CELL - HALF;
+        if (!col.isBlocked(px, pz, r) && !col.isInWater(px, pz)) {
+          return { x: px, y: col.groundHeightAt(px, pz), z: pz };
+        }
+      }
+    }
+  }
+  return { x, y: Math.max(col.roofHeightAt(x, z) + 2, col.groundHeightAt(x, z) + 2), z };
 }
