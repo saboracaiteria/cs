@@ -2,7 +2,8 @@
  * Colisão dos marcos do mundo no servidor (Rio, IMG e Brasil).
  * Garante que a CollisionWorld do servidor seja 100% idêntica à do cliente.
  */
-import { CURB_H, BLOCK_INNER, CABLE } from '../config.js';
+import { CURB_H, BLOCK_INNER, CABLE, CELL } from '../config.js';
+import { nodeCoord } from '../util.js';
 import { terrainHeight } from './terrain.js';
 
 export const CORCOVADO = { x: -640, z: -300, r: 190, h: 165 };
@@ -144,10 +145,17 @@ export function buildLandmarksCollision(col) {
   }
 
   // ------------------------------------------------------------ Heliporto
-  const cxHeli = 2 * 64 - 256 + 32; // -96
-  const czHeli = 4 * 64 - 256 + 32; // 32
-  col.addBox(cxHeli, czHeli, 16, 16, CURB_H + 18, 'building');
-  col.addPlatform(cxHeli - 16, czHeli - 16, cxHeli + 16, czHeli + 16, () => CURB_H + 18);
+  // espelho do cliente (landmarks.js _heliport): disco de 0,35 m sobre a
+  // calçada, plataforma CIRCULAR — sem caixa sólida. A versão antiga usava
+  // coordenadas erradas (256 no lugar de HALF) e uma caixa de 32×32 até
+  // 18 m, um "prédio invisível" no cruzamento a sudoeste do heliporto que
+  // bloqueava a rua e cortava o pulo.
+  const cxHeli = nodeCoord(2) + CELL / 2;   // -64
+  const czHeli = nodeCoord(4) + CELL / 2;   // 64
+  const R = BLOCK_INNER / 2 - 2;            // 16
+  const padY = CURB_H + 0.35;
+  col.addPlatform(cxHeli - R, czHeli - R, cxHeli + R, czHeli + R,
+    (px, pz) => (Math.hypot(px - cxHeli, pz - czHeli) <= R ? padY : null), true);
 }
 
 export function buildIMGBuildingsCollision(col) {
@@ -158,9 +166,10 @@ export function buildIMGBuildingsCollision(col) {
   const PORTA_W = 7;
   const PISO = CURB_H;
 
-  // Labs (3,3) -> cx = -32, cz = -32
-  // Estudio (3,4) -> cx = -32, cz = 32
-  for (const [cx, cz, alt] of [[-32, -32, 9], [-32, 32, 8]]) {
+  // Labs (3,3) -> cx = 0, cz = 0
+  // Estudio (3,4) -> cx = 0, cz = 64
+  // (centros dos blocos: nodeCoord + CELL/2 — o cliente os posiciona assim)
+  for (const [cx, cz, alt] of [[0, 0, 9], [0, 64, 8]]) {
     const top = PISO + alt;
     const ladoW = (larg - PORTA_W) / 2;
     for (const s of [-1, 1]) {
