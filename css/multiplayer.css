@@ -589,4 +589,6 @@
   bottom:calc(env(safe-area-inset-bottom) + 6px);
   z-index:96;
 }
-}
+#mp-pad .tc-btn{ pointer-events:auto; }
+#mp-correr{ background:rgba(20,120,255,.25); border-color:rgba(20,120,255,.55); color:#cfe4ff; }
+#mp-correr.press{ background:rgba(20,120,255,.5); }
