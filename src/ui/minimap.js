@@ -111,6 +111,16 @@ export class Minimap {
       }
     }
 
+    // ---- outros jogadores (multiplayer) — pontos vermelhos
+    if (marks.players && marks.players.length) {
+      ctx.fillStyle = 'rgba(255,77,77,.95)';
+      for (const pl of marks.players) {
+        const dx = pl.x - px, dz = pl.z - pz;
+        if (dx * dx + dz * dz > RANGE * RANGE) continue;
+        ctx.fillRect(TX(pl.x, pl.z) - 2.5, TY(pl.x, pl.z) - 2.5, 5, 5);
+      }
+    }
+
     /*
      * ---- portais das fases ----
      * Grudam na BORDA quando estão fora de alcance, com a letra do

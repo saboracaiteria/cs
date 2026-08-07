@@ -8,6 +8,7 @@ import { CollisionWorld } from './collision.js';
 import { terrainHeight, bridgeY, onBridge, LAKE, BRIDGE } from './terrain.js';
 import { buildCity } from './city.js';
 import { buildLandmarksCollision, buildIMGBuildingsCollision, buildBrazilLandmarksCollision } from './landmarksCollision.js';
+import { buildPropsCollision } from './propsCollision.js';
 import { CURB_H, HALF } from '../config.js';
 
 export function buildWorld() {
@@ -43,6 +44,9 @@ export function buildWorld() {
   buildLandmarksCollision(col);
   buildIMGBuildingsCollision(col);
   buildBrazilLandmarksCollision(col);
+
+  // postes e árvores (mesma seed 777 do cliente) — o jogador não atravessa no MP
+  buildPropsCollision(col, blocks);
 
   return { col, blocks, terrainHeight };
 }

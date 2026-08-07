@@ -430,10 +430,12 @@ export class Match {
         this._lastTiroT = agoraT;
         const rpLoc = this.avatares.get(this.meuId);
         if (rpLoc) rpLoc.setAiming(true);
-        const dxT = -Math.sin(this.yaw) * Math.cos(this.pitch);
-        const dyT = Math.sin(this.pitch);
-        const dzT = -Math.cos(this.yaw) * Math.cos(this.pitch);
-        const oT = foc.clone().add(new THREE.Vector3(dxT, dyT, dzT).multiplyScalar(1.3));
+        const dirT = new THREE.Vector3();
+        this.camera.getWorldDirection(dirT);
+        const dxT = dirT.x;
+        const dyT = dirT.y;
+        const dzT = dirT.z;
+        const oT = this.camera.position.clone().addScaledVector(dirT, 0.6);
         const colT = this.game.col;
         let fimT = null;
         if (colT) {
@@ -522,8 +524,12 @@ export class Match {
     }
     // minimapa do solo no MP: posição do jogador + círculo da zona no BR
     if (eu && this.game && this.game.minimap) {
-      const marks = { pickup: null, deliver: null, heli: null, portais: null };
+      const marks = { pickup: null, deliver: null, heli: null, portais: null, players: [] };
       if (this.modo === 'br' && this._zona) marks.zone = this._zona;
+      for (const [id, rp] of this.avatares) {
+        if (id === this.meuId || !rp || !rp.root) continue;
+        marks.players.push({ x: rp.root.position.x, z: rp.root.position.z });
+      }
       this.game.minimap.draw(dt, { x: eu.x, z: eu.z, yaw: this.yaw }, marks, null);
     }
     // rodas dos carros

@@ -17,6 +17,7 @@ export const LANE = 4.5;
 export const BLOCK_INNER = CELL - 2 * CURB;    // 36
 export const WORLD_EDGE = HALF + CELL * 0.5;
 
+export const PROP_OFF = 9.9;           // postes e árvores junto ao meio-fio (igual ao cliente)
 // ---------------------------------------------------------------- jogador
 export const PLAYER = {
   radius: 0.42,
