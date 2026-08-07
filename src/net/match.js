@@ -635,6 +635,7 @@ export class Match {
     this._sincronizarAlvosBala();
     if (this.game && this.game.bullets) this.game.bullets.update(dt);
     if (this.game && this.game.fx) this.game.fx.update(dt);
+    this._updateAimFeedback();   // mira vermelha sobre inimigos (como o solo)
     // ---- [FPS] ADS, coice e tremida replicados do camera.update do SOLO
     // (o GameCamera não roda no MP — a câmera aqui é a THREE pura)
     const aimando = !!(this._fire || this._fireBtn);
@@ -681,7 +682,24 @@ export class Match {
       lift = Math.max(0, floor - this.camera.position.y);
       this.camera.position.y += lift;
     }
-    this._camLook.copy(foc);
+    if (aimando) {
+      // [ADS] a câmera vira um tico para o lado da mira (offsets do NDC
+      // 0.24/0.2 com o FOV atual) — o alvo NÃO escorrega para o centro
+      // quando o zoom fecha: a mira fica onde está e apenas aproxima.
+      const halfW = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2) * this.camera.aspect;
+      const halfH = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2);
+      const ay = Math.atan(0.24 * halfW);
+      const ap = Math.atan(0.2 * halfH);
+      const ye = yawE + ay, pe = pitchE + ap;
+      const cpe = Math.cos(pe);
+      this._camLook.set(
+        foc.x - Math.sin(ye) * cpe * 12,
+        foc.y + Math.sin(pe) * 12,
+        foc.z - Math.cos(ye) * cpe * 12,
+      );
+    } else {
+      this._camLook.copy(foc);
+    }
     this._camLook.y += lift;
     this.camera.lookAt(this._camLook);
     // [FPS] tremida do tiro (mesma _applyShake do solo)
@@ -883,6 +901,20 @@ export class Match {
 
   /** Alvos locais das balas (avatares e carros) — o dano é do servidor;
    *  aqui é só o feedback visual (faísca no corpo/carro), igual ao solo. */
+  _updateAimFeedback() {
+    // [perf] metade dos traces: o realce da mira 1 frame atrasado é invisível
+    this._aimTick = (this._aimTick || 0) + 1;
+    if (this._aimTick & 1) return;
+    if (!this.game || !this.game.hud || !this.game.bullets) return;
+    const ndc = this._aimNdc || new THREE.Vector3(0.24, 0.2, 0.5);
+    this._aimNdc = ndc;
+    this.camera.updateMatrixWorld();
+    const dir = ndc.clone().unproject(this.camera).sub(this.camera.position).normalize();
+    const hit = this.game.bullets._trace(this.camera.position, dir, 220);
+    // mesma lógica do SOLO: a mira fica VERMELHA sobre inimigos e carros
+    this.game.hud.setOnTarget(!!hit && (hit.kind === 'foe' || hit.kind === 'car'));
+  }
+
   _sincronizarAlvosBala() {
     const bul = this.game && this.game.bullets;
     if (!bul) return;
@@ -893,6 +925,8 @@ export class Match {
       foes.push(rp._alvo);
     }
     bul.targets.foes = foes.length ? foes : null;
+    const euAlvo = this.avatares.get(this.meuId)?._alvo || null;
+    bul.ignoreFoe = euAlvo;   // a própria bala não acerta o próprio Bob
     const cars = [];
     let meuCarro = null;
     for (const cr of this.carrosMp.values()) {

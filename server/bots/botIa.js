@@ -91,7 +91,7 @@ export function makeBot(nick, dificuldade = 'media') {
         // foge para o centro da zona
         const toZ = Math.atan2(room.zone.x - this.body.pos.x, room.zone.z - this.body.pos.z);
         inp.yaw = toZ;
-        inp.moveZ = 1;
+        inp.moveZ = 0.5;
         inp.run = true;
         this.wanderT -= dt;
       } else if (best) {
@@ -111,7 +111,7 @@ export function makeBot(nick, dificuldade = 'media') {
           room.onShoot(this, { yaw: this.body.yaw, pitch: this.body.pitch });
         }
         // aproxima/recua um pouco
-        inp.moveZ = dist > 14 ? 1 : dist < 6 ? -1 : 0;
+        inp.moveZ = dist > 14 ? 0.5 : dist < 6 ? -0.5 : 0;
         inp.yaw = this.body.yaw;
         inp.run = true;
       } else {
@@ -124,7 +124,7 @@ export function makeBot(nick, dificuldade = 'media') {
         }
         const toW = Math.atan2(this.wanderX - this.body.pos.x, this.wanderZ - this.body.pos.z);
         inp.yaw = toW;
-        inp.moveZ = 1;
+        inp.moveZ = 0.5;
       }
 
       // BR: pega loot se estiver vazio (só arma)
@@ -138,7 +138,7 @@ export function makeBot(nick, dificuldade = 'media') {
         if (near) {
           const toL = Math.atan2(near.x - this.body.pos.x, near.z - this.body.pos.z);
           inp.yaw = toL;
-          inp.moveZ = 1;
+          inp.moveZ = 0.5;
           room.pickup(this);
         }
       }
