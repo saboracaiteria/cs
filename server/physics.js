@@ -50,7 +50,10 @@ export function stepBody(world, body, inp, dt) {
   body.pitch = clamp(inp.pitch ?? body.pitch, -1.4, 1.4);
 
   // ---- desejo de velocidade (relativo à câmera: moveX é "direita", moveZ é "frente")
-  const cy = body.yaw;
+  // Usa o yaw do INPUT (instantâneo), igual ao solo: o corpo suaviza no
+  // snapshot, mas o movimento acompanha o olhar na hora — sem o atraso do
+  // turnSmooth a direção do passo ficava "derrapando" em relação à câmera.
+  const cy = inp.yaw;
   const sinY = Math.sin(cy), cosY = Math.cos(cy);
   const wishX = (inp.moveZ * -sinY) + (inp.moveX * cosY);
   const wishZ = (inp.moveZ * -cosY) - (inp.moveX * sinY);

@@ -127,6 +127,19 @@ export class Match {
     // [Android] botão voltar da barra de navegação abre/fecha a pausa
     this._ligarBack();
 
+    // feedback local das balas (dano é do servidor): faísca vermelha ao
+    // acertar um avatar, laranja num carro — guarda os callbacks do solo
+    if (this.game && this.game.bullets) {
+      const bul = this.game.bullets;
+      this._bulletsAntes = {
+        onHitFoe: bul.onHitFoe, onHitCar: bul.onHitCar, onHitPed: bul.onHitPed,
+      };
+      this._up = new THREE.Vector3(0, 1, 0);
+      bul.onHitFoe = (foe, ponto) => this.game.fx.impact(ponto, this._up, { r: 3.2, g: 0.5, b: 0.4 });
+      bul.onHitCar = (car, ponto) => this.game.fx.impact(ponto, this._up, { r: 3.2, g: 1.8, b: 0.5 });
+      bul.onHitPed = null;
+    }
+
     // avatares para os jogadores conhecidos
     for (const [id, info] of this.nicks) this._garantirAvatar(id, info);
 
@@ -160,8 +173,10 @@ export class Match {
       this._norm();
     };
 
-    // mouse: mover = olhar (pointer lock) ou arrastar; clique = atirar
+    // mouse: mover = olhar (pointer lock) ou arrastar; clique = atirar.
+    // Toques NÃO atiram: no celular o gatilho é só o botão ATIRAR (igual ao solo)
     this._pd = (e) => {
+      if (e.pointerType === 'touch') return;
       this._dragX = e.clientX; this._dragY = e.clientY;
       this._dragOn = true;
       this._fire = true;
@@ -193,6 +208,9 @@ export class Match {
 
     this._touchStart = (e) => {
       for (const t of e.changedTouches) {
+        // toque em botão/menu: deixa o clique sintético acontecer (☰, pausa,
+        // placar...) — o preventDefault aqui matava os clicks no mobile
+        if (t.target.closest('button, .btn, [data-acao], [data-segura]')) continue;
         const x = t.clientX, y = t.clientY;
         const jr = this._joy ? this._joy.getBoundingClientRect() : null;
         if (jr && x >= jr.left && x <= jr.right && y >= jr.top && y <= jr.bottom) {
@@ -201,7 +219,8 @@ export class Match {
           this._joyTouch = { id: t.identifier, x, y };
           e.preventDefault();
         } else {
-          // área de olhar/atirar
+          // área de olhar: arrastar gira a câmera (tap curto NÃO atira —
+          // o gatilho é só o botão ATIRAR, igual ao modo solo)
           if (!this._lt) this._lt = { id: t.identifier, x, y, t0: performance.now(), drag: false };
           e.preventDefault();
         }
@@ -236,9 +255,7 @@ export class Match {
     this._touchEnd = (e) => {
       for (const t of e.changedTouches) {
         if (this._lt && t.identifier === this._lt.id) {
-          const foiTiro = !this._lt.drag && (performance.now() - this._lt.t0) < 350;
           this._lt = null;
-          if (foiTiro) this._fire = true;
         }
         if (this._joyTouch && t.identifier === this._joyTouch.id) {
           this._joyTouch = null;
@@ -317,6 +334,9 @@ export class Match {
       case T.PLAYER_LEFT:
       case T.BOT_SAIU:
         this._removerAvatar(msg.id);
+        break;
+      case T.CAR_BOOM:
+        this._explodirCarro(msg);
         break;
       case T.CHAT:
         break;
@@ -408,6 +428,16 @@ export class Match {
       // o avatar local gira com o mouse na hora (a posição continua vindo
       // do servidor) — sem isto a câmera parece "travada" pela latência
       if (rp.local) { rp.yaw = this.yaw; rp.pitch = this.pitch; }
+      // morte: o corpo explode como no solo (vale para bots e jogadores)
+      if (!rp.vivo && !rp._explodiu) {
+        rp._explodiu = true;
+        if (this.game && this.game.fx) {
+          this.game.fx.explode(new THREE.Vector3(rp.x, rp.y + 0.9, rp.z), 0.7);
+          if (this.game.audio) this.game.audio.explosao(0.7);
+        }
+      } else if (rp.vivo) {
+        rp._explodiu = false;
+      }
       const vel = Math.hypot(d.moveX || 0, d.moveZ || 0) * (d.run ? 14.5 : 6.4);
       rp.update(dt, vel);
       // corpo do próprio jogador visível a pé; dentro do carro ele some
@@ -422,7 +452,6 @@ export class Match {
     else foc.set(0, 2, 0);
     const noCarro = this._emCarro;
     const ombro = noCarro ? 0 : CAMERA.shoulderX;
-    const aimando = !!(this._fire || this._dragOn || this._fireBtn);
     // [tiro] tracer local — dano é autoritativo do servidor (feedback igual ao solo)
     if ((this._fire || this._fireBtn) && foc) {
       const agoraT = performance.now();
@@ -456,6 +485,7 @@ export class Match {
         this._tracer.visible = true;
         this._tracerVida = 0.08;
         this.game.bullets?.fire(oT, new THREE.Vector3(dxT, dyT, dzT));
+        if (this.game && this.game.audio) this.game.audio.tiro();
       }
     }
     if (this._tracer) {
@@ -466,7 +496,12 @@ export class Match {
       const rpLoc2 = this.avatares.get(this.meuId);
       if (rpLoc2) rpLoc2.setAiming(false);
     }
-    this._camDist = damp(this._camDist, noCarro ? CAMERA.carZoom : (aimando ? 3.2 : this._dist), 9, dt);
+    // balas e partículas do SOLO rodando no MP: sem isto o projétil não
+    // avança nem cria faísca ao bater (e explosão nenhuma anima)
+    this._sincronizarAlvosBala();
+    if (this.game && this.game.bullets) this.game.bullets.update(dt);
+    if (this.game && this.game.fx) this.game.fx.update(dt);
+    this._camDist = damp(this._camDist, noCarro ? CAMERA.carZoom : this._dist, 9, dt);
     const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
     const dir = new THREE.Vector3(-Math.sin(this.yaw) * cp, sp, -Math.cos(this.yaw) * cp);
     let dist = this._camDist;
@@ -522,7 +557,9 @@ export class Match {
       if (alvo != null) this._setHint('E — entrar no carro');
       else this._setHint(null);
     }
-    // minimapa do solo no MP: posição do jogador + círculo da zona no BR
+    // minimapa do solo no MP: posição do jogador + círculo da zona no BR.
+    // O yaw segue o MESMO do solo (player.yaw = câmera + PI + bodyTurn) —
+    // passar o yaw da câmera direto deixava o radar de cabeça para baixo.
     if (eu && this.game && this.game.minimap) {
       const marks = { pickup: null, deliver: null, heli: null, portais: null, players: [] };
       if (this.modo === 'br' && this._zona) marks.zone = this._zona;
@@ -530,7 +567,7 @@ export class Match {
         if (id === this.meuId || !rp || !rp.root) continue;
         marks.players.push({ x: rp.root.position.x, z: rp.root.position.z });
       }
-      this.game.minimap.draw(dt, { x: eu.x, z: eu.z, yaw: this.yaw }, marks, null);
+      this.game.minimap.draw(dt, { x: eu.x, z: eu.z, yaw: this.yaw + Math.PI + CAMERA.bodyTurn }, marks, null);
     }
     // rodas dos carros
     for (const cr of this.carrosMp.values()) cr.mesh.spinWheels(dt);
@@ -600,6 +637,15 @@ export class Match {
   // ------------------------------------------------------------ veiculos
   _aplicarCarros(lista) {
     for (const c of lista) {
+      // carro explodiu no servidor: some da cena de vez
+      if (c.destroyed) {
+        const velho = this.carrosMp.get(c.id);
+        if (velho) {
+          velho.mesh.dispose(this.game.gfx.scene);
+          this.carrosMp.delete(c.id);
+        }
+        continue;
+      }
       let cr = this.carrosMp.get(c.id);
       if (!cr) {
         const mesh = new Car(c.cor || 0xe53935, Math.random);
@@ -614,6 +660,43 @@ export class Match {
       cr.mesh.syncTransform();
       cr.mesh.speed = c.speed;
     }
+  }
+
+  /** Carro destruído no servidor: explosão grande + some da cena. */
+  _explodirCarro(msg) {
+    const cr = this.carrosMp.get(msg.id);
+    if (!cr) return;
+    const p = new THREE.Vector3(cr.x, cr.y + 0.6, cr.z);
+    if (this.game && this.game.fx) {
+      this.game.fx.explode(p, 1.8);
+      if (this.game.audio) this.game.audio.explosao(1.8);
+    }
+    cr.mesh.dispose(this.game.gfx.scene);
+    this.carrosMp.delete(msg.id);
+  }
+
+  /** Alvos locais das balas (avatares e carros) — o dano é do servidor;
+   *  aqui é só o feedback visual (faísca no corpo/carro), igual ao solo. */
+  _sincronizarAlvosBala() {
+    const bul = this.game && this.game.bullets;
+    if (!bul) return;
+    const foes = [];
+    for (const rp of this.avatares.values()) {
+      if (!rp._alvo) rp._alvo = { vivo: true, root: rp.root, alturaAlvo: 1.15, raioAcerto: 0.55 };
+      rp._alvo.vivo = rp.vivo;
+      foes.push(rp._alvo);
+    }
+    bul.targets.foes = foes.length ? foes : null;
+    const cars = [];
+    let meuCarro = null;
+    for (const cr of this.carrosMp.values()) {
+      if (!cr._alvo) cr._alvo = { alive: true, root: cr.mesh.root };
+      cr._alvo.alive = true;
+      cars.push(cr._alvo);
+      if (cr.playerId === this.meuId) meuCarro = cr._alvo;
+    }
+    bul.targets.cars = cars.length ? { cars } : null;
+    bul.ignoreCar = meuCarro;   // bala não acerta o próprio carro (sai de dentro dele)
   }
 
   /** Carro livre mais proximo do jogador (raio 4.5) ou 0 (sair do atual). */
@@ -733,6 +816,19 @@ export class Match {
     for (const cr of this.carrosMp.values()) cr.mesh.dispose(this.game.gfx.scene);
     this.carrosMp.clear();
     if (this._tracer) { this.game.gfx.scene.remove(this._tracer); this._tracer.geometry.dispose(); this._tracer.material.dispose(); this._tracer = null; }
+    // devolve as balas do single: alvos do trânsito e callbacks originais
+    if (this.game && this.game.bullets) {
+      const bul = this.game.bullets;
+      bul.setTargets(this.game.peds, this.game.cars);
+      bul.setFoes(null);
+      bul.ignoreCar = null;
+      if (this._bulletsAntes) {
+        bul.onHitFoe = this._bulletsAntes.onHitFoe;
+        bul.onHitCar = this._bulletsAntes.onHitCar;
+        bul.onHitPed = this._bulletsAntes.onHitPed;
+        this._bulletsAntes = null;
+      }
+    }
     if (this.game && this.game.cars) this.game.cars.group.visible = true;
     if (this.game && this.game.peds) this.game.peds.group.visible = true;
     // pausa: desliga handlers do MP e devolve o comando ao modo solo

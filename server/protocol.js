@@ -33,6 +33,7 @@ export const T = {
   BOT_SAIU: 'botSaiu',     // { t, id }
   CAR_JOIN: 'carJoin',     // { t, id, carId }
   CAR_LEAVE: 'carLeave',   // { t, id }
+  CAR_BOOM: 'carBoom',     // { t, id, x, z } — carro destruído (explode no cliente)
 };
 
 /** Envia uma mensagem JSON segura (limite de tamanho). */

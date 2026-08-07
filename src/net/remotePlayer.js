@@ -5,6 +5,7 @@
 import { Human } from '../ent/human.js';
 import { Loro } from '../ent/loro.js';
 import { makePistola } from '../player.js';
+import { CAMERA } from '../config.js';
 
 // cores determinísticas por id (para não piscar a cada partida)
 const PALETA = [
@@ -66,8 +67,10 @@ export class RemotePlayer {
   /** Animação por quadro. */
   update(dt, speed = 0) {
     this.root.position.set(this.x, this.y, this.z);
-    // mesma convenção do single: o corpo olha para +Z em yaw 0 (câmera olha -Z)
-    this.root.rotation.y = this.yaw + Math.PI;
+    // mesma convenção do single: o corpo olha para +Z em yaw 0 (câmera olha -Z).
+    // O avatar local ainda ganha o bodyTurn (leve giro para expor a pistola),
+    // exatamente como o Bob do modo solo.
+    this.root.rotation.y = this.yaw + Math.PI + (this.local ? CAMERA.bodyTurn : 0);
     this.human.lookYaw = 0;
     this.human.lookPitch = this.pitch;
     this.human.update(dt, speed);

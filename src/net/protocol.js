@@ -31,6 +31,9 @@ export const T = {
   PING: 'ping',            // { t, agora }
   PONG: 'pong',            // { t, agora }
   BOT_SAIU: 'botSaiu',     // { t, id }
+  CAR_JOIN: 'carJoin',     // { t, id, carId }
+  CAR_LEAVE: 'carLeave',   // { t, id }
+  CAR_BOOM: 'carBoom',     // { t, id, x, z } — carro destruído (explode)
 };
 
 /** Envia JSON seguro (espelho do send() do servidor). */

@@ -48,6 +48,8 @@ export function createCars(world, count) {
       playerId: null,        // id do jogador dirigindo (null = livre)
       inp: null,             // input do motorista (moveX, moveZ)
       cor: rngPick(rng, CORES),
+      hp: 90,                // vida: 4 tiros de pistola (24) — explode ao zerar
+      destroyed: false,      // virou sucata: não dirige nem pode entrar
     });
   }
   return cars;

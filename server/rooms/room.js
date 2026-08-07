@@ -7,6 +7,7 @@ import { NET, MODES, CAR, NUM_CARS } from '../config.js';
 import { T, send, lobbyPlayer } from '../protocol.js';
 import { stepBody } from '../physics.js';
 import { createCars, updateCars } from '../cars.js';
+import { WEAPONS } from '../weapons.js';
 import { makeRng, findFreeSpot, dist2D } from '../util.js';
 
 let uid = 1000;
@@ -146,6 +147,7 @@ export class Room {
 
     this.elapsed += dt;
     this._step(dt);
+    this._stepBodies(dt);
     this._stepCars(dt);
     this._broadcastSnapshot();
   }
@@ -205,17 +207,35 @@ export class Room {
   _applyInput(p, msg) {
     if (!p.body) return;
     if (msg.car != null) this._veiculo(p, msg.car);
-    const r = stepBody(this.world, p.body, {
+    const inp = {
       moveX: clampNum(msg.moveX, -1, 1),
       moveZ: clampNum(msg.moveZ, -1, 1),
       yaw: msg.yaw ?? p.body.yaw,
       pitch: msg.pitch ?? p.body.pitch,
       run: !!msg.run,
       jump: !!msg.jump,
-    }, 1 / NET.tickRate);
-    p.body.moveX = clampNum(msg.moveX, -1, 1);
-    p.body.moveZ = clampNum(msg.moveZ, -1, 1);
+    };
+    p.body.moveX = inp.moveX;
+    p.body.moveZ = inp.moveZ;
+    if (p.client) {
+      // humano: guarda o último input e a INTEGRAÇÃO roda no tick a 30 Hz.
+      // Integrar aqui (a 20 Hz, a cadência do input) fazia o jogador andar
+      // a 2/3 da velocidade do solo — e dos bots, que integram no tick.
+      p.body._inp = inp;
+      return;
+    }
+    const r = stepBody(this.world, p.body, inp, 1 / NET.tickRate);
     if (r.fallDamage > 0) this._damage(p, null, r.fallDamage, 'queda');
+  }
+
+  /** Integra a física dos jogadores humanos a 30 Hz com o último input. */
+  _stepBodies(dt) {
+    for (const p of this.players.values()) {
+      if (!p.body || !p.body._inp) continue;
+      if (p.inCar != null) continue;   // o carro move o corpo do motorista
+      const r = stepBody(this.world, p.body, p.body._inp, dt);
+      if (r.fallDamage > 0) this._damage(p, null, r.fallDamage, 'queda');
+    }
   }
 
   /** Entra/sai do carro: msg.car = id do carro (entrar) ou 0 (sair). */
@@ -223,7 +243,7 @@ export class Room {
     if (!this.cars || this.cars.length === 0) return;
     if (!p.body) return;
     if (p.inCar == null) {
-      const c = this.cars.find((cc) => cc.id === alvo && cc.playerId == null);
+      const c = this.cars.find((cc) => cc.id === alvo && cc.playerId == null && !cc.destroyed);
       if (!c) return;
       const d = dist2D(p.body.pos.x, p.body.pos.z, c.x, c.z);
       if (d > CAR.enterRange) return;
@@ -300,6 +320,69 @@ export class Room {
     this._onKill(morto, por);
   }
 
+  /**
+   * Tiro: raycast autoritativo contra jogadores, bots e carros.
+   * O mais próximo vence (um carro entre o atirador e o alvo protege o alvo,
+   * igual à campanha, onde a bala não atravessa um carro).
+   */
+  onShoot(p, aim) {
+    if (!p.body || p.hp <= 0) return;
+    const W = WEAPONS[p.arma] || WEAPONS.pistola;
+    const now = Date.now();
+    if (now - (p._lastFire || 0) < W.cooldown * 1000) return;
+    p._lastFire = now;
+
+    const ox = p.body.pos.x, oy = p.body.pos.y + 1.5, oz = p.body.pos.z;
+    const spread = W.spread * (Math.random() - 0.5);
+    const yaw = aim.yaw + spread, pitch = aim.pitch + spread;
+    const dx = -Math.sin(yaw) * Math.cos(pitch);
+    const dy = Math.sin(pitch);
+    const dz = -Math.cos(yaw) * Math.cos(pitch);
+
+    const hitWorld = this.world.col.raycast(ox, oy, oz, dx, dy, dz, W.range);
+    const maxT = hitWorld ? Math.max(0.5, hitWorld.t - 0.3) : W.range;
+
+    let best = null, bestT = Infinity;
+    for (const alvo of this._all()) {
+      if (alvo === p || !alvo.body || alvo.hp <= 0) continue;
+      const t = raySphere(ox, oy, oz, dx, dy, dz, alvo.body.pos, 0.45);
+      if (t !== null && t < bestT && t < maxT) {
+        bestT = t;
+        best = { alvo };
+      }
+    }
+    // carros também tomam tiro (e explodem ao zerar a vida)
+    if (this.cars) {
+      for (const c of this.cars) {
+        if (c.destroyed || c.playerId === p.id) continue;
+        const t = raySphere(ox, oy, oz, dx, dy, dz, { x: c.x, y: c.y + 0.8, z: c.z }, 2.0);
+        if (t !== null && t < bestT && t < maxT) {
+          bestT = t;
+          best = { carro: c };
+        }
+      }
+    }
+    if (!best) return;
+    if (best.carro) this._carDano(best.carro, W.damage);
+    else this._damage(best.alvo, p, W.damage, p.arma);
+  }
+
+  /** Carro levou tiro: perde vida e explode ao zerar (expulsa o motorista). */
+  _carDano(c, dmg) {
+    if (c.destroyed) return;
+    c.hp -= dmg;
+    if (c.hp > 0) return;
+    c.destroyed = true;
+    c.hp = 0;
+    c.playerId = null;
+    c.inp = null;
+    c.speed = 0;
+    for (const p of this._all()) {
+      if (p.inCar === c.id) this._sairCarro(p);
+    }
+    this._bcast(T.CAR_BOOM, { id: c.id, x: c.x, z: c.z });
+  }
+
   _onKill(morto, por) {}
 
   _bcastLobby() {
@@ -355,6 +438,7 @@ export class Room {
       deaths: p.deaths || 0,
       moveX: p.body ? (p.body.moveX||0) : 0,
       moveZ: p.body ? (p.body.moveZ||0) : 0,
+      run: p.body ? !!(p.body._inp && p.body._inp.run) : false,
       inCar: p.inCar ?? null,
     }));
     const snap = { t: T.SNAPSHOT, seq: this.seq, players };
@@ -368,6 +452,7 @@ export class Room {
       speed: Math.round(c.speed * 10) / 10,
       playerId: c.playerId,
       cor: c.cor,
+      destroyed: !!c.destroyed,
     }));
     this._bcast(T.SNAPSHOT, snap);
   }
@@ -381,4 +466,15 @@ export class Room {
 function clampNum(v, a, b) {
   if (typeof v !== 'number' || Number.isNaN(v)) return 0;
   return Math.max(a, Math.min(b, v));
+}
+
+/** Raycast esfera (hitbox simples do jogador/carro). Retorna t ou null. */
+function raySphere(ox, oy, oz, dx, dy, dz, c, r) {
+  const lx = ox - c.x, ly = oy - c.y, lz = oz - c.z;
+  const b = 2 * (lx * dx + ly * dy + lz * dz);
+  const cc = lx * lx + ly * ly + lz * lz - r * r;
+  const disc = b * b - 4 * cc;
+  if (disc < 0) return null;
+  const t = (-b - Math.sqrt(disc)) / 2;
+  return t > 0 ? t : null;
 }

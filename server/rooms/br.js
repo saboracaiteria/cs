@@ -160,36 +160,6 @@ export class BRRoom extends Room {
     }, 15_000);
   }
 
-  /** Tiro no BR (igual ao DM, mas com os loots no caminho). */
-  onShoot(p, aim) {
-    if (!p.body || p.hp <= 0) return;
-    const W = WEAPONS[p.arma] || WEAPONS.pistola;
-    const now = Date.now();
-    if (now - (p._lastFire || 0) < W.cooldown * 1000) return;
-    p._lastFire = now;
-
-    const ox = p.body.pos.x, oy = p.body.pos.y + 1.5, oz = p.body.pos.z;
-    const spread = W.spread * (Math.random() - 0.5);
-    const yaw = aim.yaw + spread, pitch = aim.pitch + spread;
-    const dx = -Math.sin(yaw) * Math.cos(pitch);
-    const dy = Math.sin(pitch);
-    const dz = -Math.cos(yaw) * Math.cos(pitch);
-
-    const hitWorld = this.world.col.raycast(ox, oy, oz, dx, dy, dz, W.range);
-    const maxT = hitWorld ? Math.max(0.5, hitWorld.t - 0.3) : W.range;
-
-    let best = null, bestT = Infinity;
-    for (const alvo of this._all()) {
-      if (alvo === p || !alvo.body || alvo.hp <= 0) continue;
-      const t = raySphere(ox, oy, oz, dx, dy, dz, alvo.body.pos, 0.45);
-      if (t !== null && t < bestT && t < maxT) {
-        bestT = t;
-        best = alvo;
-      }
-    }
-    if (best) this._damage(best, p, W.damage, p.arma);
-  }
-
   /** Pegar loot próximo. */
   pickup(p) {
     if (!p.body) return;
@@ -218,14 +188,4 @@ export class BRRoom extends Room {
     snap.vivos = this._alive().length;
   }
 
-}
-
-function raySphere(ox, oy, oz, dx, dy, dz, c, r) {
-  const lx = ox - c.x, ly = oy - c.y, lz = oz - c.z;
-  const b = 2 * (lx * dx + ly * dy + lz * dz);
-  const cc = lx * lx + ly * ly + lz * lz - r * r;
-  const disc = b * b - 4 * cc;
-  if (disc < 0) return null;
-  const t = (-b - Math.sqrt(disc)) / 2;
-  return t > 0 ? t : null;
 }
