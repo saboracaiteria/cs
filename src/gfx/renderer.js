@@ -65,11 +65,13 @@ export class Graphics {
     document.addEventListener('fullscreenchange', this._onResize);
     this.renderer.domElement.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
+      this._ctxLostAt = performance.now();
       console.warn('[gfx] contexto WebGL perdido — tentando restaurar...');
     });
     this.renderer.domElement.addEventListener('webglcontextrestored', () => {
-      this.resize();
-      console.warn('[gfx] contexto WebGL restaurado');
+      const ago = performance.now() - (this._ctxLostAt || 0);
+      if (ago > 2000) location.reload(); // recria shaders/composer do zero (canvas nao fica preto)
+      else console.warn('[gfx] contexto restaurado em cascata - sem reload');
     });
   }
 

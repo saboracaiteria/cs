@@ -462,8 +462,10 @@
     document.title = 'ERRO: ' + (err && err.message) + ' || ' + (err && err.stack ? err.stack.split('\n').slice(1, 4).join(' ~ ') : '') + ' || DIAG: ' + (window.__diag || 'nada');
     const el = document.getElementById('fatal');
     el.classList.remove('hidden');
-    el.innerHTML = '<h3>Falha ao iniciar</h3><pre>' + (err && err.stack || err) + '</pre>' +
-      '<p>Verifique a conexão com a internet (o Three.js é carregado via CDN).</p>';
+    el.innerHTML = '<h3>❌ Falha ao iniciar o jogo</h3><pre>' + (err && err.stack || err) + '</pre>' +
+      '<button id="fatal-reload" class="fatal-btn">🔄 TOCAR PARA RECARREGAR</button>';
+    const fb = document.getElementById('fatal-reload');
+    if (fb) fb.addEventListener('click', () => location.reload());
   });
 </script>
 <!-- botão fullscreen global (todos os modos) -->
