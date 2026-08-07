@@ -9,8 +9,10 @@ export function criarNetStatus() {
 
   function setPing(ms) {
     if (ms == null || !pingEl) return;
-    pingEl.textContent = `${ms}ms`;
-    pingEl.className = ms < 80 ? 'ns-ok' : ms < 200 ? 'ns-meio' : 'ns-ruim';
+    // nunca passa de 3 dígitos: o badge não pode ficar largo na tela
+    const msC = Math.max(0, Math.min(999, Math.round(ms)));
+    pingEl.textContent = `${msC}ms`;
+    pingEl.className = msC < 80 ? 'ns-ok' : msC < 200 ? 'ns-meio' : 'ns-ruim';
   }
 
   function setEstado(estado) {

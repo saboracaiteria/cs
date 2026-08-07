@@ -43,9 +43,14 @@ export class RoomManager {
     this.rooms.delete(salaId);
   }
 
-  /** Registra um jogador em uma sala (cria se preciso). */
-  join(client, nick, modo) {
-    let room = this.find(modo);
+  /**
+   * Registra um jogador em uma sala (cria se preciso).
+   * `codigo` opcional: entra na sala ESPECÍFICA do amigo (matchmaking por
+   * código — sem isto cada humano caía numa sala nova e ninguém se achava).
+   */
+  join(client, nick, modo, codigo = null) {
+    let room = codigo ? this.get(String(codigo).trim().toUpperCase()) : null;
+    if (!room || !room.canJoin()) room = this.find(modo);
     if (!room) room = this.create(modo);
     room.addClient(client, nick);
     return room;

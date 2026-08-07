@@ -33,7 +33,10 @@ export class Room {
   }
 
   canJoin() {
-    return this.state === 'lobby' && this.players.size + this.bots.size < this.cfg.maxPlayers;
+    // vaga é por HUMANO: bots não bloqueiam a entrada (addClient cede um bot
+    // se a sala estiver cheia). Contagem incluída no countdown para o amigo
+    // que chega com o jogo quase começando conseguir entrar na MESMA sala.
+    return (this.state === 'lobby' || this.state === 'countdown') && this.players.size < this.cfg.maxPlayers;
   }
 
   get totalSlots() { return this.players.size + this.bots.size; }
@@ -42,6 +45,13 @@ export class Room {
   addClient(client, nick) {
     const id = uid++;
     const p = lobbyPlayer(id, nick, { host: this.players.size === 0 && this.bots.size === 0 });
+    // humano tem prioridade: se a sala está cheia de bots, um bot cede a vaga
+    if (this.players.size + this.bots.size >= this.cfg.maxPlayers && this.bots.size > 0) {
+      const [bid, bot] = this.bots.entries().next().value;
+      this.bots.delete(bid);
+      this._bcast(T.BOT_SAIU, { id: bid });
+      this._log('bot ' + bot.nick + ' cedeu a vaga para ' + nick);
+    }
     p.client = client;
     p.body = null;
     p.hp = 100;
@@ -127,7 +137,7 @@ export class Room {
       return;
     }
     this.state = 'countdown';
-    this.countdownT = 5;
+    this.countdownT = 10;   // tempo generoso: o amigo com o código da sala entra
     this._bcastLobby();
     this._log('contagem para iniciar...');
   }
@@ -381,8 +391,11 @@ export class Room {
       }
     }
     if (!best) return;
-    if (best.carro) this._carDano(best.carro, W.damage);
-    else this._damage(best.alvo, p, W.damage, p.arma);
+    // dano do bot aplica o danoMult da dificuldade (1.5 na média — o campo
+    // existia mas nunca era usado, e o tiro do bot parecia fraco)
+    const dmg = W.damage * (p.danoMult ?? 1);
+    if (best.carro) this._carDano(best.carro, dmg);
+    else this._damage(best.alvo, p, dmg, p.arma);
   }
 
   /** Carro levou tiro: perde vida e explode ao zerar (expulsa o motorista). */

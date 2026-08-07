@@ -116,11 +116,13 @@ function handle(ws, msg) {
         ws.close(4001, 'versao');
         return;
       }
-      const room = manager.join(ws, nick, modo);
-      // bots preenchem TODAS as vagas — jogar sozinho funciona (partida cheia de bots)
+      const room = manager.join(ws, nick, modo, msg.sala);
+      // bots preenchem as vagas — mas SEMPRE deixa 1 vaga livre: se outro
+      // humano entrar, ele cai na MESMA sala (era o motivo de ninguém se
+      // achar: os bots enchiam tudo e canJoin() ficava falso)
       const cfg = MODES[modo];
       const rng = makeRng(Date.now() & 0xffffffff);
-      while (room.totalSlots < cfg.maxPlayers) {
+      while (room.totalSlots < cfg.maxPlayers - 1) {
         const bot = makeBot(pickBotName(rng));
         room.addBot(bot);
       }

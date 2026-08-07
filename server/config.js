@@ -15,6 +15,8 @@ export const CURB = ROAD_H + SIDEWALK_W;       // 14
 export const CURB_H = 0.24;
 export const LANE = 4.5;
 export const BLOCK_INNER = CELL - 2 * CURB;    // 36
+/** Onde o carro para no vermelho: atrás da faixa de pedestre, contando o capô. */
+export const STOP_LINE = 16.5;
 export const WORLD_EDGE = HALF + CELL * 0.5;
 
 export const PROP_OFF = 9.9;           // postes e árvores junto ao meio-fio (igual ao cliente)
@@ -45,6 +47,8 @@ export const CAR = {
   brake: 34,
   steer: 1.9,
   enterRange: 4.5,
+  npcSpeed: 12.5,          // m/s do tráfego (~45 km/h, igual ao solo)
+  stopDistance: 11,        // distância de parada no semáforo
 };
 export const NUM_CARS = 8;
 

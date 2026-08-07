@@ -16,9 +16,9 @@ export const NOMES = [
 
 export function makeBot(nick, dificuldade = 'media') {
   const DIF = {
-    facil: { precisao: 0.25, reacao: 0.6, danoMult: 0.7, visao: 40 },
-    media: { precisao: 0.45, reacao: 0.4, danoMult: 1.0, visao: 55 },
-    dificil: { precisao: 0.7, reacao: 0.22, danoMult: 1.2, visao: 70 },
+    facil: { precisao: 0.25, reacao: 0.6, danoMult: 1.0, visao: 40 },
+    media: { precisao: 0.45, reacao: 0.4, danoMult: 1.5, visao: 55 },
+    dificil: { precisao: 0.7, reacao: 0.22, danoMult: 1.8, visao: 70 },
   };
   const d = DIF[dificuldade] || DIF.media;
   return {

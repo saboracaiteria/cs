@@ -10,6 +10,8 @@ export function criarLobby() {
   const btnPronto = document.getElementById('mp-pronto');
   const btnIniciar = document.getElementById('mp-iniciar');
   const btnSair = document.getElementById('mp-sair');
+  const codigoEl = document.getElementById('lobby-codigo');
+  const salaEl = document.getElementById('mp-sala');
 
   if (!tela) return { mostrar() {}, esconder() {}, atualizar() {}, onReady() {}, onStart() {}, onLeave() {}, nick() { return ''; } };
 
@@ -24,6 +26,16 @@ export function criarLobby() {
   }
 
   function esconder() { tela.classList.add('hidden'); }
+
+  /** Mostra o código da sala atual (compartilhe com os amigos). */
+  function setSala(codigo) {
+    if (codigoEl) codigoEl.textContent = codigo || '—';
+  }
+
+  /** Código digitado para entrar na sala do amigo (ou vazio). */
+  function codigoSala() {
+    return salaEl ? salaEl.value.trim().toUpperCase() : '';
+  }
 
   function atualizar(data) {
     estado = data.state || 'lobby';
@@ -60,7 +72,7 @@ export function criarLobby() {
   let onReadyCb = null, onStartCb = null, onLeaveCb = null;
 
   return {
-    mostrar, esconder, atualizar,
+    mostrar, esconder, atualizar, setSala, codigoSala,
     nick: () => nick ? nick.value.trim() || 'Jogador' : 'Jogador',
     setNick: (v) => { if (nick) nick.value = v; },
     onReady: (fn) => { onReadyCb = fn; },

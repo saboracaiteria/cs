@@ -51,7 +51,10 @@ export function iniciarMultiplayer(game, modo, nick) {
   net._onStatus = (estado) => {
     if (estado === 'erro') lobby.mostrar('⚠ Sem conexão com o servidor');
   };
-  net._onReplay = () => net.enviar({ t: T.HELLO, v: NET_VERSION, nick, modo });
+  // código de sala digitado (entrar na sala do amigo) — lido UMA vez aqui;
+  // se vazio, o servidor acha/cria uma sala como antes
+  const salaDigitada = lobby.codigoSala();
+  net._onReplay = () => net.enviar({ t: T.HELLO, v: NET_VERSION, nick, modo, sala: salaDigitada });
   net.conectar();
   net._onReplay();
 }
@@ -63,6 +66,8 @@ function onMsg(msg) {
       net.salaId = msg.salaId;
       net.modo = msg.modo;
       net.cfg = msg.cfg;
+      // mostra o código da sala no lobby: é com ele que o amigo entra junto
+      lobby.setSala(msg.salaId);
       break;
     case T.LOBBY:
       lobby.atualizar(msg);

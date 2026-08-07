@@ -370,6 +370,14 @@ export class Match {
         if (msg.id === this.meuId) this._morreu(por);
         break;
       }
+      case T.DAMAGE:
+        // resposta IMEDIATA ao dano: os corações descem na hora exata do
+        // hit (o snapshot também traria, mas com atraso/em saltos)
+        if (msg.alvo === this.meuId) {
+          this._hp = msg.hp;
+          this._atualizarHud();
+        }
+        break;
       case T.RESPAWN:
         if (msg.id === this.meuId) this._revive();
         break;
