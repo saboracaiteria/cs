@@ -23,8 +23,10 @@ export const PLAYER = {
   radius: 0.42,
   height: 1.78,
   eye: 1.62,
-  walkSpeed: 6.4,
-  runSpeed: 14.5,
+  // ~20% mais lento que o solo (6.4/14.5) a pedido: no MP a sensação de
+  // velocidade com latência é maior, e os duelos ficam mais justos
+  walkSpeed: 5.1,
+  runSpeed: 11.6,
   accel: 58,
   jumpSpeed: 7.4,
   gravity: 26,

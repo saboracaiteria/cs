@@ -79,7 +79,10 @@ export class Match {
     if (window.__pararLoopSingle) window.__pararLoopSingle();
     // sem arma na tela: em terceira pessoa a pistola aparece na MÃO do Bob,
     // que fica visível na frente da câmera com o papagaio voando ao lado
-    if (this.game && this.game.viewmodel) this.game.viewmodel.visible = false;
+    if (this.game && this.game.viewmodel) {
+      this._viewmodelAntes = this.game.viewmodel.visible;
+      this.game.viewmodel.visible = false;
+    }
     // esconde o transito e pedestres do single — no MP os carros vêm do servidor
     if (this.game && this.game.cars) this.game.cars.group.visible = false;
     if (this.game && this.game.peds) this.game.peds.group.visible = false;
@@ -177,6 +180,7 @@ export class Match {
     // Toques NÃO atiram: no celular o gatilho é só o botão ATIRAR (igual ao solo)
     this._pd = (e) => {
       if (e.pointerType === 'touch') return;
+      if (this._pausado) return;   // menu aberto: cliques são do painel
       this._dragX = e.clientX; this._dragY = e.clientY;
       this._dragOn = true;
       this._fire = true;
@@ -198,6 +202,7 @@ export class Match {
     // scroll do mouse aproxima/afasta a câmera (fora do carro)
     this._zw = (e) => {
       if (this._emCarro) return;
+      if (this._pausado) return;   // rolar o menu não mexe no zoom
       this._dist = clamp(this._dist - e.deltaY * 0.004, CAMERA.minZoom, CAMERA.maxZoom);
     };
 
@@ -207,6 +212,9 @@ export class Match {
     this._lookEl = document.getElementById('mp-look');
 
     this._touchStart = (e) => {
+      // pausa/opções abertas: o toque é do MENU — sem preventDefault, o
+      // scroll nativo das opções funciona (antes a página não rolava)
+      if (this._pausado) return;
       for (const t of e.changedTouches) {
         // toque em botão/menu: deixa o clique sintético acontecer (☰, pausa,
         // placar...) — o preventDefault aqui matava os clicks no mobile
@@ -227,6 +235,7 @@ export class Match {
       }
     };
     this._touchMove = (e) => {
+      if (this._pausado) return;   // pausa: o dedo é do menu, não do jogo
       for (const t of e.changedTouches) {
         if (this._lt && t.identifier === this._lt.id) {
           const dx = t.clientX - this._lt.x, dy = t.clientY - this._lt.y;
@@ -285,6 +294,41 @@ export class Match {
     ligaBtn('mp-pular', () => { this.inp.jump = true; }, () => { this.inp.jump = false; });
     ligaBtn('mp-acao', () => { this._toggleCar = true; });
     ligaBtn('mp-correr', () => { this.inp.run = true; }, () => { this.inp.run = false; });
+    // [COD Mobile] o botão ATIRAR também é o analógico de mira, igual ao
+    // solo: o dedo FIRME atira em rajada; DESLIZANDO, a câmera gira e a
+    // mira acompanha o arrasto — dá para segurar o recuo sem largar o
+    // gatilho (só toque; no PC o olhar já é o mouse)
+    this._mpMira = null;
+    const miraEl = document.getElementById('mp-atirar');
+    if (miraEl) {
+      const m = { el: miraEl, down: null, move: null, up: null };
+      let ancora = null, pend = { x: 0, y: 0 };
+      m.down = (ev) => {
+        if (ev.pointerType !== 'touch') return;
+        ancora = { x: ev.clientX, y: ev.clientY };
+        pend = { x: 0, y: 0 };
+        try { miraEl.setPointerCapture(ev.pointerId); } catch {}
+      };
+      m.move = (ev) => {
+        if (!ancora) return;
+        pend.x += ev.clientX - ancora.x;
+        pend.y += ev.clientY - ancora.y;
+        ancora = { x: ev.clientX, y: ev.clientY };
+        // micro-tremor do polegar parado não mexe na mira; passou disso,
+        // o dedo deslizando gira a câmera (a mira acompanha o arrasto)
+        if (Math.hypot(pend.x, pend.y) < 3) return;
+        this.yaw -= pend.x * 0.005;
+        this.pitch -= pend.y * 0.005;
+        this._clampAim();
+        pend = { x: 0, y: 0 };
+      };
+      m.up = () => { ancora = null; pend = { x: 0, y: 0 }; };
+      miraEl.addEventListener('pointerdown', m.down);
+      miraEl.addEventListener('pointermove', m.move);
+      miraEl.addEventListener('pointerup', m.up);
+      miraEl.addEventListener('pointercancel', m.up);
+      this._mpMira = m;
+    }
     window.addEventListener('keydown', this._kd);
     window.addEventListener('keyup', this._ku);
     window.addEventListener('pointerdown', this._pd);
@@ -438,7 +482,8 @@ export class Match {
       } else if (rp.vivo) {
         rp._explodiu = false;
       }
-      const vel = Math.hypot(d.moveX || 0, d.moveZ || 0) * (d.run ? 14.5 : 6.4);
+      // velocidades do MP/BR (5.1/11.6 — ~20% abaixo do solo 6.4/14.5)
+      const vel = Math.hypot(d.moveX || 0, d.moveZ || 0) * (d.run ? 11.6 : 5.1);
       rp.update(dt, vel);
       // corpo do próprio jogador visível a pé; dentro do carro ele some
       if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro;
@@ -749,6 +794,11 @@ export class Match {
     if (this._pausado) return;
     this._pausado = true;
     this._setHint(null);
+    // dedos soltos: nada de andar/atirar sozinho ao retomar
+    this._lt = null;
+    this._joyTouch = null;
+    this.inp.mx = 0; this.inp.mz = 0; this.inp.run = false;
+    this._fireBtn = false; this._fire = false;
     if (this.pausa) this.pausa.mostrar();
   }
 
@@ -860,6 +910,14 @@ export class Match {
       b.el.removeEventListener("mouseleave", b.u);
     }
     this._mpBtns = [];
+    if (this._mpMira && this._mpMira.el) {
+      const m = this._mpMira;
+      m.el.removeEventListener('pointerdown', m.down);
+      m.el.removeEventListener('pointermove', m.move);
+      m.el.removeEventListener('pointerup', m.up);
+      m.el.removeEventListener('pointercancel', m.up);
+      this._mpMira = null;
+    }
     const pad = document.getElementById("mp-pad");
     if (pad) pad.classList.add("hidden");
     const ov = document.getElementById('mp-overlay');
@@ -868,7 +926,12 @@ export class Match {
     if (ab) ab.classList.remove('hidden');
     // devolve o laço e a câmera ao single player (tela de abertura girando)
     if (window.__retomarLoopSingle) window.__retomarLoopSingle();
-    if (this.game && this.game.viewmodel) this.game.viewmodel.visible = true;
+    // restaura a arma de tela ao estado que estava ANTES do MP (no solo em
+    // terceira pessoa ela fica escondida — forçar true deixava uma pistola
+    // flutuando atrás do Bob na câmera)
+    if (this.game && this.game.viewmodel) {
+      this.game.viewmodel.visible = this._viewmodelAntes ?? false;
+    }
     this.camera.rotation.order = 'XYZ';
     this.killfeed.limpar();
   }
