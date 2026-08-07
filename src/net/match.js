@@ -518,9 +518,9 @@ export class Match {
         const rpLoc = this.avatares.get(this.meuId);
         if (rpLoc) rpLoc.setAiming(true);
         const dxT = this._fireDir.x, dyT = this._fireDir.y, dzT = this._fireDir.z;
-        // a bala nasce no PEITO do Bob — antes nascia na câmera, atrás dele,
-        // e o "fogo do cano" aparecia saindo das costas do player
-        const oT = new THREE.Vector3(foc.x, foc.y + 0.02, foc.z);
+        // a bala nasce na CÂMERA (a linha EXATA da mira — a mesma origem que o
+        // servidor usa via fpx/fpy/fpz): o dano cai onde o tracer/bala aponta
+        const oT = this.camera.position.clone();
         const colT = this.game.col;
         let fimT = null;
         if (colT) {
@@ -637,6 +637,9 @@ export class Match {
         fdx: this._fireDir ? this._fireDir.x : 0,
         fdy: this._fireDir ? this._fireDir.y : 0,
         fdz: this._fireDir ? this._fireDir.z : 0,
+        fpx: this.camera.position.x,
+        fpy: this.camera.position.y,
+        fpz: this.camera.position.z,
         car: this._toggleCar ? this._alvoCarro() : null,
       });
       this._toggleCar = false;

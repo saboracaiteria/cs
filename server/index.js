@@ -136,6 +136,8 @@ function handle(ws, msg) {
             yaw: msg.yaw, pitch: msg.pitch,
             // direção da MIRA do cliente (NDC) — dano na mesma linha do tracer
             dir: msg.fdx != null ? { x: msg.fdx, y: msg.fdy, z: msg.fdz } : null,
+            // origem da MIRA (a câmera) — o raycast bate na linha exata do centro da tela
+            orig: msg.fpx != null ? { x: msg.fpx, y: msg.fpy, z: msg.fpz } : null,
           });
         }
         if (room.modo === 'br' && msg.pickup) room.pickup(p);

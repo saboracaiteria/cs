@@ -335,7 +335,13 @@ export class Room {
     if (now - (p._lastFire || 0) < W.cooldown * 1000) return;
     p._lastFire = now;
 
-    const ox = p.body.pos.x, oy = p.body.pos.y + 1.5, oz = p.body.pos.z;
+    // origem do tiro: a CÂMERA do cliente (a linha exata da mira — mesmo ponto
+    // de onde o tracer/bala saem). Valida que está perto do peito (anti-cheat);
+    // fallback: o peito do jogador.
+    let ox = p.body.pos.x, oy = p.body.pos.y + 1.5, oz = p.body.pos.z;
+    if (aim.orig && Math.abs(aim.orig.x - ox) < 6 && Math.abs(aim.orig.z - oz) < 6 && Math.abs(aim.orig.y - oy) < 4) {
+      ox = aim.orig.x; oy = aim.orig.y; oz = aim.orig.z;
+    }
     // direção do tiro: com a direção da MIRA do cliente (NDC), usa-se ela
     // EXATA — o dano cai onde o tracer/bala do jogador apontam. Bots e
     // clientes antigos mandam só yaw/pitch: fallback com espalhamento.

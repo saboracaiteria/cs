@@ -58,7 +58,10 @@ export class SnapshotBuffer {
       while (dy < -Math.PI) dy += Math.PI * 2;
       yaw = (ant.yaw ?? ay) + dy * alpha;
     }
-    return { ...a, ...pos, yaw, pitch: a.pitch ?? 0 };
+    // o Y NÃO é interpolado linearmente: o pulo é uma parábola e a reta
+    // entre snapshots corta o pico (o pulo parecia baixo e lento); usa o
+    // valor do snapshot atual
+    return { ...a, ...pos, y: a.y, yaw, pitch: a.pitch ?? 0 };
   }
 
   limpar() {

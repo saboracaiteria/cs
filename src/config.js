@@ -57,8 +57,8 @@ export const PLAYER = {
   walkSpeed: 6.4,
   runSpeed: 14.5,              // [30] Shift
   accel: 58,                   // acompanha: sem isso a arrancada fica mole
-  jumpSpeed: 7.4,              // [36] espaço
-  gravity: 26,
+  jumpSpeed: 10,              // [36] espaço
+  gravity: 28,
   turnSmooth: 14,
   /*
    * [33] Corações.
