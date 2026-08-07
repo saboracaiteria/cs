@@ -6,6 +6,24 @@
 
 import { dist2D, angleDelta } from '../util.js';
 
+/** Máx. de bots atirando no MESMO alvo ao mesmo tempo. Sem este limite todos
+ *  os bots focavam o jogador junto e ele morria em segundos. */
+const MAX_FOCO = 2;
+
+/** Linha de visão: amostra o segmento olho->peito a cada ~4 m; um sólido na
+ *  altura do olhar entre os dois pontos bloqueia (bot não atira em parede). */
+function temVisao(col, ax, ay, az, bx, by, bz) {
+  const dx = bx - ax, dy = by - ay, dz = bz - az;
+  const d = Math.hypot(dx, dy, dz);
+  if (d < 0.5) return true;
+  const n = Math.max(2, Math.ceil(d / 4));
+  for (let i = 1; i < n; i++) {
+    const t = i / n;
+    if (col.isBlocked(ax + dx * t, az + dz * t, 0.35, ay + dy * t, 0.5)) return false;
+  }
+  return true;
+}
+
 /** Nomes brasileiros para bots (tema BR, como pedido no documento). */
 export const NOMES = [
   'Zé da Manga', 'Dona Flor', 'Seu Lunga', 'Batoré', 'Dedé', 'Bira',
@@ -16,9 +34,9 @@ export const NOMES = [
 
 export function makeBot(nick, dificuldade = 'media') {
   const DIF = {
-    facil: { precisao: 0.25, reacao: 0.6, danoMult: 1.0, visao: 40 },
-    media: { precisao: 0.45, reacao: 0.4, danoMult: 1.5, visao: 55 },
-    dificil: { precisao: 0.7, reacao: 0.22, danoMult: 1.8, visao: 70 },
+    facil: { precisao: 0.25, reacao: 0.6, danoMult: 1.0, visao: 30 },
+    media: { precisao: 0.45, reacao: 0.4, danoMult: 1.5, visao: 42 },
+    dificil: { precisao: 0.7, reacao: 0.22, danoMult: 1.8, visao: 55 },
   };
   const d = DIF[dificuldade] || DIF.media;
   return {
@@ -43,13 +61,29 @@ export function makeBot(nick, dificuldade = 'media') {
         inZone = d <= room.zone.r;
       }
 
-      // acha o inimigo mais próximo visível
+      // quantos bots já estão mirando cada alvo (o alvo é o PRÓPRIO objeto:
+      // bots não têm .id — o id fica na chave do Map da sala; contagem do
+      // frame, suficiente para espalhar o fogo)
+      const foco = new Map();
+      for (const b of room.bots.values()) {
+        if (b !== this && b.target) foco.set(b.target, (foco.get(b.target) || 0) + 1);
+      }
+
+      // acha o inimigo mais próximo com LINHA DE VISÃO livre (sem paredes no
+      // caminho) e que ainda não está saturado de atiradores
       let best = null, bestD = this.visao;
+      const col = room.world.col;
       for (const o of room._all()) {
         if (o === this || o.hp <= 0 || !o.body) continue;
         const dd = dist2D(this.body.pos.x, this.body.pos.z, o.body.pos.x, o.body.pos.z);
-        if (dd < bestD) { bestD = dd; best = o; }
+        if (dd >= bestD || (foco.get(o) || 0) >= MAX_FOCO) continue;
+        // olho do bot (1.5) até o peito do alvo (1.2): se bater parede, não vê
+        if (!temVisao(col,
+          this.body.pos.x, this.body.pos.y + 1.5, this.body.pos.z,
+          o.body.pos.x, o.body.pos.y + 1.2, o.body.pos.z)) continue;
+        bestD = dd; best = o;
       }
+      this.target = best;
 
       const inp = { moveX: 0, moveZ: 0, yaw: this.body.yaw, pitch: 0, run: false, jump: false };
 

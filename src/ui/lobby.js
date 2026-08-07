@@ -80,8 +80,9 @@ export function criarLobby() {
       lista.appendChild(li);
     }
     if (estado === 'countdown') {
-      cd.style.display = 'block';
-      cd.textContent = `Partida em ${data.countdown || 0}s…`;
+      // número grande no círculo (CSS .lobby-cd) — fácil de visualizar
+      cd.style.display = 'flex';
+      cd.textContent = data.countdown || 0;
     } else {
       cd.style.display = 'none';
     }

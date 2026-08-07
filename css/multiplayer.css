@@ -212,10 +212,22 @@
   font-size: 24px;
 }
 .lobby-cd {
+  /* contagem regressiva em círculo, número grande no centro — fácil de ver */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background: rgba(255, 176, 32, .14);
+  border: 3px solid var(--accent);
   color: var(--accent);
-  font-weight: 800;
-  font-size: 16px;
-  letter-spacing: 1px;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+  box-shadow: 0 0 26px rgba(255, 176, 32, .4);
   animation: pulseCd 1s infinite alternate;
 }
 @keyframes pulseCd {

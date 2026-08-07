@@ -134,7 +134,7 @@ export class Room {
       return;
     }
     this.state = 'countdown';
-    this.countdownT = 10;   // tempo generoso: o amigo com o código da sala entra
+    this.countdownT = 7;   // contagem regressiva de 7s (pedido), 1s a 1s na tela
     this._bcastLobby();
     this._log('contagem para iniciar...');
   }
@@ -392,9 +392,12 @@ export class Room {
       }
     }
     if (!best) return;
-    // dano do bot aplica o danoMult da dificuldade (1.5 na média — o campo
-    // existia mas nunca era usado, e o tiro do bot parecia fraco)
-    const dmg = W.damage * (p.danoMult ?? 1);
+    // balanceamento de dano (pedido): o bot causa só 18% do dano base no
+    // player; o player causa 67% no bot (player vs player fica 100%). O
+    // antigo danoMult da dificuldade deixava o bot forte demais.
+    const atiradorBot = !!this.bots.get(p.id);
+    const alvoBot = best.alvo ? !!this.bots.get(best.alvo.id) : false;
+    const dmg = atiradorBot ? W.damage * 0.18 : (alvoBot ? W.damage * 0.67 : W.damage);
     if (best.carro) this._carDano(best.carro, dmg);
     else this._damage(best.alvo, p, dmg, p.arma);
   }

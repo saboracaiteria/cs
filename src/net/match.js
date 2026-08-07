@@ -47,6 +47,8 @@ export class Match {
     // câmera de ombro (terceira pessoa), igual à do single
     this._camDist = CAMERA.defaultZoom;
     this._camFocus = new THREE.Vector3();
+    this._camSmooth = new THREE.Vector3();   // foco amortecido — mesmo lag do solo
+    this._camFirst = true;
     this._camLook = new THREE.Vector3();
     this._sendAcc = 0;
     this._pingAcc = 0;
@@ -55,6 +57,7 @@ export class Match {
     this._hp = 100;
     this._arma = 'pistola';
     this._morto = false;
+    this._respawnT = 0;         // contagem do respawn no DM (aviso do servidor)
     this._rodando = false;
     this._raf = null;
     this._ult = 0;
@@ -345,6 +348,14 @@ export class Match {
     document.addEventListener('touchstart', this._touchStart, { passive: false });
     document.addEventListener('touchmove', this._touchMove, { passive: false });
     document.addEventListener('touchend', this._touchEnd, { passive: false });
+    // gatilho nunca fica "preso" ao perder o foco (alt-tab) ou sair do
+    // pointer lock — o solo faz o mesmo no input.js (blur + pointerlockchange)
+    this._blur = () => { this._dragOn = false; this._fire = false; this._fireBtn = false; };
+    this._lockChg = () => {
+      if (!document.pointerLockElement) { this._dragOn = false; this._fire = false; }
+    };
+    window.addEventListener('blur', this._blur);
+    document.addEventListener('pointerlockchange', this._lockChg);
   }
 
   _norm() {
@@ -365,7 +376,8 @@ export class Match {
       case T.KILL:
       case T.DEATH: {
         const morto = this._nick(msg.id);
-        const por = msg.por != null ? this._nick(msg.por) : 'zona';
+        // morte por zona/queda chega sem `por` — o servidor manda a causa na `arma`
+        const por = msg.por != null ? this._nick(msg.por) : (msg.arma || 'zona');
         if (msg.t === T.KILL) this.killfeed.add(morto, por, msg.arma, msg.id === this.meuId);
         if (msg.id === this.meuId) this._morreu(por);
         break;
@@ -379,7 +391,12 @@ export class Match {
         }
         break;
       case T.RESPAWN:
-        if (msg.id === this.meuId) this._revive();
+        // o servidor manda DOIS respawns para o morto: o AVISO {id, t} (tempo
+        // até renascer) e o REAL {id, x, y, z} (bcast do _spawn, para todos).
+        // O aviso só liga a contagem; o real é o que devolve o jogador ao jogo
+        if (msg.id !== this.meuId) break;
+        if (msg.x != null) this._revive();
+        else this._contagemRespawn(msg.t);
         break;
       case T.WINNER:
         this._vencedor(msg);
@@ -388,7 +405,10 @@ export class Match {
         if (this.brHud) this.brHud.atualizar({ loot: (msg.itens || []).length }, this.meuId, null);
         break;
       case T.SPAWN:
-        break;   // BR sem avião: os jogadores nascem espalhados pelo mapa
+        // respawn confirmado SÓ para o próprio jogador: segurança extra caso
+        // o bcast do RESPAWN se perca (sem isto ficava preso na tela de morte)
+        if (msg.id === this.meuId) this._revive();
+        break;
 
       case T.PLAYER_LEFT:
       case T.BOT_SAIU:
@@ -478,6 +498,16 @@ export class Match {
         );
       }
     }
+    // contagem de respawn no overlay (DM): o aviso {id,t} liga o cronômetro e
+    // o respawn REAL (com x/y/z) é o que esconde a tela de morte
+    if (this._morto && this._respawnT > 0) {
+      this._respawnT -= dt;
+      const ov = document.getElementById('mp-overlay');
+      if (ov) {
+        const s = Math.max(0, Math.ceil(this._respawnT));
+        ov.querySelector('.ov-sub').textContent = s > 0 ? `RESPAWN em ${s}s` : 'RENASCENDO…';
+      }
+    }
     // interpola avatares
     const alpha = this.snapBuf.alpha();
     for (const [id, rp] of this.avatares) {
@@ -510,6 +540,14 @@ export class Match {
     const foc = this._camFocus;
     if (eu) foc.set(eu.x, eu.y + 1.48, eu.z);
     else foc.set(0, 2, 0);
+    // [câmera] amortecimento do foco IGUAL ao do modo solo (camera.js lag):
+    // sem este suavizador a câmera do MP acompanhava o jogador SEM atraso e
+    // o enquadramento ficava "colado" — o Bob parecia mais próximo que no solo
+    if (this._camFirst) { this._camSmooth.copy(foc); this._camFirst = false; }
+    this._camSmooth.x = damp(this._camSmooth.x, foc.x, CAMERA.lag, dt);
+    this._camSmooth.y = damp(this._camSmooth.y, foc.y, CAMERA.lag * 0.7, dt);
+    this._camSmooth.z = damp(this._camSmooth.z, foc.z, CAMERA.lag, dt);
+    foc.copy(this._camSmooth);
     const noCarro = this._emCarro;
     const ombro = noCarro ? 0 : CAMERA.shoulderX;
     // direção da MIRA: raio que passa pela ponta dela (NDC 0.24/0.2 — o MESMO
@@ -656,7 +694,9 @@ export class Match {
         car: this._toggleCar ? this._alvoCarro() : null,
       });
       this._toggleCar = false;
-      this._fire = false;   // tiro único por input (rajada via clique segura)
+      // segurar o mouse mantém o gatilho aceso (rajada + ADS contínuos,
+      // como no solo); soltar zera tudo no pointerup
+      this._fire = this._dragOn;
       this.inp.jump = false;
     }
     // dicas no MESMO lugar do HUD do solo: carros no DM, nada de avião no BR
@@ -702,6 +742,10 @@ export class Match {
   _morreu(por) {
     if (this._morto) return;
     this._morto = true;
+    this._respawnT = 0;
+    // morto não atira: zera o gatilho — o pointerup pode cair fora da janela
+    // com o overlay aberto e deixar o mouse "preso" até o respawn
+    this._dragOn = false; this._fire = false; this._fireBtn = false;
     const rp = this.avatares.get(this.meuId);
     if (rp) rp.vivo = false;   // corpo e papagaio somem da cena
     const ov = document.getElementById('mp-overlay');
@@ -709,15 +753,31 @@ export class Match {
       ov.classList.remove('hidden');
       ov.className = 'mp-overlay morte';
       ov.querySelector('.ov-titulo').textContent = 'VOCÊ MORREU';
-      ov.querySelector('.ov-sub').textContent = `Eliminado por ${por}`;
+      ov.querySelector('.ov-sub').textContent = por ? `Eliminado por ${por}` : 'Você foi eliminado';
+      // SEMPRE dá para finalizar o jogo: sem o botão o jogador morto ficava
+      // preso no overlay (no BR não há respawn e o ESC é bloqueado com ele aberto)
       const btn = ov.querySelector('.mp-btn');
-      btn.style.display = 'none';
+      btn.style.display = '';
+      btn.textContent = 'SAIR DA PARTIDA';
+      btn.onclick = () => { ov.classList.add('hidden'); this.sair(); };
     }
     if (this.brHud) this.brHud.esconder();
   }
 
+  /** Aviso do servidor no DM: {id, t} = segundos até renascer. */
+  _contagemRespawn(t) {
+    if (!this._morto) return;
+    this._respawnT = Math.max(0, t || 3);
+    const ov = document.getElementById('mp-overlay');
+    if (ov) ov.querySelector('.ov-sub').textContent = `RESPAWN em ${Math.ceil(this._respawnT)}s`;
+  }
+
   _revive() {
     this._morto = false;
+    this._respawnT = 0;
+    // câmera cola no novo spawn: sem o reset o foco amortecido "voava" do
+    // ponto da morte até o respawn (atravessando prédios por ~0,5s)
+    this._camFirst = true;
     const rp = this.avatares.get(this.meuId);
     if (rp) rp.vivo = true;
     const ov = document.getElementById('mp-overlay');
@@ -726,6 +786,8 @@ export class Match {
   }
 
   _vencedor(msg) {
+    // fim de partida: para a contagem de respawn (nada de sobrescrever o texto)
+    this._respawnT = 0;
     const ov = document.getElementById('mp-overlay');
     if (!ov) return;
     ov.classList.remove('hidden');
@@ -865,7 +927,7 @@ export class Match {
     this._lt = null;
     this._joyTouch = null;
     this.inp.mx = 0; this.inp.mz = 0; this.inp.run = false;
-    this._fireBtn = false; this._fire = false;
+    this._fireBtn = false; this._fire = false; this._dragOn = false;
     if (this.pausa) this.pausa.mostrar();
   }
 
@@ -927,6 +989,8 @@ export class Match {
     document.removeEventListener('touchstart', this._touchStart);
     document.removeEventListener('touchmove', this._touchMove);
     document.removeEventListener('touchend', this._touchEnd);
+    window.removeEventListener('blur', this._blur);
+    document.removeEventListener('pointerlockchange', this._lockChg);
     for (const rp of this.avatares.values()) rp.remover();
     this.avatares.clear();
     // remove os carros do MP e devolve o transito do single
