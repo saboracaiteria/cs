@@ -31,11 +31,17 @@ export async function boot() {
       btnFs.title = document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia';
     };
     document.addEventListener('fullscreenchange', atualizarFsIcone);
-    btnFs.addEventListener('click', () => {
+    const toggleFs = () => {
+      const ago = performance.now();
+      if (ago - (window.__fsLast || 0) < 500) return; // guarda duplo disparo pointerup+click
+      window.__fsLast = ago;
       if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
       else document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
       setTimeout(atualizarFsIcone, 120);
-    });
+    };
+    // pointerup: funciona mesmo quando o multiplayer previne o 'click' no toque
+    btnFs.addEventListener('pointerup', toggleFs);
+    btnFs.addEventListener('click', toggleFs);
   }
 
   let last = performance.now();

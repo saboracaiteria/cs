@@ -83,6 +83,11 @@ export class RemotePlayer {
     }
   }
 
+  /** [MP] Posicao de tiro: bracos erguidos com a pistola (igual ao solo). */
+  setAiming(on) {
+    if (this.local) this.human.aiming = on;
+  }
+
   remover() {
     if (this.root.parent) this.root.parent.remove(this.root);
     if (this.loro) this.loro.dispose();

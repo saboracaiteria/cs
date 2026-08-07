@@ -408,8 +408,8 @@ export class Match {
       // o avatar local gira com o mouse na hora (a posição continua vindo
       // do servidor) — sem isto a câmera parece "travada" pela latência
       if (rp.local) { rp.yaw = this.yaw; rp.pitch = this.pitch; }
-      const vel = Math.hypot(d.moveX || 0, d.moveZ || 0);
-      rp.update(dt, vel * 14.5);
+      const vel = Math.hypot(d.moveX || 0, d.moveZ || 0) * (d.run ? 14.5 : 6.4);
+      rp.update(dt, vel);
       // corpo do próprio jogador visível a pé; dentro do carro ele some
       if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro;
     }
@@ -428,6 +428,8 @@ export class Match {
       const agoraT = performance.now();
       if (agoraT - (this._lastTiroT || 0) > 130) {
         this._lastTiroT = agoraT;
+        const rpLoc = this.avatares.get(this.meuId);
+        if (rpLoc) rpLoc.setAiming(true);
         const dxT = -Math.sin(this.yaw) * Math.cos(this.pitch);
         const dyT = Math.sin(this.pitch);
         const dzT = -Math.cos(this.yaw) * Math.cos(this.pitch);
@@ -451,45 +453,16 @@ export class Match {
         posT.needsUpdate = true;
         this._tracer.visible = true;
         this._tracerVida = 0.08;
+        this.game.bullets?.fire(oT, new THREE.Vector3(dxT, dyT, dzT));
       }
     }
     if (this._tracer) {
       if (this._tracerVida > 0) this._tracerVida -= dt;
       else this._tracer.visible = false;
     }
-    // [tiro] tracer local — dano é autoritativo do servidor (feedback igual ao solo)
-    if ((this._fire || this._fireBtn) && foc) {
-      const agoraT = performance.now();
-      if (agoraT - (this._lastTiroT || 0) > 130) {
-        this._lastTiroT = agoraT;
-        const dxT = -Math.sin(this.yaw) * Math.cos(this.pitch);
-        const dyT = Math.sin(this.pitch);
-        const dzT = -Math.cos(this.yaw) * Math.cos(this.pitch);
-        const oT = foc.clone().add(new THREE.Vector3(dxT, dyT, dzT).multiplyScalar(1.3));
-        const colT = this.game.col;
-        let fimT = null;
-        if (colT) {
-          const hitT = colT.raycast(oT.x, oT.y, oT.z, dxT, dyT, dzT, 160);
-          if (hitT) fimT = new THREE.Vector3(oT.x + dxT * hitT.t, oT.y + dyT * hitT.t, oT.z + dzT * hitT.t);
-        }
-        if (!fimT) fimT = oT.clone().add(new THREE.Vector3(dxT, dyT, dzT).multiplyScalar(160));
-        if (!this._tracer) {
-          const gT = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-          this._tracer = new THREE.Line(gT, new THREE.LineBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0.85 }));
-          this._tracer.frustumCulled = false;
-          this.game.gfx.scene.add(this._tracer);
-        }
-        const posT = this._tracer.geometry.attributes.position;
-        posT.setXYZ(0, oT.x, oT.y, oT.z);
-        posT.setXYZ(1, fimT.x, fimT.y, fimT.z);
-        posT.needsUpdate = true;
-        this._tracer.visible = true;
-        this._tracerVida = 0.08;
-      }
-    }
-    if (this._tracer) {
-      if (this._tracerVida > 0) this._tracerVida -= dt;
-      else this._tracer.visible = false;
+    if (!(this._fire || this._fireBtn)) {
+      const rpLoc2 = this.avatares.get(this.meuId);
+      if (rpLoc2) rpLoc2.setAiming(false);
     }
     this._camDist = damp(this._camDist, noCarro ? CAMERA.carZoom : (aimando ? 3.2 : this._dist), 9, dt);
     const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
