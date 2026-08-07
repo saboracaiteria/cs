@@ -1028,6 +1028,8 @@ body.toque #dlg-text{font-size:clamp(15px,2vw,24px)}
 
 /* botão fullscreen global — discreto, topo da tela, todos os modos */
 #btn-fs{
+  pointer-events:auto;
+  pointer-events:auto;
   position:fixed; top:max(84px, calc(env(safe-area-inset-top) + 84px)); right:max(10px, env(safe-area-inset-right));
   z-index:9999; width:38px; height:38px; border-radius:12px;
   background:rgba(10,18,32,.45); border:1px solid rgba(140,170,220,.35);

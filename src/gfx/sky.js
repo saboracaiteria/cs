@@ -60,9 +60,9 @@ export class SkySystem {
       white: new THREE.Color(0xfff6e8),
       day: new THREE.Color(0xbdd6ee),
       dusk: new THREE.Color(0xd98a52),
-      night: new THREE.Color(0x0c1220),
+      night: new THREE.Color(0x1c2c4c),
       hemiDay: new THREE.Color(0xa8ccff),
-      hemiNight: new THREE.Color(0x24304a),
+      hemiNight: new THREE.Color(0x3c5278),
       groundDay: new THREE.Color(0x6b6152),
       groundNight: new THREE.Color(0x0d1018),
     };
@@ -349,7 +349,7 @@ export class SkySystem {
     this._envRT = rt;
     this.scene.environment = rt.texture;
     // à noite os reflexos do céu quase somem
-    this.scene.environmentIntensity = QUALITY.envIntensity * (1 - this.nightFactor * 0.86);
+    this.scene.environmentIntensity = QUALITY.envIntensity * (1 - this.nightFactor * 0.72);
   }
 
   get clockText() { return formatClock(this.hour); }
