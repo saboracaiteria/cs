@@ -116,7 +116,7 @@ function handle(ws, msg) {
         ws.close(4001, 'versao');
         return;
       }
-      const room = manager.join(ws, nick, modo, msg.sala);
+      const room = manager.join(ws, nick, modo);
       // bots preenchem as vagas — mas SEMPRE deixa 1 vaga livre: se outro
       // humano entrar, ele cai na MESMA sala (era o motivo de ninguém se
       // achar: os bots enchiam tudo e canJoin() ficava falso)
@@ -148,6 +148,73 @@ function handle(ws, msg) {
     }
     case T.READY: {
       if (ws._room && ws._playerId != null) ws._room.ready(ws._playerId);
+      break;
+    }
+    case T.START: {
+      // host inicia: só quando TODOS os humanos marcaram pronto — com 1
+      // humano (e bots) também inicia: "jogar sozinho com bots" é permitido
+      if (ws._room && ws._playerId != null) ws._room.start(ws._playerId);
+      break;
+    }
+    case T.INVITE: {
+      // chamar um jogador online para a MINHA sala
+      const room = ws._room;
+      const p = room && ws._playerId != null ? room.players.get(ws._playerId) : null;
+      const alvoId = msg.alvoId;
+      if (!p || alvoId == null) break;
+      const alvoRoom = manager.salaDe(alvoId);
+      const alvo = alvoRoom && alvoRoom.players.get(alvoId);
+      if (!alvo || !alvo.client) {
+        send(ws, { t: T.INVITE_FIM, id: alvoId, aceitou: false, motivo: 'Jogador não encontrado' });
+        break;
+      }
+      if (alvoRoom === room) {
+        send(ws, { t: T.INVITE_FIM, id: alvoId, aceitou: false, motivo: 'Jogador já está na sua sala' });
+        break;
+      }
+      if (alvoRoom.state !== 'lobby') {
+        send(ws, { t: T.INVITE_FIM, id: alvoId, aceitou: false, motivo: 'Jogador já está em partida' });
+        break;
+      }
+      alvo.inviteDe = { id: p.id, nick: p.nick, salaId: room.salaId, modo: room.modo };
+      send(alvo.client, { t: T.INVITE, de: { id: p.id, nick: p.nick, salaId: room.salaId, modo: room.modo } });
+      break;
+    }
+    case T.ACEITAR: {
+      // aceitou o convite: sai da própria sala e entra na sala de quem chamou
+      const room = ws._room;
+      const p = room && ws._playerId != null ? room.players.get(ws._playerId) : null;
+      const deId = msg.deId;
+      if (!p || !p.inviteDe || p.inviteDe.id !== deId) break;
+      const convite = p.inviteDe;
+      p.inviteDe = null;
+      const salaDe = manager.get(convite.salaId);
+      if (!salaDe || !salaDe.canJoin()) {
+        send(ws, { t: T.ERROR, msg: 'A sala de ' + convite.nick + ' fechou ou encheu' });
+        break;
+      }
+      if (salaDe !== room) {
+        room.removePlayer(p.id);              // fecha a sala antiga se ficar vazia
+        const novo = salaDe.addClient(ws, p.nick);
+        // avisa quem chamou que o convite foi aceito
+        const convid = salaDe.players.get(deId);
+        if (convid && convid.client) {
+          send(convid.client, { t: T.INVITE_FIM, id: novo ? novo.id : p.id, nick: p.nick, aceitou: true });
+        }
+      }
+      break;
+    }
+    case T.RECUSAR: {
+      const room = ws._room;
+      const p = room && ws._playerId != null ? room.players.get(ws._playerId) : null;
+      const deId = msg.deId;
+      if (!p || !p.inviteDe || p.inviteDe.id !== deId) break;
+      p.inviteDe = null;
+      const de = manager.salaDe(deId);
+      const convid = de && de.players.get(deId);
+      if (convid && convid.client) {
+        send(convid.client, { t: T.INVITE_FIM, id: p.id, nick: p.nick, aceitou: false, motivo: 'recusou o convite' });
+      }
       break;
     }
     case T.PING: {

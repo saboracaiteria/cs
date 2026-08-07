@@ -44,16 +44,41 @@ export class RoomManager {
   }
 
   /**
-   * Registra um jogador em uma sala (cria se preciso).
-   * `codigo` opcional: entra na sala ESPECÍFICA do amigo (matchmaking por
-   * código — sem isto cada humano caía numa sala nova e ninguém se achava).
+   * Registra um jogador na SUA PRÓPRIA sala (sempre cria). É assim que o
+   * jogador vê os outros online (na lista global) e os CHAMA pelo convite:
+   * quem aceita é movido para a sala de quem chamou.
    */
-  join(client, nick, modo, codigo = null) {
-    let room = codigo ? this.get(String(codigo).trim().toUpperCase()) : null;
-    if (!room || !room.canJoin()) room = this.find(modo);
-    if (!room) room = this.create(modo);
+  join(client, nick, modo) {
+    const room = this.create(modo);
     room.addClient(client, nick);
     return room;
+  }
+
+  /** Todos os humanos conectados (lista "online" do lobby, entre salas). */
+  online() {
+    const out = [];
+    for (const r of this.rooms.values()) {
+      for (const p of r.players.values()) {
+        out.push({
+          id: p.id,
+          nick: p.nick,
+          pronto: p.pronto,
+          host: p.host,
+          salaId: r.salaId,
+          modo: r.modo,
+          estado: r.state,
+        });
+      }
+    }
+    return out;
+  }
+
+  /** A sala onde um jogador (humano) está, ou null. */
+  salaDe(id) {
+    for (const r of this.rooms.values()) {
+      if (r.players.has(id)) return r;
+    }
+    return null;
   }
 
   /** Resumo das salas para debug/admin. */

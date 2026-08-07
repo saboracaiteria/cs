@@ -114,13 +114,8 @@ export class Room {
     p.pronto = !p.pronto;
     // sem host (sala com bots órfãos): o primeiro humano a marcar pronto assume
     if (![...this.players.values()].some((h) => h.host)) p.host = true;
-    if (p.host && p.pronto) {
-      const humans = [...this.players.values()];
-      if (humans.length > 0 && humans.every((h) => h.pronto)) {
-        this.start(id);
-        return;
-      }
-    }
+    // NÃO inicia sozinho: o início é explícito pelo botão INICIAR PARTIDA
+    // (T.START), quando todos os humanos estiverem prontos
     this._bcastLobby();
   }
 
@@ -425,7 +420,9 @@ export class Room {
     ];
     const hostId = humans.find((p) => p.host)?.id ?? null;
     const podeIniciar = humans.length > 0 && humans.every((p) => p.pronto) && this.state === 'lobby';
-    this._bcast(T.LOBBY, { jogadores: todos, hostId, podeIniciar, state: this.state, countdown: Math.ceil(this.countdownT) });
+    // lista de TODOS os humanos online (outras salas) — é com ela que o
+    // jogador vê quem está jogando e pode CHAMAR para a própria sala
+    this._bcast(T.LOBBY, { jogadores: todos, hostId, podeIniciar, state: this.state, countdown: Math.ceil(this.countdownT), online: this.manager.online() });
   }
 
   _sendTo(p, t, data) {

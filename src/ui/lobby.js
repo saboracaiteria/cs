@@ -11,12 +11,20 @@ export function criarLobby() {
   const btnIniciar = document.getElementById('mp-iniciar');
   const btnSair = document.getElementById('mp-sair');
   const codigoEl = document.getElementById('lobby-codigo');
-  const salaEl = document.getElementById('mp-sala');
+  const onlineList = document.getElementById('lobby-online-list');
+  const inviteEl = document.getElementById('lobby-invite');
+  const inviteMsg = document.getElementById('lobby-invite-msg');
+  const btnAceitar = document.getElementById('invite-aceitar');
+  const btnRecusar = document.getElementById('invite-recusar');
+  const toastEl = document.getElementById('lobby-toast');
 
   if (!tela) return { mostrar() {}, esconder() {}, atualizar() {}, onReady() {}, onStart() {}, onLeave() {}, nick() { return ''; } };
 
   let estado = 'lobby';
   let pronto = false;
+  let meuId = null;
+  let conviteDe = null;   // { id, nick } do convite pendente
+  let toastTimer = null;
 
   function mostrar(modoLabel) {
     tela.classList.remove('hidden');
@@ -27,14 +35,32 @@ export function criarLobby() {
 
   function esconder() { tela.classList.add('hidden'); }
 
-  /** Mostra o código da sala atual (compartilhe com os amigos). */
+  /** Mostra o código da sala atual (só informativo). */
   function setSala(codigo) {
     if (codigoEl) codigoEl.textContent = codigo || '—';
   }
 
-  /** Código digitado para entrar na sala do amigo (ou vazio). */
-  function codigoSala() {
-    return salaEl ? salaEl.value.trim().toUpperCase() : '';
+  /** Guarda meu id (para saber se sou host / esconder meu próprio CHAMAR). */
+  function setMeuId(id) {
+    meuId = id;
+  }
+
+  /** Banner de convite recebido: "Fulano quer jogar com você". */
+  function mostrarConvite(de) {
+    if (!inviteEl) return;
+    conviteDe = de || null;
+    if (!conviteDe) { inviteEl.classList.add('hidden'); return; }
+    inviteMsg.textContent = `${de.nick} quer jogar com você!`;
+    inviteEl.classList.remove('hidden');
+  }
+
+  /** Aviso curto no lobby (convite aceito/recusado, erros). */
+  function aviso(msg, ms = 4000) {
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.classList.remove('hidden');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.add('hidden'), ms);
   }
 
   function atualizar(data) {
@@ -56,28 +82,72 @@ export function criarLobby() {
     } else {
       cd.style.display = 'none';
     }
+    // jogadores online (outras salas) — cada um com CHAMAR
+    if (onlineList) {
+      onlineList.innerHTML = '';
+      const online = data.online || [];
+      if (online.length === 0) {
+        const li = document.createElement('li');
+        li.className = 'lb-vazio';
+        li.textContent = 'ninguém online agora — jogue com bots';
+        onlineList.appendChild(li);
+      }
+      for (const j of online) {
+        if (j.id === meuId) continue;                 // eu mesmo
+        if (j.salaId === data.salaId) continue;       // já está na minha sala
+        const li = document.createElement('li');
+        const estadoTxt = j.estado === 'lobby' ? 'na sala' : (j.estado === 'countdown' ? 'contagem…' : 'em partida');
+        const podeChamar = j.estado === 'lobby';
+        li.innerHTML = `<span class="lb-on-nick">${esc(j.nick || '?')}</span>` +
+          `<span class="lb-on-sala">${j.modo === 'br' ? 'BR' : 'DM'} · ${estadoTxt}</span>` +
+          (podeChamar ? `<button type="button" class="lb-chamar" data-id="${j.id}">CHAMAR</button>` : '');
+        onlineList.appendChild(li);
+        if (podeChamar) {
+          li.querySelector('.lb-chamar').addEventListener('click', () => {
+            onInviteCb && onInviteCb(j.id, j.nick);
+          });
+        }
+      }
+    }
     // botões
     const eu = data.jogadores || [];
     btnPronto.disabled = estado !== 'lobby';
     btnPronto.textContent = pronto ? 'PRONTO ✔' : 'MARCAR PRONTO';
     btnPronto.classList.toggle('verde', pronto);
-    btnIniciar.style.display = (data.hostId != null && eu.some((j) => j.host)) ? '' : 'none';
+    // INICIAR PARTIDA: só quem é o HOST vê (e só habilita com todos prontos)
+    btnIniciar.style.display = meuId != null && meuId === data.hostId ? '' : 'none';
     btnIniciar.disabled = !data.podeIniciar;
   }
 
   btnPronto.addEventListener('click', () => { pronto = !pronto; onReadyCb && onReadyCb(); });
   btnIniciar.addEventListener('click', () => onStartCb && onStartCb());
   btnSair.addEventListener('click', () => onLeaveCb && onLeaveCb());
+  btnAceitar && btnAceitar.addEventListener('click', () => {
+    const de = conviteDe;
+    if (!de) return;
+    onAceitarCb && onAceitarCb(de.id);
+    mostrarConvite(null);
+  });
+  btnRecusar && btnRecusar.addEventListener('click', () => {
+    const de = conviteDe;
+    if (!de) return;
+    onRecusarCb && onRecusarCb(de.id);
+    mostrarConvite(null);
+  });
 
   let onReadyCb = null, onStartCb = null, onLeaveCb = null;
+  let onInviteCb = null, onAceitarCb = null, onRecusarCb = null;
 
   return {
-    mostrar, esconder, atualizar, setSala, codigoSala,
+    mostrar, esconder, atualizar, setSala, setMeuId, mostrarConvite, aviso,
     nick: () => nick ? nick.value.trim() || 'Jogador' : 'Jogador',
     setNick: (v) => { if (nick) nick.value = v; },
     onReady: (fn) => { onReadyCb = fn; },
     onStart: (fn) => { onStartCb = fn; },
     onLeave: (fn) => { onLeaveCb = fn; },
+    onInvite: (fn) => { onInviteCb = fn; },
+    onAceitar: (fn) => { onAceitarCb = fn; },
+    onRecusar: (fn) => { onRecusarCb = fn; },
   };
 }
 

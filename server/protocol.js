@@ -9,12 +9,17 @@ export const T = {
   HELLO: 'hello',          // { t, v, nick, modo }
   INPUT: 'input',          // { t, seq, yaw, pitch, moveX, moveZ, run, jump, fire, ads }
   READY: 'ready',          // { t }
+  START: 'start',          // { t } host inicia a partida (todos os humanos prontos)
+  INVITE: 'invite',        // { t, alvoId } chamar um jogador online para a sua sala
+  ACEITAR: 'aceitar',      // { t, deId } aceitar o convite de deId
+  RECUSAR: 'recusar',      // { t, deId } recusar o convite de deId
   LEAVE: 'leave',          // { t }
   CHAT: 'chat',            // { t, msg }
 
   // servidor -> cliente
   WELCOME: 'welcome',      // { t, id, salaId, modo, cfg }
-  LOBBY: 'lobby',          // { t, jogadores: [{id,nick,pronto,host,bot}], hostId, podeIniciar }
+  LOBBY: 'lobby',          // { t, jogadores: [{id,nick,pronto,host,bot}], hostId, podeIniciar, online }
+  INVITE_FIM: 'inviteFim', // { t, id, nick, aceitou, motivo? } resultado do convite p/ quem chamou
   GAME_START: 'gameStart', // { t, modo, seed, jogadores: [...] }
   SNAPSHOT: 'snap',        // { t, seq, players: [...], zone?, loot?, kills?, vivos? }
   SPAWN: 'spawn',          // { t, id, x, y, z, yaw }

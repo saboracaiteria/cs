@@ -421,13 +421,21 @@
     <ul id="lobby-list" class="lobby-list"></ul>
     <div id="lobby-srv" class="lobby-srv"></div>
     <div class="lobby-sala">
-      <span>SALA <b id="lobby-codigo">—</b></span>
-      <span class="lobby-sala-dica">compartilhe o código para o amigo entrar na sua partida</span>
+      <span>MINHA SALA <b id="lobby-codigo">—</b></span>
+      <span class="lobby-sala-dica">sem outros jogadores? marque pronto e INICIE sozinho com bots</span>
     </div>
-    <div class="lobby-sala">
-      <label for="mp-sala">ENTRAR NA SALA DO AMIGO</label>
-      <input id="mp-sala" maxlength="4" placeholder="ex: AB12" autocomplete="off">
+    <div class="lobby-online">
+      <h3>ONLINE AGORA</h3>
+      <ul id="lobby-online-list" class="lobby-online-list"></ul>
     </div>
+    <div id="lobby-invite" class="lobby-invite hidden">
+      <span id="lobby-invite-msg"></span>
+      <div class="lobby-invite-botoes">
+        <button type="button" id="invite-aceitar">ACEITAR</button>
+        <button type="button" id="invite-recusar">RECUSAR</button>
+      </div>
+    </div>
+    <div id="lobby-toast" class="lobby-toast hidden"></div>
     <div class="lobby-botoes">
       <button type="button" id="mp-pronto">MARCAR PRONTO</button>
       <button type="button" id="mp-iniciar" style="display:none">INICIAR PARTIDA</button>

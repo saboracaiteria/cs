@@ -29,8 +29,16 @@ export function iniciarMultiplayer(game, modo, nick) {
   lobby.setNick(nick);
   lobby.mostrar(modo === 'br' ? 'BATTLE ROYALE' : 'MULTIPLAYER');
   lobby.onReady(() => net && net.enviar({ t: T.READY }));
-  lobby.onStart(() => net && net.enviar({ t: T.READY }));
+  // INICIAR PARTIDA: comando explícito do host (só funciona com todos prontos)
+  lobby.onStart(() => net && net.enviar({ t: T.START }));
   lobby.onLeave(() => sairMultiplayer());
+  lobby.onInvite((alvoId, nick) => {
+    if (!net) return;
+    net.enviar({ t: T.INVITE, alvoId });
+    lobby.aviso(`Chamando ${nick}…`);
+  });
+  lobby.onAceitar((deId) => net && net.enviar({ t: T.ACEITAR, deId }));
+  lobby.onRecusar((deId) => net && net.enviar({ t: T.RECUSAR, deId }));
 
   const url = serverUrl();
   // diagnóstico de "todo mundo é host": todos precisam conectar no MESMO
@@ -51,10 +59,7 @@ export function iniciarMultiplayer(game, modo, nick) {
   net._onStatus = (estado) => {
     if (estado === 'erro') lobby.mostrar('⚠ Sem conexão com o servidor');
   };
-  // código de sala digitado (entrar na sala do amigo) — lido UMA vez aqui;
-  // se vazio, o servidor acha/cria uma sala como antes
-  const salaDigitada = lobby.codigoSala();
-  net._onReplay = () => net.enviar({ t: T.HELLO, v: NET_VERSION, nick, modo, sala: salaDigitada });
+  net._onReplay = () => net.enviar({ t: T.HELLO, v: NET_VERSION, nick, modo });
   net.conectar();
   net._onReplay();
 }
@@ -66,8 +71,18 @@ function onMsg(msg) {
       net.salaId = msg.salaId;
       net.modo = msg.modo;
       net.cfg = msg.cfg;
-      // mostra o código da sala no lobby: é com ele que o amigo entra junto
+      lobby.setMeuId(msg.id);
+      // mostra o código da sala atual (só informativo)
       lobby.setSala(msg.salaId);
+      break;
+    case T.INVITE:
+      // alguém me chamou: banner com ACEITAR/RECUSAR
+      lobby.mostrarConvite(msg.de || {});
+      break;
+    case T.INVITE_FIM:
+      // resultado do convite que EU fiz
+      if (msg.aceitou) lobby.aviso(`${msg.nick} aceitou o convite!`);
+      else lobby.aviso(`${msg.nick} ${msg.motivo || 'recusou o convite'}`);
       break;
     case T.LOBBY:
       lobby.atualizar(msg);
