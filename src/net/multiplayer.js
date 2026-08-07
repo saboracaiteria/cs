@@ -60,8 +60,7 @@ export function iniciarMultiplayer(game, modo, nick) {
     if (estado === 'erro') lobby.mostrar('⚠ Sem conexão com o servidor');
   };
   net._onReplay = () => net.enviar({ t: T.HELLO, v: NET_VERSION, nick, modo });
-  net.conectar();
-  net._onReplay();
+  net.conectar();   // o onopen do ClientNet já reenvia o HELLO (_onReplay)
 }
 
 function onMsg(msg) {

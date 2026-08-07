@@ -25,7 +25,9 @@ export class BRRoom extends Room {
   }
 
   canJoin() {
-    return this.state === 'lobby' && this.totalSlots < this.cfg.maxPlayers;
+    // mesma regra do DM: aceita no lobby E no countdown (o amigo convidado
+    // pode entrar na sala com a contagem já rolando)
+    return (this.state === 'lobby' || this.state === 'countdown') && this.players.size < this.cfg.maxPlayers;
   }
 
   _beginGame() {

@@ -24,6 +24,7 @@ export class Room {
     this.seq = 0;
     this.state = 'lobby';       // lobby | countdown | playing | ended
     this.countdownT = 0;
+    this._cdBcast = 0;          // contador p/ reenviar o lobby 1x/s no countdown
     this.elapsed = 0;
     this.world = null;          // preenchido no startGame
     this.cars = [];             // veiculos do MP (server/cars.js)
@@ -98,8 +99,9 @@ export class Room {
     if (this.players.size === 0) {
       this.manager.remove(this.salaId);
       this.stop();
-    } else if (this.state === 'lobby') {
-      // transfere host para o primeiro humano restante
+    } else if (this.state === 'lobby' || this.state === 'countdown') {
+      // transfere host para o primeiro humano restante (também no countdown:
+      // se o host sair na contagem, o outro jogador assume o lobby)
       const first = this.players.values().next().value;
       if (first && !first.host) {
         first.host = true;
@@ -110,7 +112,7 @@ export class Room {
 
   ready(id) {
     const p = this.players.get(id);
-    if (!p) return;
+    if (!p || this.state !== 'lobby') return;
     p.pronto = !p.pronto;
     // sem host (sala com bots órfãos): o primeiro humano a marcar pronto assume
     if (![...this.players.values()].some((h) => h.host)) p.host = true;
@@ -145,6 +147,10 @@ export class Room {
 
     if (this.state === 'countdown') {
       this.countdownT -= dt;
+      // a contagem na tela "anda": reenvia o lobby 1x/s (sem isso o cliente
+      // fica preso em "Partida em 10s…" até o GAME_START)
+      this._cdBcast -= dt;
+      if (this._cdBcast <= 0) { this._bcastLobby(); this._cdBcast = 1; }
       if (this.countdownT <= 0) this._beginGame();
       return;
     }
@@ -422,7 +428,9 @@ export class Room {
     const podeIniciar = humans.length > 0 && humans.every((p) => p.pronto) && this.state === 'lobby';
     // lista de TODOS os humanos online (outras salas) — é com ela que o
     // jogador vê quem está jogando e pode CHAMAR para a própria sala
-    this._bcast(T.LOBBY, { jogadores: todos, hostId, podeIniciar, state: this.state, countdown: Math.ceil(this.countdownT), online: this.manager.online() });
+    // salaId no payload: o lobby usa para filtrar da lista ONLINE quem já
+    // está na MINHA sala (sem isso o amigo da mesma sala aparece com CHAMAR)
+    this._bcast(T.LOBBY, { salaId: this.salaId, jogadores: todos, hostId, podeIniciar, state: this.state, countdown: Math.ceil(this.countdownT), online: this.manager.online() });
   }
 
   _sendTo(p, t, data) {

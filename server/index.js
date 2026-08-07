@@ -109,6 +109,10 @@ wss.on('connection', (ws, req) => {
 function handle(ws, msg) {
   switch (msg.t) {
     case T.HELLO: {
+      // dedupe: o cliente envia HELLO no onopen e no replay (2x por conexão).
+      // Sem isso o mesmo ws vira 2 players em 2 salas — o "fantasma" que
+      // entope a lista ONLINE e faz o botão INICIAR sumir (meuId errado)
+      if (ws._room || ws._playerId != null) break;
       const nick = sanitizeNick(msg.nick) || 'Jogador';
       const modo = msg.modo === 'br' ? 'br' : 'dm';
       if (msg.v !== NET.version) {

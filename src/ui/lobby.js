@@ -31,6 +31,9 @@ export function criarLobby() {
     modoEl.textContent = modoLabel || '';
     cd.style.display = 'none';
     pronto = false;
+    // convite/banner de sessão anterior não podem reaparecer (fantasma)
+    conviteDe = null;
+    if (inviteEl) inviteEl.classList.add('hidden');
   }
 
   function esconder() { tela.classList.add('hidden'); }
@@ -97,8 +100,12 @@ export function criarLobby() {
         if (j.salaId === data.salaId) continue;       // já está na minha sala
         const li = document.createElement('li');
         const estadoTxt = j.estado === 'lobby' ? 'na sala' : (j.estado === 'countdown' ? 'contagem…' : 'em partida');
-        const podeChamar = j.estado === 'lobby';
+        // deixa claro quem é jogador de verdade e quem é bot (na lista online
+        // só entram humanos; a etiqueta evita confusão com o CHAMAR)
+        const tipo = j.bot ? '🤖 bot' : '👤 jogador';
+        const podeChamar = !j.bot && j.estado === 'lobby';
         li.innerHTML = `<span class="lb-on-nick">${esc(j.nick || '?')}</span>` +
+          `<span class="lb-on-tipo ${j.bot ? 'lb-on-bot' : ''}">${tipo}</span>` +
           `<span class="lb-on-sala">${j.modo === 'br' ? 'BR' : 'DM'} · ${estadoTxt}</span>` +
           (podeChamar ? `<button type="button" class="lb-chamar" data-id="${j.id}">CHAMAR</button>` : '');
         onlineList.appendChild(li);
@@ -110,6 +117,10 @@ export function criarLobby() {
       }
     }
     // botões
+    // sincroniza o PRONTO com o servidor: quem aceita um convite ganha um
+    // player NOVO (pronto zerado) — sem isso o botão fica invertido
+    const meuJ = (data.jogadores || []).find((j) => j.id === meuId);
+    if (meuJ) pronto = !!meuJ.pronto;
     const eu = data.jogadores || [];
     btnPronto.disabled = estado !== 'lobby';
     btnPronto.textContent = pronto ? 'PRONTO ✔' : 'MARCAR PRONTO';

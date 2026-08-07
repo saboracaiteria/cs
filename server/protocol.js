@@ -18,7 +18,7 @@ export const T = {
 
   // servidor -> cliente
   WELCOME: 'welcome',      // { t, id, salaId, modo, cfg }
-  LOBBY: 'lobby',          // { t, jogadores: [{id,nick,pronto,host,bot}], hostId, podeIniciar, online }
+  LOBBY: 'lobby',          // { t, salaId, jogadores: [{id,nick,pronto,host,bot}], hostId, podeIniciar, state, countdown, online: [{id,nick,pronto,host,salaId,modo,estado,bot?}] }
   INVITE_FIM: 'inviteFim', // { t, id, nick, aceitou, motivo? } resultado do convite p/ quem chamou
   GAME_START: 'gameStart', // { t, modo, seed, jogadores: [...] }
   SNAPSHOT: 'snap',        // { t, seq, players: [...], zone?, loot?, kills?, vivos? }

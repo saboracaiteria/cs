@@ -679,6 +679,8 @@
 }
 .lobby-online-list li:last-child{ border-bottom:none; }
 .lb-on-nick{ flex:1; color:#eef4fb; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lb-on-tipo{ font-size:10px; letter-spacing:.06em; color:#9fb4cc; background:rgba(255,255,255,.07); border-radius:6px; padding:2px 7px; white-space:nowrap; }
+.lb-on-tipo.lb-on-bot{ color:#7fd4ff; }
 .lb-on-sala{ font-size:11px; color:#7f93ab; }
 .lb-chamar{
   background:rgba(18,140,80,.28); border:1px solid rgba(18,200,110,.5); color:#a8f0c8;
