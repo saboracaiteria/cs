@@ -4,6 +4,14 @@
  */
 
 // ---------------------------------------------------------------- malha urbana
+// ------------------------------------------------------------ multiplayer
+export const NET = {
+  wsUrl: '',  // ← se o site (frontend) for servido em domínio diferente do servidor
+             //   (ex.: GitHub Pages), preencha com:  wss://SEU-SERVIDOR.onrender.com/ws
+};
+
+
+
 export const GRID = 8;                 // linhas de cruzamento por eixo (8x8 = 64 nós)
 export const CELL = 64;                // distância entre cruzamentos
 export const HALF = ((GRID - 1) * CELL) / 2;   // 224 -> cidade vai de -224 a +224

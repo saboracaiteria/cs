@@ -6,12 +6,14 @@ import { ClientNet } from '../net/client.js';
 import { Match } from '../net/match.js';
 import { criarLobby } from '../ui/lobby.js';
 import { NET_VERSION, T } from '../net/protocol.js';
+import { NET } from '../config.js';
 
 /** URL do servidor: sobrescreva com window.__MP_SERVER__ no index.html. */
 export function serverUrl() {
   if (window.__MP_SERVER__) return window.__MP_SERVER__;
   const host = location.hostname;
   if (host === 'localhost' || host === '127.0.0.1') return 'ws://localhost:3000/ws';
+  if (NET.wsUrl && !NET.wsUrl.includes('SEU-SERVIDOR')) return NET.wsUrl;
   return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws'; // mesma origem (Render ou outro host)
 }
 

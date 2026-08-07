@@ -26,12 +26,17 @@ export async function boot() {
   // botão fullscreen global (todos os modos)
   const btnFs = document.getElementById('btn-fs');
   if (btnFs) {
+    const atualizarFsIcone = () => {
+      btnFs.textContent = document.fullscreenElement ? '⤢' : '⛶';
+      btnFs.title = document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia';
+    };
+    document.addEventListener('fullscreenchange', atualizarFsIcone);
     btnFs.addEventListener('click', () => {
       if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
       else document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
+      setTimeout(atualizarFsIcone, 120);
     });
   }
-  window.__cidade3d = game;        // útil para depurar no console
 
   let last = performance.now();
   let acc = 0, frames = 0;
