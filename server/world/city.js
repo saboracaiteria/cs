@@ -69,10 +69,6 @@ export function buildCity(col) {
       }
       const totalH = base;
       col.addBox(lot.x, lot.z, lot.w / 2, lot.d / 2, totalH, 'building');
-      if (totalH > 52 && lot.w > 17 && lot.d > 17 && rng() < 0.5) {
-        const R = Math.min(lot.w, lot.d) * 0.36;
-        col.addBox(lot.x, lot.z, R, R, totalH + 0.06, 'helipad');
-      }
     }
   }
   return blocks;

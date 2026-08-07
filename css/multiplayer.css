@@ -584,6 +584,14 @@
 
 /* botões de ação do toque do MP (ATIRAR/PULAR/AÇÃO/CORRER) — mesmo padrão do solo */
 #mp-pad{
+  position:absolute; width:264px; height:200px; pointer-events:none; touch-action:none;
+  right:calc(env(safe-area-inset-right) + 2px);
+  bottom:calc(env(safe-area-inset-bottom) + 6px);
+  z-index:96;
+  position:absolute; width:264px; height:200px; pointer-events:none; touch-action:none;
+  right:calc(env(safe-area-inset-right) + 2px);
+  bottom:calc(env(safe-area-inset-bottom) + 6px);
+  z-index:96;
   position:absolute; width:264px; height:200px; pointer-events:none;
   right:calc(env(safe-area-inset-right) + 2px);
   bottom:calc(env(safe-area-inset-bottom) + 6px);

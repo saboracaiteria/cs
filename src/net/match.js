@@ -107,6 +107,8 @@ export class Match {
     if (look) look.classList.toggle('hidden', !(this.game && this.game.toque));
     const pad = document.getElementById("mp-pad");
     if (pad) pad.classList.toggle("hidden", !(this.game && this.game.toque));
+    if (this.game && this.game.toque && this.game._telaCheia) this.game._telaCheia();
+    if (this.game && this.game.toque && this.game._telaCheia) this.game._telaCheia();
     // botão de pausa na tela (só no toque; no PC é ESC/Pause)
     this._pausaBtn = document.getElementById('mp-pausa');
     if (this._pausaBtn) {
@@ -170,12 +172,12 @@ export class Match {
     this._pm = (e) => {
       if (document.pointerLockElement) {
         this.yaw -= e.movementX * 0.0024;
-        this.pitch += e.movementY * 0.0024;
+        this.pitch -= e.movementY * 0.0024;
       } else if (this._dragOn) {
         const dx = e.clientX - this._dragX, dy = e.clientY - this._dragY;
         this._dragX = e.clientX; this._dragY = e.clientY;
         this.yaw -= dx * 0.004;
-        this.pitch += dy * 0.004;
+        this.pitch -= dy * 0.004;
       }
       this._clampAim();
     };
@@ -213,7 +215,7 @@ export class Match {
           if (!this._lt.drag && Math.hypot(dx, dy) > 10) this._lt.drag = true;
           if (this._lt.drag) {
             this.yaw -= dx * 0.005;
-            this.pitch += dy * 0.005;
+            this.pitch -= dy * 0.005;
             this._lt.x = t.clientX; this._lt.y = t.clientY;
             this._clampAim();
           }
@@ -421,7 +423,8 @@ export class Match {
     else foc.set(0, 2, 0);
     const noCarro = this._emCarro;
     const ombro = noCarro ? 0 : CAMERA.shoulderX;
-    this._camDist = damp(this._camDist, noCarro ? CAMERA.carZoom : this._dist, 9, dt);
+    const aimando = !!(this._fire || this._dragOn || this._fireBtn);
+    this._camDist = damp(this._camDist, noCarro ? CAMERA.carZoom : (aimando ? 3.2 : this._dist), 9, dt);
     const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
     const dir = new THREE.Vector3(-Math.sin(this.yaw) * cp, sp, -Math.cos(this.yaw) * cp);
     let dist = this._camDist;
@@ -463,7 +466,7 @@ export class Match {
         run: this.inp.run,
         jump: this.inp.jump,
         fire: !!(this._fire || this._dragOn || this._fireBtn),
-        ads: this.inp.ads,
+        ads: !!(this._fire || this._dragOn || this._fireBtn),
         car: this._toggleCar ? this._alvoCarro() : null,
       });
       this._toggleCar = false;

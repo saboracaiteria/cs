@@ -23,6 +23,33 @@ export async function boot() {
     mpBtn.disabled = false;
     mpBtn.addEventListener('click', () => abrirModoSelect(game));
   }
+  // botão fullscreen global (todos os modos)
+  const btnFs = document.getElementById('btn-fs');
+  if (btnFs) {
+    btnFs.addEventListener('click', () => {
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+      else document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
+    });
+  }
+  // botão fullscreen global (todos os modos)
+  const btnFs = document.getElementById('btn-fs');
+  if (btnFs) {
+    btnFs.addEventListener('click', () => {
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+      else document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
+    });
+  }
+  window.__cidade3d = game;        // útil para depurar no console
+  window.__cidade3d = game;        // útil para depurar no console
+  // botão fullscreen global (todos os modos)
+  const btnFs = document.getElementById('btn-fs');
+  if (btnFs) {
+    btnFs.addEventListener('click', () => {
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+      else document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
+    });
+  }
+  window.__cidade3d = game;        // útil para depurar no console
   window.__cidade3d = game;        // útil para depurar no console
 
   let last = performance.now();
