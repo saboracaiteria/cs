@@ -504,6 +504,12 @@ export class Match {
     else foc.set(0, 2, 0);
     const noCarro = this._emCarro;
     const ombro = noCarro ? 0 : CAMERA.shoulderX;
+    // direção da MIRA: raio que passa pela ponta dela (NDC 0.24/0.2 — o MESMO
+    // aimRay do solo). yaw/pitch puro aponta para o CENTRO da tela, e a mira
+    // fica deslocada no ombro: a bala errava tudo que se apontava.
+    this.camera.updateMatrixWorld();
+    const ndcM = new THREE.Vector3(0.24, 0.2, 0.5).unproject(this.camera);
+    this._fireDir = ndcM.sub(this.camera.position).normalize();
     // [tiro] tracer local — dano é autoritativo do servidor (feedback igual ao solo)
     if ((this._fire || this._fireBtn) && foc) {
       const agoraT = performance.now();
@@ -511,12 +517,7 @@ export class Match {
         this._lastTiroT = agoraT;
         const rpLoc = this.avatares.get(this.meuId);
         if (rpLoc) rpLoc.setAiming(true);
-        // direção do tiro = yaw/pitch PUROS, mesma fórmula do servidor (o
-        // recuo da câmera é visual; a bala sai reta na mira)
-        const cpT = Math.cos(this.pitch), spT = Math.sin(this.pitch);
-        const dxT = -Math.sin(this.yaw) * cpT;
-        const dyT = spT;
-        const dzT = -Math.cos(this.yaw) * cpT;
+        const dxT = this._fireDir.x, dyT = this._fireDir.y, dzT = this._fireDir.z;
         // a bala nasce no PEITO do Bob — antes nascia na câmera, atrás dele,
         // e o "fogo do cano" aparecia saindo das costas do player
         const oT = new THREE.Vector3(foc.x, foc.y + 0.02, foc.z);
@@ -631,6 +632,11 @@ export class Match {
         jump: this.inp.jump,
         fire: !!(this._fire || this._dragOn || this._fireBtn),
         ads: !!(this._fire || this._dragOn || this._fireBtn),
+        // direção da MIRA (NDC) — o servidor valida o dano na MESMA linha do
+        // tracer/bala do cliente; sem isto ele atira pelo yaw/pitch (centro)
+        fdx: this._fireDir ? this._fireDir.x : 0,
+        fdy: this._fireDir ? this._fireDir.y : 0,
+        fdz: this._fireDir ? this._fireDir.z : 0,
         car: this._toggleCar ? this._alvoCarro() : null,
       });
       this._toggleCar = false;

@@ -546,13 +546,31 @@ modeSelect → escolhe modo → cria NetClient → connect(ws://...)
 ## 10. DEPLOY (IMPORTANTE)
 
 - **GitHub Pages NÃO roda WebSocket** — o servidor vai para uma nuvem Node:
-  - **Render** (free tier, região São Paulo 🇧🇷 disponível) — recomendado
+  - **OnRender (Render.com) — tipo de serviço: WEB SERVICE** (não "Static Site": Static Site não roda Node e o WebSocket nunca sobe)
   - Railway, Fly.io, ou VPS (alternativas)
-- Cliente: `src/net/client.js` guarda a URL em `src/config.js` → `NET.wsUrl = 'wss://seu-servidor.onrender.com'`
-- HTTPS obrigatório (WSS) — o Pages é HTTPS, navegador bloqueia WS misto.
-- O repositório sobe `server/` junto (o Pages ignora, a nuvem roda).
-- **Free tier do Render "dorme"** após 15 min sem uso: o 1º jogador pode esperar ~30s de "wake up" — aceitável para teste, mas considerar plano pago (US$7/mês) quando for divulgar.
-- **Healthcheck:** o Render monitora `GET /health` — configurar no painel.
+
+### 10.1 Passo a passo no OnRender (Web Service)
+
+1. **Dashboard → New → Web Service** → conecta o repositório (`saboracaiteria/cs`).
+2. **Root Directory:** deixe a raiz (`/`) — o `package.json` da raiz tem o `start`.
+3. **Build Command:** `npm install`
+4. **Start Command:** `npm start`  (roda `node server/index.js` — serve o jogo E o WebSocket na MESMA porta)
+5. **Instâncias: mantenha 1 (uma).** Com 2+ instâncias, cada jogador pode cair numa instância diferente → cada um vira host da própria sala e ninguém se vê.
+6. **Plano pago (não hibernar):** o free tier "dorme" após ~15 min sem uso. Ao acordar, o processo REINICIA do zero — a sala anterior sumiu, e o próximo jogador entra numa sala NOVA (sintoma clássico: "todo mundo é host"). Para testar com amigos, suba o plano pago (US$ 7/mês) ou pelo menos entrem todos na mesma janela de atividade.
+7. O Render injeta a porta via `PORT` — o servidor já usa (`process.env.PORT || 3000`). Nada a configurar.
+
+### 10.2 Cliente conectando
+
+- O cliente conecta no MESMO host de onde a página foi aberta: `wss://<seu-servidor>.onrender.com/ws` (auto, via `serverUrl()`).
+- Se o frontend ficar em OUTRO domínio (ex.: GitHub Pages), preencha `NET.wsUrl` em `src/config.js`:
+  `wsUrl: 'wss://SEU-SERVIDOR.onrender.com/ws'`
+- HTTPS obrigatório (WSS) — o navegador bloqueia WS misto em página HTTPS.
+- O lobby agora mostra o servidor conectado (linha discreta) — se ele aparecer como `localhost` num site remoto, a configuração está errada e cada jogador cai no PRÓPRIO PC.
+- **Mapa, bots e kills são SEMPRE do servidor** (seed fixa 777 nos dois lados; bots criados no servidor; killfeed/placar vêm dos eventos do servidor) — conectando todos no mesmo servidor, todo mundo vê o mesmo mapa, os mesmos bots e o placar bate.
+
+### 10.3 Healthcheck
+
+- `GET /health` → `{ ok:true, ... }` — configurar no painel do Render para monitorar/evitar "unhealthy".
 
 ---
 

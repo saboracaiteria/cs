@@ -273,6 +273,14 @@
   flex-wrap: wrap;
   margin-top: 8px;
 }
+.lobby-srv {
+  margin: 4px 0 10px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--accent2);
+  opacity: .8;
+  word-break: break-all;
+}
 .lobby-botoes button {
   background: rgba(255, 255, 255, .08);
   border: 1px solid var(--stroke);

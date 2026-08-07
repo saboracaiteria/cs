@@ -131,7 +131,13 @@ function handle(ws, msg) {
       const p = room && ws._playerId != null ? room.players.get(ws._playerId) : null;
       if (p && room.state === 'playing' && p.body) {
         room._applyInput(p, msg);
-        if (msg.fire) room.onShoot(p, { yaw: msg.yaw, pitch: msg.pitch });
+        if (msg.fire) {
+          room.onShoot(p, {
+            yaw: msg.yaw, pitch: msg.pitch,
+            // direção da MIRA do cliente (NDC) — dano na mesma linha do tracer
+            dir: msg.fdx != null ? { x: msg.fdx, y: msg.fdy, z: msg.fdz } : null,
+          });
+        }
         if (room.modo === 'br' && msg.pickup) room.pickup(p);
       }
       break;

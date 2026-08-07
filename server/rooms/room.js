@@ -161,7 +161,10 @@ export class Room {
     this._spawnAll();
     this._bcast(T.GAME_START, {
       modo: this.modo,
-      seed: 20260725,
+      // seed REAL do mundo: cliente e servidor geram a cidade com a mesma
+      // seed fixa 777 — todos os jogadores veem o MESMO mapa (e o mesmo
+      // lugar dos postes/árvores, que o servidor usa para colidir)
+      seed: 777,
       jogadores: this._all().map((p) => ({ id: p.id, nick: p.nick, bot: !!this.bots.get(p.id) })),
     });
     this._log('partida iniciada!');
@@ -333,11 +336,20 @@ export class Room {
     p._lastFire = now;
 
     const ox = p.body.pos.x, oy = p.body.pos.y + 1.5, oz = p.body.pos.z;
-    const spread = W.spread * (Math.random() - 0.5);
-    const yaw = aim.yaw + spread, pitch = aim.pitch + spread;
-    const dx = -Math.sin(yaw) * Math.cos(pitch);
-    const dy = Math.sin(pitch);
-    const dz = -Math.cos(yaw) * Math.cos(pitch);
+    // direção do tiro: com a direção da MIRA do cliente (NDC), usa-se ela
+    // EXATA — o dano cai onde o tracer/bala do jogador apontam. Bots e
+    // clientes antigos mandam só yaw/pitch: fallback com espalhamento.
+    let dx, dy, dz;
+    if (aim.dir) {
+      const l = Math.hypot(aim.dir.x, aim.dir.y, aim.dir.z) || 1;
+      dx = aim.dir.x / l; dy = aim.dir.y / l; dz = aim.dir.z / l;
+    } else {
+      const spread = W.spread * (Math.random() - 0.5);
+      const yaw = aim.yaw + spread, pitch = aim.pitch + spread;
+      dx = -Math.sin(yaw) * Math.cos(pitch);
+      dy = Math.sin(pitch);
+      dz = -Math.cos(yaw) * Math.cos(pitch);
+    }
 
     const hitWorld = this.world.col.raycast(ox, oy, oz, dx, dy, dz, W.range);
     const maxT = hitWorld ? Math.max(0.5, hitWorld.t - 0.3) : W.range;

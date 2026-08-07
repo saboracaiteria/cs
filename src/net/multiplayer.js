@@ -32,7 +32,21 @@ export function iniciarMultiplayer(game, modo, nick) {
   lobby.onStart(() => net && net.enviar({ t: T.READY }));
   lobby.onLeave(() => sairMultiplayer());
 
-  net = new ClientNet(serverUrl());
+  const url = serverUrl();
+  // diagnóstico de "todo mundo é host": todos precisam conectar no MESMO
+  // servidor — se a página é remota e a URL aponta para localhost, cada
+  // jogador cai no PRÓPRIO PC e ninguém se vê
+  console.log('[MP] conectando em', url);
+  const el = document.getElementById('lobby-srv');
+  if (el) {
+    el.textContent = 'Servidor: ' + url.replace(/^wss?:\/\//, '');
+    const host = location.hostname;
+    if (url.includes('localhost') && host !== 'localhost' && host !== '127.0.0.1') {
+      el.textContent += ' ⚠ site remoto apontando para localhost — configure NET.wsUrl';
+    }
+  }
+
+  net = new ClientNet(url);
   net._onMsg = onMsg;
   net._onStatus = (estado) => {
     if (estado === 'erro') lobby.mostrar('⚠ Sem conexão com o servidor');
