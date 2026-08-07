@@ -588,16 +588,5 @@
   right:calc(env(safe-area-inset-right) + 2px);
   bottom:calc(env(safe-area-inset-bottom) + 6px);
   z-index:96;
-  position:absolute; width:264px; height:200px; pointer-events:none; touch-action:none;
-  right:calc(env(safe-area-inset-right) + 2px);
-  bottom:calc(env(safe-area-inset-bottom) + 6px);
-  z-index:96;
-  position:absolute; width:264px; height:200px; pointer-events:none;
-  right:calc(env(safe-area-inset-right) + 2px);
-  bottom:calc(env(safe-area-inset-bottom) + 6px);
-  z-index:60;
 }
-#mp-pad .tc-btn{ pointer-events:auto; }
-#mp-correr{ background:rgba(20,120,255,.25); border-color:rgba(20,120,255,.55); color:#cfe4ff; }
-#mp-correr.press{ background:rgba(20,120,255,.5); }
-
+}

@@ -524,7 +524,6 @@ export class City {
       pad.translate(x, top + 0.06, z);
       padOut.push(pad);
       this.rooftopPads.push({ x, z, y: top + 0.06, r: R });
-      this.col.addBox(x, z, R, R, top + 0.06, 'helipad');
     }
   }
 
