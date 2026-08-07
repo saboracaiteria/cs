@@ -93,6 +93,13 @@ export class DMRoom extends Room {
     }
   }
 
+  /** [respawn] Morto pediu para voltar já (botão "VOLTAR PARA A PARTIDA"). */
+  _respawnAgora(p) {
+    if (!p || p.hp > 0 || this.state !== 'playing') return;
+    this.respawnQueue.delete(p.id);
+    this._spawn(p);
+  }
+
   _endGame(vencedor) {
     this.state = 'ended';
     this._bcast(T.WINNER, { id: vencedor.id, nick: vencedor.nick, kills: vencedor.kills });

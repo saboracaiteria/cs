@@ -87,7 +87,7 @@ export const MODES = {
     minPlayers: 2,       // bots completam até minPlayers quando ligado
     killLimit: 25,
     timeLimit: 600,      // segundos
-    respawnTime: 3,
+    respawnTime: 2,      // segundos até renascer (botão antecipa na hora)
     spawnProtect: 3,     // segundos imune após nascer
     teamCount: 2,        // verde x amarelo
   },

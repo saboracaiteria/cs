@@ -15,6 +15,7 @@ export const T = {
   RECUSAR: 'recusar',      // { t, deId } recusar o convite de deId
   LEAVE: 'leave',          // { t }
   CHAT: 'chat',            // { t, msg }
+  RESPAWN_NOW: 'respawnNow', // { t } morto pediu para renascer na hora (DM)
 
   // servidor -> cliente
   WELCOME: 'welcome',      // { t, id, salaId, modo, cfg }

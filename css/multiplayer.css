@@ -179,7 +179,8 @@
   margin-top: 6px;
 }
 .mp-fechar,
-.mp-btn-back {
+.mp-btn-back,
+.mp-btn-sair {
   background: rgba(255, 255, 255, .06);
   border: 1px solid var(--stroke);
   color: var(--ink);
@@ -193,9 +194,14 @@
   transition: background .15s, border-color .15s;
 }
 .mp-fechar:hover,
-.mp-btn-back:hover {
+.mp-btn-back:hover,
+.mp-btn-sair:hover {
   background: rgba(255, 255, 255, .14);
   border-color: rgba(255, 255, 255, .3);
+}
+/* botão secundário do overlay de morte: fica abaixo do principal */
+.mp-btn-sair {
+  margin-top: 12px;
 }
 
 /* ---------- Lobby Componentes ---------- */

@@ -777,12 +777,22 @@ export class Match {
       ov.className = 'mp-overlay morte';
       ov.querySelector('.ov-titulo').textContent = 'VOCÊ MORREU';
       ov.querySelector('.ov-sub').textContent = por ? `Eliminado por ${por}` : 'Você foi eliminado';
-      // SEMPRE dá para finalizar o jogo: sem o botão o jogador morto ficava
-      // preso no overlay (no BR não há respawn e o ESC é bloqueado com ele aberto)
+      // [respawn] DM: o botão principal volta para a partida NA HORA (pede ao
+      // servidor, que renasce sem esperar o timer); o secundário sai. BR não
+      // tem respawn — só o de sair. A contagem de 2s continua de fundo
       const btn = ov.querySelector('.mp-btn');
-      btn.style.display = '';
-      btn.textContent = 'SAIR DA PARTIDA';
-      btn.onclick = () => { ov.classList.add('hidden'); this.sair(); };
+      const btnSair = ov.querySelector('.mp-btn-sair');
+      if (this.modo !== 'br') {
+        btn.style.display = '';
+        btn.textContent = 'VOLTAR PARA A PARTIDA';
+        btn.onclick = () => this.net.enviar({ t: T.RESPAWN_NOW });
+      } else {
+        btn.style.display = 'none';
+      }
+      if (btnSair) {
+        btnSair.classList.remove('hidden');
+        btnSair.onclick = () => { ov.classList.add('hidden'); this.sair(); };
+      }
     }
     if (this.brHud) this.brHud.esconder();
   }
@@ -819,6 +829,8 @@ export class Match {
     ov.querySelector('.ov-titulo').textContent = venceu ? 'VITÓRIA! 🏆' : 'FIM DE PARTIDA';
     ov.querySelector('.ov-sub').textContent = venceu ? 'Você é o último de pé!' : `${msg.nick || 'Alguém'} venceu`;
     ov.querySelector('.ov-kills').textContent = 'Partida encerrada — obrigado por jogar!';
+    const btnSair = ov.querySelector('.mp-btn-sair');
+    if (btnSair) btnSair.classList.add('hidden');
     const btn = ov.querySelector('.mp-btn');
     btn.style.display = '';
     btn.textContent = 'VOLTAR AO MENU';

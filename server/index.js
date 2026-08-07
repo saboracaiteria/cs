@@ -154,6 +154,14 @@ function handle(ws, msg) {
       if (ws._room && ws._playerId != null) ws._room.ready(ws._playerId);
       break;
     }
+    case T.RESPAWN_NOW: {
+      // morto apertou "VOLTAR PARA A PARTIDA": renasce na hora, sem esperar
+      // o timer. Só salas com respawn (DM) implementam _respawnAgora
+      const room = ws._room;
+      const p = room && ws._playerId != null ? room.players.get(ws._playerId) : null;
+      if (p && room._respawnAgora) room._respawnAgora(p);
+      break;
+    }
     case T.START: {
       // host inicia: só quando TODOS os humanos marcaram pronto — com 1
       // humano (e bots) também inicia: "jogar sozinho com bots" é permitido
