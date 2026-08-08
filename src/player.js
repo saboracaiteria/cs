@@ -204,13 +204,11 @@ export class Player {
     const wanted = maxSpeed * Math.min(1, mag);
     this.speed = damp(this.speed, wanted, PLAYER.accel / Math.max(1, maxSpeed), dt);
 
-    // [FPS] O MOUSE é só a CABEÇA: o corpo não gira com a câmera (nada de
-    // seguir o yaw + bodyTurn). Andando, o corpo vira para a DIREÇÃO DO
-    // MOVIMENTO (dx,dz); parado, mantém a última direção — olhar ao redor
-    // não faz o boneco girar nem andar torto.
-    if (mag > 0.001) {
-      this.yaw = dampAngle(this.yaw, Math.atan2(dx, dz), PLAYER.turnSmooth, dt);
-    }
+    // [FPS] O CORPO gira com o mouse (estilo GTA): parado ou andando, o
+    // boneco vira para a MESMA direção da câmera (viewYaw = centro da
+    // tela). O movimento usa a mesma direção — nunca fica torto/diagonal,
+    // e olhar ao redor vira o corpo junto com a câmera.
+    this.yaw = dampAngle(this.yaw, camYaw, PLAYER.turnSmooth, dt);
     if (mag > 0.001) this._move.set(dx, 0, dz);
 
     // ------------------------------------------------ [36] pulo e gravidade
@@ -335,9 +333,7 @@ export class Player {
     if (this.pos.y < floor) { this.pos.y = floor; this.vy = Math.max(0, this.vy); }
     if (this.pos.y > 430) { this.pos.y = 430; this.vy = Math.min(0, this.vy); }
 
-    // [Ombro] mesma rotação com corpo levemente de lado, para a arma
-    // continuar visível também no modo deus
-    this.yaw = dampAngle(this.yaw, camYaw + Math.PI + CAMERA.bodyTurn, PLAYER.turnSmooth, dt);
+    this.yaw = dampAngle(this.yaw, camYaw + Math.PI, PLAYER.turnSmooth, dt);
     this.grounded = false;
     this.inWater = false;
 
