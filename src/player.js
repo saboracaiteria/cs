@@ -208,7 +208,7 @@ export class Player {
     // boneco vira para a MESMA direção da câmera (viewYaw = centro da
     // tela). O movimento usa a mesma direção — nunca fica torto/diagonal,
     // e olhar ao redor vira o corpo junto com a câmera.
-    this.yaw = dampAngle(this.yaw, camYaw, PLAYER.turnSmooth, dt);
+    this.yaw = dampAngle(this.yaw, camYaw + Math.PI, PLAYER.turnSmooth, dt);
     if (mag > 0.001) this._move.set(dx, 0, dz);
 
     // ------------------------------------------------ [36] pulo e gravidade
