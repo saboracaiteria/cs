@@ -258,6 +258,8 @@ export class Human {
   update(dt, speed) {
     const moving = speed > 0.15;
     if (this.weapon) this.weapon.visible = !this.carrying;
+    this.armR.group.rotation.y = 0;   // [FPS] braços viram na horizontal só quando mirando
+    this.armL.group.rotation.y = 0;
     const cadence = moving ? clamp(speed * 2.35, 2.2, 11) : 1.6;
     this.phase += dt * cadence;
 
@@ -288,10 +290,13 @@ export class Human {
       // um pouco mais; desceu, a arma abaixa junto — a arma SEMPRE aponta
       // para onde a mira está
       const apAim = clamp(this.lookPitch, -0.7, 0.7);
+      const ayAim = clamp(this.lookYaw, -0.5, 0.5);   // [FPS] virada lateral: cano segue a mira
       this.armR.group.rotation.x = -1.45 - apAim;
+      this.armR.group.rotation.y = ayAim;
       this.armR.group.rotation.z = 0.10;
       this.armR.fore.rotation.x = -0.12;
       this.armL.group.rotation.x = -1.45 - apAim * 0.85;
+      this.armL.group.rotation.y = ayAim * 0.85;
       this.armL.group.rotation.z = -0.30;   // a mão esquerda cruza e segura a frente
       this.armL.fore.rotation.x = -0.12;
     } else if (this.armGesture > 0) {
