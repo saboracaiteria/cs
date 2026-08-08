@@ -71,6 +71,9 @@ export class Match {
     this._emCarro = false;
     this._toggleCar = false;
     this._fireBtn = false;   // gatilho do botão ATIRAR do toque (segurar = rajada)
+    // true em telas de toque (mobile): o PC usa mouse e a câmera não vira no ADS
+    this._isTouch = typeof window !== 'undefined' &&
+      ('ontouchstart' in window || (navigator.maxTouchPoints || 0) > 0);
 
     // [FPS] ADS e coice da câmera, iguais ao solo (o camera.update do single
     // não roda no MP — o estado é replicado aqui)
@@ -682,7 +685,7 @@ export class Match {
       lift = Math.max(0, floor - this.camera.position.y);
       this.camera.position.y += lift;
     }
-    if (aimando) {
+    if (aimando && this._isTouch) {
       // [ADS] a câmera vira um tico para o lado da mira (offsets do NDC
       // 0.24/0.2 com o FOV atual) — o alvo NÃO escorrega para o centro
       // quando o zoom fecha: a mira fica onde está e apenas aproxima.
