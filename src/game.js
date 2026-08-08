@@ -1987,15 +1987,18 @@ export class Game {
       else this.player.update(dt, inp, this.camera.viewYaw);
       this.player.focusPoint(this._focus);
       /*
-       * [27][FPS] Segurou ATIRAR (botão da tela, tecla E ou mouse):
-       * os braços erguem com a pistola, a câmera fecha o zoom de mira
-       * (ADS — o "zoom que fixa a mira") e a arma na tela sobe para o
-       * centro. Soltou, tudo volta ao normal sozinho.
+       * [27][FPS] MIRA: no PC o botao DIREITO, segurado, ergue a pistola e
+       * fecha a mira 2x (FOV pela metade) — padrao de jogos; o botao
+       * ESQUERDO atira sem zoom (tiro de cintura). No celular nada muda:
+       * segurar ATIRAR continua com o zoom leve de COD Mobile. Soltou,
+       * tudo volta ao normal sozinho.
        */
-      const aimando = !blocked && (this.input.toque.atirar
-        || this.input.mouseDown || this.input.segurando('atirar'));
+      const aimando = !blocked && (this.toque
+        ? (this.input.toque.atirar || this.input.segurando('atirar'))
+        : this.input.mouseRightDown);
       this.player.setAiming(aimando);
-      this.camera.setAds(aimando);
+      this.camera.setAds(aimando, this.toque ? CAMERA.adsFov : CAMERA.adsFovPc);
+      this.camera.setAds(aimando, this.toque ? CAMERA.adsFov : CAMERA.adsFovPc);
       if (this.viewmodel) this.viewmodel.setAds(aimando);
     } else if (this.mode === 'cable') {
       // [54] o corpo olha para onde a câmera aponta; a POSIÇÃO é acertada
