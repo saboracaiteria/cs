@@ -345,6 +345,7 @@ export class Room {
     const now = Date.now();
     if (now - (p._lastFire || 0) < W.cooldown * 1000) return;
     p._lastFire = now;
+    p._fireVis = now;   // [MP] flag visual: o cliente ergue o braco/arma do avatar
 
     // origem do tiro: a CÂMERA do cliente (a linha exata da mira — mesmo ponto
     // de onde o tracer/bala saem). Valida que está perto do peito (anti-cheat);
@@ -374,10 +375,10 @@ export class Room {
     let best = null, bestT = Infinity;
     for (const alvo of this._all()) {
       if (alvo === p || !alvo.body || alvo.hp <= 0) continue;
-      const t = rayCapsule(ox, oy, oz, dx, dy, dz, alvo.body.pos);
-      if (t !== null && t < bestT && t < maxT) {
-        bestT = t;
-        best = { alvo };
+      const rt = rayCapsule(ox, oy, oz, dx, dy, dz, alvo.body.pos);
+      if (rt && rt.t < bestT && rt.t < maxT) {
+        bestT = rt.t;
+        best = { alvo, cabeca: rt.cabeca };
       }
     }
     // carros também tomam tiro (e explodem ao zerar a vida)
@@ -396,8 +397,8 @@ export class Room {
     // player; o player causa 67% no bot (player vs player fica 100%). O
     // antigo danoMult da dificuldade deixava o bot forte demais.
     const atiradorBot = !!this.bots.get(p.id);
-    const alvoBot = best.alvo ? !!this.bots.get(best.alvo.id) : false;
-    const dmg = atiradorBot ? W.damage * 0.18 : (alvoBot ? W.damage * 0.67 : W.damage);
+    const mult = best.cabeca && W.headshotMult ? W.headshotMult : 1;
+    const dmg = (atiradorBot ? W.damage * 0.18 : W.damage) * mult;
     if (best.carro) this._carDano(best.carro, dmg);
     else this._damage(best.alvo, p, dmg, p.arma);
   }
@@ -479,6 +480,7 @@ export class Room {
       moveZ: p.body ? (p.body.moveZ||0) : 0,
       run: p.body ? !!(p.body._inp && p.body._inp.run) : false,
       inCar: p.inCar ?? null,
+      fire: (p._fireVis && Date.now() - p._fireVis < 350) ? 1 : 0,
     }));
     const snap = { t: T.SNAPSHOT, seq: this.seq, players };
     this._snapExtra(snap);
@@ -525,10 +527,12 @@ function raySphere(ox, oy, oz, dx, dy, dz, c, r) {
  */
 function rayCapsule(ox, oy, oz, dx, dy, dz, pos) {
   const esferas = [[0.35, 0.38], [0.95, 0.52], [1.6, 0.32]];
-  let menor = null;
-  for (const [h, r] of esferas) {
+  let menor = null, cabeca = false;
+  for (let i = 0; i < esferas.length; i++) {
+    const [h, r] = esferas[i];
     const t = raySphere(ox, oy, oz, dx, dy, dz, { x: pos.x, y: pos.y + h, z: pos.z }, r);
-    if (t !== null && (menor === null || t < menor)) menor = t;
+    if (t !== null && (menor === null || t < menor)) { menor = t; cabeca = i === 2; }
   }
-  return menor;
+  if (menor === null) return null;
+  return { t: menor, cabeca };
 }
