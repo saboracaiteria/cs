@@ -162,7 +162,7 @@ export const CAMERA = {
    * aproxima de verdade, e o braço com a pistola domina o canto da tela.
    */
   adsFov: 54,
-  adsZoom: 2.9,
+  adsFovPc: 31,             // [PC] mira 2x no botão direito (FOV pela metade)
   adsSpeed: 9,
   /**
    * [FPS] SEM coice de câmera: ao atirar a mira NUNCA sai do lugar
