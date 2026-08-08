@@ -619,10 +619,9 @@ export class Match {
         this._tracerVida = 0.08;
         this.game.bullets?.fire(oT, this._vT2.set(dxT, dyT, dzT));
         if (this.game && this.game.audio) this.game.audio.tiro();
-        // [FPS] tremida e coice da câmera, iguais ao solo
-        this._shake = Math.min(1.4, this._shake + 0.16);
-        this._recoilP += CAMERA.recoilPitch * (0.8 + Math.random() * 0.45);
-        this._recoilY += (Math.random() - 0.5) * 2 * CAMERA.recoilYaw;
+        // [FPS] coice/tremida da camera REMOVIDO nos modos online (DM/BR):
+        // o recuo tremia a mira e atrapalhava em rede lenta (lag).
+        // O SOLO (game.js) mantem o recuo normal.
       }
     }
     if (this._tracer) {
@@ -657,7 +656,7 @@ export class Match {
     const pitchE = clamp(this.pitch + this._recoilP, CAMERA.pitchMin, CAMERA.pitchMax);
     this._camDist = damp(
       this._camDist,
-      noCarro ? CAMERA.carZoom : (aimando ? Math.min(this._dist, CAMERA.adsZoom) : this._dist),
+      noCarro ? CAMERA.carZoom : this._dist,
       9, dt,
     );
     const cp = Math.cos(pitchE), sp = Math.sin(pitchE);
