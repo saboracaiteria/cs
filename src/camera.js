@@ -171,12 +171,11 @@ export class GameCamera {
     const yaw = this.yaw + this._recoilY;
     const pitch = clamp(this.pitch + this._recoilP, CAMERA.pitchMin, CAMERA.pitchMax);
 
-    // ---- [FPS] a pé, segurar o tiro puxa a câmera até o zoom de mira;
-    // soltar devolve o zoom que o scroll tinha deixado
+    // ---- [FPS] a distância é SÓ do scroll; o ADS não puxa a câmera
+    // (puxar gira a visão pelo ombro e a mira "anda" — o tiro sairia
+    // fora do alvo). O zoom de mira agora é só o FOV, que não mexe na mira.
     if (this.mode === 'foot') {
-      this.wantDistance = this._adsQuero
-        ? Math.min(this._zoomScroll, CAMERA.adsZoom)
-        : this._zoomScroll;
+      this.wantDistance = this._zoomScroll;
     }
 
     this.distance = damp(this.distance, this.wantDistance, 9, dt);
