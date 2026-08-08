@@ -78,10 +78,10 @@ export class GameCamera {
 
   // ------------------------------------------------------------ [FPS] ADS
   /** Liga/desliga o zoom de mira (ADS) — segurar o tiro. */
-  setAds(on) { this._adsQuero = !!on; }
-
-  /** O zoom de mira está fechado o bastante para valer? */
-  get isAds() { return this.ads > 0.03; }
+  setAds(on, fovAlvo = CAMERA.adsFov) {
+    this._adsQuero = !!on;
+    this._adsFov = fovAlvo;
+  }
 
   /**
    * [FPS] Inclinação (pitch) do FOCO da mira no mundo, em radianos.
@@ -145,7 +145,7 @@ export class GameCamera {
     const queroAds = this._adsQuero && (this.mode === 'foot' || this.mode === 'fps') ? 1 : 0;
     this.ads = damp(this.ads, queroAds, CAMERA.adsSpeed, dt);
 
-    const fov = CAMERA.fov + (CAMERA.adsFov - CAMERA.fov) * this.ads;
+    const fov = CAMERA.fov + (this._adsFov - CAMERA.fov) * this.ads;
     if (Math.abs(this.cam.fov - fov) > 0.01) {
       this.cam.fov = fov;
       this.cam.updateProjectionMatrix();
