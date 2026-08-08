@@ -1998,7 +1998,6 @@ export class Game {
         : this.input.mouseRightDown);
       this.player.setAiming(aimando);
       this.camera.setAds(aimando, this.toque ? CAMERA.adsFov : CAMERA.adsFovPc);
-      this.camera.setAds(aimando, this.toque ? CAMERA.adsFov : CAMERA.adsFovPc);
       if (this.viewmodel) this.viewmodel.setAds(aimando);
     } else if (this.mode === 'cable') {
       // [54] o corpo olha para onde a câmera aponta; a POSIÇÃO é acertada
