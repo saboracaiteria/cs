@@ -204,20 +204,13 @@ export class Player {
     const wanted = maxSpeed * Math.min(1, mag);
     this.speed = damp(this.speed, wanted, PLAYER.accel / Math.max(1, maxSpeed), dt);
 
-    /*
-     * [11][14] O MOUSE define para onde o jogador olha, não o movimento.
-     * O corpo acompanha a câmera mesmo parado, então WASD vira deslocamento
-     * relativo: A e D andam de lado sem virar as costas, e o tiro sai sempre
-     * na direção em que o personagem está encarando.
-     *
-     * A frente da câmera no chão é (-sin, -cos) e o personagem olha para +Z,
-     * logo a rotação do corpo é o yaw da câmera + PI.
-     *
-     * [Ombro] Soma `CAMERA.bodyTurn`: o corpo fica levemente virado para a
-     * esquerda em relação à câmera, expondo o ombro direito e a pistola —
-     * a câmera deslocada (over-the-shoulder) vê o braço em perfil.
-     */
-    this.yaw = dampAngle(this.yaw, camYaw + Math.PI + CAMERA.bodyTurn, PLAYER.turnSmooth, dt);
+    // [FPS] O MOUSE é só a CABEÇA: o corpo não gira com a câmera (nada de
+    // seguir o yaw + bodyTurn). Andando, o corpo vira para a DIREÇÃO DO
+    // MOVIMENTO (dx,dz); parado, mantém a última direção — olhar ao redor
+    // não faz o boneco girar nem andar torto.
+    if (mag > 0.001) {
+      this.yaw = dampAngle(this.yaw, Math.atan2(dx, dz), PLAYER.turnSmooth, dt);
+    }
     if (mag > 0.001) this._move.set(dx, 0, dz);
 
     // ------------------------------------------------ [36] pulo e gravidade
