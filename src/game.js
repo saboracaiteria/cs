@@ -1984,7 +1984,7 @@ export class Game {
       this.player.human.lookPitch = this.camera.aimPitch;
       this.player.human.lookYaw = this.camera.aimYaw;
       if (this.god) this.player.updateFly(dt, inp, this.camera.yaw);
-      else this.player.update(dt, inp, this.camera.yaw);
+      else this.player.update(dt, inp, this.camera.viewYaw);
       this.player.focusPoint(this._focus);
       /*
        * [27][FPS] Segurou ATIRAR (botão da tela, tecla E ou mouse):
