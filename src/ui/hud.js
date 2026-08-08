@@ -155,9 +155,7 @@ export class HUD {
   }
 
   recoil() {
-    const c = this.el.crosshair;
-    c.classList.add('recoil');
-    setTimeout(() => c.classList.remove('recoil'), 70);
+    // [FPS] sem pulso: a mira fica parada mesmo ao atirar (sniper)
   }
 
   setOnTarget(on) {
