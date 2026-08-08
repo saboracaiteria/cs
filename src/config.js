@@ -165,16 +165,12 @@ export const CAMERA = {
   adsZoom: 2.9,
   adsSpeed: 9,
   /**
-   * [FPS] Coice leve e controlável.
-   *
-   * Cada tiro empurra a inclinação para cima (`recoilPitch`) com uma
-   * deriva lateral aleatória (`recoilYaw`); o coice relaxa sozinho com
-   * `recoilRecover`. O jogador compensa puxando o mouse para baixo —
-   * é o controle de recuo dos FPS, e é o que permite reposicionar a
-   * mira enquanto atira.
+   * [FPS] SEM coice de câmera: ao atirar a mira NUNCA sai do lugar
+   * (sniper-friendly). O recuo ficou só visual — a arma sobe no
+   * viewmodel e o hitmarker confirma o acerto.
    */
-  recoilPitch: 0.005,
-  recoilYaw: 0.0022,
+  recoilPitch: 0,
+  recoilYaw: 0,
   recoilRecover: 5.0,
   /** [FPS] Espalhamento da bala: sem mirar (cintura) vs mirando (ADS). */
   spreadHip: 0.012,
