@@ -364,9 +364,21 @@ export class Game {
      * menos no caminho de quem só queria mexer numa configuração.
      */
     this.input.onLockChange = (locked) => {
-      if (!locked && this.state === 'playing' && !this.phone.open) {
-        this.pausar();
-      }
+      if (locked) { clearTimeout(this._reLock); return; }
+      if (this.state !== "playing" || this.phone.open) return;
+      // [FPS] Perda acidental (alt-tab, redimensionar, clique fora): tenta
+      // re-travar em 250 ms para não "desligar" sozinho. No ESC intencional
+      // o Chrome recusa o re-lock por ~1 s e o timeout cai no menu normal.
+      clearTimeout(this._reLock);
+      this._reLock = setTimeout(() => {
+        if (this.state !== "playing" || this.phone.open) return;
+        this.input.requestLock();
+        setTimeout(() => {
+          if (!this.input.locked && this.state === "playing" && !this.phone.open) {
+            this.pausar();
+          }
+        }, 300);
+      }, 250);
     };
 
     this.canvas.addEventListener('mousedown', () => {
@@ -2144,20 +2156,9 @@ export class Game {
     }
     car.speed = clamp(car.speed, -CAR.reverseSpeed, CAR.maxSpeed);   // [28] até 120 km/h
 
-    /*
-     * [11] Direção pelo mouse: o carro busca o rumo para onde a câmera aponta.
-     * A/D continuam valendo como ajuste fino.
-     *
-     * Só vale na câmera externa. Na visão interna o mouse serve para olhar
-     * dentro da cabine — se ele também esterçasse, olhar para o lado viraria
-     * o carro e o carro viraria o olhar, num laço sem fim.
-     */
-    const externa = this.camera.mode !== 'car-in';
+    // [FPS] O mouse é só a cabeça: a direção do carro vem SÓ do volante
+    // (A/D). Olhar ao redor não esterça o carro — nem na câmera externa.
     let steer = -ax.strafe;                            // manual: D vira à direita
-    if (externa) {
-      const alvo = this.camera.yaw + Math.PI;          // rumo = frente da câmera
-      steer += clamp(angleDelta(car.yaw, alvo) * 1.8, -1, 1);
-    }
     steer = clamp(steer, -1, 1);
 
     // esterço proporcional à velocidade (parado não vira)
