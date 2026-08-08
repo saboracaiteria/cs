@@ -43,6 +43,20 @@ function sphere(r, x, y, z, hex, sy = 1, sz = 1) {
   return paint(g, hex);
 }
 
+/**
+ * Cápsula (cilindro com pontas arredondadas) — o formato real de um braço
+ * ou perna. `len` é o trecho reto; a altura total fica len + 2r, então quem
+ * usa escolhe r e len de modo a manter a MESMA altura do segmento (os pivôs
+ * das dobradiças não se mexem). sx/sz achatam levemente a seção — membro
+ * humano não é um cilindro perfeito. cap/rad controlam a suavidade.
+ */
+function capsule(r, len, x, y, z, hex, sx = 1, sz = 1, cap = 4, rad = 10) {
+  const g = new THREE.CapsuleGeometry(r, len, cap, rad);
+  g.scale(sx, 1, sz);
+  g.translate(x, y, z);
+  return paint(g, hex);
+}
+
 export class Human {
   /**
    * @param {object} opts {rng, shirt, pants, skin, hair, scale, number}
@@ -172,8 +186,15 @@ export class Human {
     const group = new THREE.Group();
     group.position.set(side * SHOULDER_X, SHOULDER_Y, 0);
 
+    /*
+     * Braço em CÁPSULA, não caixa: o ombro rola em vez de dobrar em quina e
+     * a manga da jaqueta ganha volume arredondado. O raio + trecho reto são
+     * escolhidos para a altura total (len + 2r) bater exatamente com o
+     * UPPER_ARM/FOREARM antigos — as dobradiças (ombro/cotovelo) não se
+     * mexem, e a mecânica de animação/arma continua idêntica.
+     */
     const upper = new THREE.Mesh(
-      paint(new THREE.BoxGeometry(0.105, UPPER_ARM, 0.105).translate(0, -UPPER_ARM / 2, 0), this.shirt),
+      capsule(0.056, 0.208, 0, -UPPER_ARM / 2, 0, this.shirt, 1, 0.9, 4, 10),
       this.material,
     );
     upper.castShadow = this.fullShadow;
@@ -182,9 +203,8 @@ export class Human {
     const fore = new THREE.Group();
     fore.position.y = -UPPER_ARM;
     const foreGeos = [
-      new THREE.BoxGeometry(0.092, FOREARM, 0.092).translate(0, -FOREARM / 2, 0),
+      capsule(0.048, 0.204, 0, -FOREARM / 2, 0, this.skin, 1, 0.9, 4, 10),
     ];
-    paint(foreGeos[0], this.skin);
     const hand = sphere(0.062, 0, -FOREARM - 0.03, 0, this.skin, 0.85, 1);
     const foreMesh = new THREE.Mesh(mergeGeometries([foreGeos[0], hand], false), this.material);
     foreMesh.castShadow = this.fullShadow;
@@ -198,8 +218,9 @@ export class Human {
     const group = new THREE.Group();
     group.position.set(side * 0.105, HIP_Y, 0);
 
+    // coxa em cápsula (calça justa) — altura total = THIGH, igual à caixa antiga
     const thigh = new THREE.Mesh(
-      paint(new THREE.BoxGeometry(0.148, THIGH, 0.158).translate(0, -THIGH / 2, 0), this.pants),
+      capsule(0.077, 0.296, 0, -THIGH / 2, 0, this.pants, 0.94, 1.02, 5, 12),
       this.material,
     );
     thigh.castShadow = this.fullShadow;
@@ -207,11 +228,12 @@ export class Human {
 
     const shinGroup = new THREE.Group();
     shinGroup.position.y = -THIGH;
-    const shinGeo = new THREE.BoxGeometry(0.128, SHIN, 0.135).translate(0, -SHIN / 2, 0);
-    paint(shinGeo, this.pants);
+    // canela em cápsula + bota com bico arredondado (bola achatada na ponta)
+    const shinGeo = capsule(0.064, 0.302, 0, -SHIN / 2, 0, this.pants, 0.94, 1.02, 5, 12);
     const footGeo = new THREE.BoxGeometry(0.135, 0.085, 0.27).translate(0, -SHIN - 0.042, 0.055);
     paint(footGeo, shoeColor);
-    const shinMesh = new THREE.Mesh(mergeGeometries([shinGeo, footGeo], false), this.material);
+    const toe = sphere(0.065, 0, -SHIN - 0.042, 0.128, shoeColor, 0.52, 0.95);
+    const shinMesh = new THREE.Mesh(mergeGeometries([shinGeo, footGeo, toe], false), this.material);
     shinMesh.castShadow = this.fullShadow;
     shinGroup.add(shinMesh);
     group.add(shinGroup);
