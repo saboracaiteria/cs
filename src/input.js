@@ -31,7 +31,7 @@ export class Input {
     this.mouseDown = false;
     this.mousePressed = false;      // borda de subida
     this.mouseRightDown = false;      // botão direito (mira no PC)
-
+    this._justPressed = new Set();
     this.onLockChange = null;
     this.onAcao = null;             // callback (idAcao, evento) para ações de borda
 
