@@ -63,6 +63,7 @@ export class RemotePlayer {
     this.pitch = d.pitch ?? this.pitch;
     this.hp = d.hp ?? this.hp;
     this.vivo = (d.hp ?? 1) > 0;
+    this.firing = (d.fire || 0) >= 0.5;   // [MP] avatar esta atirando agora
   }
 
   /** Animação por quadro. `animar=false` (LOD) ainda segue a posição. */
@@ -89,7 +90,10 @@ export class RemotePlayer {
     // andar; pulo/queda (variação grande) passa direto (não achata a parábola)
     const dy = (this._tY ?? this.y) - this.y;
     this.y += Math.abs(dy) < 0.08 ? dy * Math.min(1, 18 * dt) : dy;
-    if (!animar) return;   // posição segue; passos/asa em câmera lenta
+    if (!animar) return;   // posicao segue; passos/asa em camera lenta
+    // [MP] bot/jogador ATIRANDO: ergue os bracos com a arma apontando
+    // para o alvo (o yaw/pitch do corpo ja vem do snapshot mirando o player)
+    if (!this.local) this.human.aiming = this.firing && this.vivo;
     this.human.lookYaw = 0;
     this.human.lookPitch = this.pitch;
     this.human.update(dt, speed);
@@ -107,7 +111,9 @@ export class RemotePlayer {
 
   /** [MP] Posicao de tiro: bracos erguidos com a pistola (igual ao solo). */
   setAiming(on) {
-    if (this.local) this.human.aiming = on;
+    // remotos: ergue os bracos ao atirar (flag fire do snapshot);
+    // local: ADS manual (match.js controla).
+    this.human.aiming = on;
   }
 
   remover() {
