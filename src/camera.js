@@ -92,9 +92,9 @@ export class GameCamera {
    * O jogo passa isto para `human.lookPitch` e a cabeça obedece.
    */
   get aimPitch() {
-    const halfH = Math.tan(THREE.MathUtils.degToRad(this.cam.fov) / 2);
-    const offset = Math.atan(0.2 * halfH);
-    return this.pitch + this._recoilP + offset;
+    // [FPS] A mira fica no CENTRO da tela: o tiro sai exatamente para onde
+    // o centro do retículo aponta (sem desvio do ombro).
+    return this.pitch + this._recoilP;
   }
 
   /**
@@ -103,8 +103,8 @@ export class GameCamera {
    * este valor só vira a CABEÇA um tico na direção da mira, como num FPS.
    */
   get aimYaw() {
-    const halfW = Math.tan(THREE.MathUtils.degToRad(this.cam.fov) / 2) * this.cam.aspect;
-    return Math.atan(0.24 * halfW);
+    // [FPS] o tiro sai no centro horizontal da tela (sem ombro).
+    return 0;
   }
 
   /**
