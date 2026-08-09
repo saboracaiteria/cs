@@ -934,6 +934,7 @@ export class Game {
     this.heli.setInteriorView(false);
     this.hud.showHeliPanel(true);
     this.hud.setPrompt(null);
+    this.hud.setCrosshairCenter(true);
   }
 
   _exitHeli() {
@@ -947,6 +948,7 @@ export class Game {
     this.mode = 'foot';
     this.camera.setMode('foot');
     this.hud.showHeliPanel(false);
+    this.hud.setCrosshairCenter(false);
   }
 
   /**
@@ -1220,7 +1222,8 @@ export class Game {
     if (this.mode === 'heli') { this._fireMissile(); return; }  // [63]
 
     if (!this.bullets.canFire) return;
-    const { origin, direction } = this.camera.aimRay(this._aimOrigin, this._aimDir);
+    const noHeli = this.mode === 'heli';
+    const { origin, direction } = this.camera.aimRay(this._aimOrigin, this._aimDir, noHeli ? 0 : 0.24, noHeli ? 0 : 0.2);
 
     // [AIM ASSIST] inimigo perto da linha de mira: o tiro desvia para o centro
     // dele (cone ~5,7°). Não rouba tiro errado longe — só tira o peso de
@@ -1323,15 +1326,38 @@ export class Game {
 
     // [AIM ASSIST] igual ao FPS: o míssil desvia para o inimigo mais próximo
     // da linha de mira (cone ~5,7°) — o heli acerta onde o alvo está.
+    const alvosM = [];
     const foesM = this.player.inimigos;
     if (foesM && foesM.length) {
-      const alvosM = [];
       for (const f of foesM) {
         if (!f.vivo) continue;
         const pM = f.root.position;
         alvosM.push({ x: pM.x, y: pM.y + (f.alturaAlvo || 1), z: pM.z });
       }
-      const aM = aimAssist(origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, alvosM, 200, 0.16);
+    }
+    if (this.stage && this.stage.foes && this.stage.foes.length) {
+      for (const f of this.stage.foes) {
+        if (!f.vivo) continue;
+        const pM = f.root.position;
+        alvosM.push({ x: pM.x, y: pM.y + (f.alturaAlvo || 1), z: pM.z });
+      }
+    }
+    if (this.peds && this.peds.peds) {
+      for (const p of this.peds.peds) {
+        if (!p.alive) continue;
+        const pP = p.human.root.position;
+        alvosM.push({ x: pP.x, y: pP.y + 0.9, z: pP.z });
+      }
+    }
+    if (this.cars && this.cars.cars) {
+      for (const c of this.cars.cars) {
+        if (!c.alive) continue;
+        const pC = c.root.position;
+        alvosM.push({ x: pC.x, y: pC.y + 0.9, z: pC.z });
+      }
+    }
+    if (alvosM.length) {
+      const aM = aimAssist(origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, alvosM, 300, noHeli ? 0.28 : 0.16);
       if (aM) direction.set(aM.x, aM.y, aM.z);
     }
 

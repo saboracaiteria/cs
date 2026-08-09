@@ -39,6 +39,7 @@ button{font-family:var(--font)}
   transition:transform .06s ease-out;
 }
 #crosshair.recoil{transform:translate(-50%,-50%) scale(1.28)}
+#crosshair.center{left:50%; top:50%}
 
 /* [FPS] zoom de mira (ADS): a mira desliza para o centro da tela */
 /* [FPS] ADS: a mira NÃO anda de lugar — fica no ombro. O anel só

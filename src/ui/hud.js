@@ -166,6 +166,11 @@ export class HUD {
     this.el.crosshair.style.opacity = v ? '1' : '0';
   }
 
+  /** [heli] Mira do helicóptero fica no centro da tela (o míssil vai para onde o jogador olha). */
+  setCrosshairCenter(on) {
+    this.el.crosshair.classList.toggle('center', !!on);
+  }
+
   /** [FPS] Zoom de mira: a mira desliza do canto (62%, 2/5) para o centro. */
   setAds(on) {
     this.el.crosshair.classList.toggle('ads', on);

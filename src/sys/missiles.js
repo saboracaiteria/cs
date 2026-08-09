@@ -171,6 +171,11 @@ export class MissileSystem {
 
       m.p.addScaledVector(m.v, dt);
 
+      if (m.alvo) {
+        const ax = m.alvo.x - m.p.x, ay = m.alvo.y - m.p.y, az = m.alvo.z - m.p.z;
+        if (ax * ax + ay * ay + az * az < 10.24) { this._detona(m, m.alvo); continue; }   // chegou no ponto da mira
+      }
+
       // rastro: intervalo por DISTÂNCIA, não por quadro — senão o rastro fica
       // ralo quando o míssil está rápido e denso quando está lento
       m.fumaca += passo;

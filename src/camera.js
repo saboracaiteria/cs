@@ -319,7 +319,7 @@ export class GameCamera {
    * a 62% da largura (NDC x = +0.24) e 2/5 do topo (NDC y = +0.2) — o
    * mesmo deslocamento da mira no celular, estilo COD Mobile.
    */
-  aimRay(origin = new THREE.Vector3(), direction = new THREE.Vector3()) {
+  aimRay(origin = new THREE.Vector3(), direction = new THREE.Vector3(), ndcX = 0.24, ndcY = 0.2) {
     // unproject depende de matrizes atualizadas; o tiro pode ser disparado
     // pelo teclado, fora do momento em que o three atualiza a cena
     this.cam.updateMatrixWorld();
@@ -330,7 +330,7 @@ export class GameCamera {
      * continua saindo exatamente onde ela está e a visão dos inimigos ao
      * redor permanece aberta.
      */
-    const ndc = new THREE.Vector3(0.24, 0.2, 0.5);
+    const ndc = new THREE.Vector3(ndcX, ndcY, 0.5);
     ndc.unproject(this.cam);
     origin.copy(this.cam.position);
     direction.copy(ndc).sub(origin).normalize();

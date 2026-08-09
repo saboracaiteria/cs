@@ -651,7 +651,7 @@ export class Match {
     // aimRay do solo). yaw/pitch puro aponta para o CENTRO da tela, e a mira
     // fica deslocada no ombro: a bala errava tudo que se apontava.
     this.camera.updateMatrixWorld();
-    this._vNdc.set(0.24, 0.2, 0.5).unproject(this.camera);
+    this._vNdc.set(this._emHeli ? 0 : 0.24, this._emHeli ? 0 : 0.2, 0.5).unproject(this.camera);
     this._fireDir = this._vNdc.sub(this.camera.position).normalize();
 
     // [AIM ASSIST] magnetismo de mira: inimigo perto da linha de tiro e o tiro
