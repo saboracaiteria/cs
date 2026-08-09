@@ -7,6 +7,7 @@ import { SnapshotBuffer } from './snapshot.js';
 import { RemotePlayer } from './remotePlayer.js';
 import { predictBody } from './predict.js';
 import { aimAssist } from '../util/aim.js';
+import { criarKillfeed } from '../ui/killfeed.js';
 import { criarScoreboard } from '../ui/scoreboard.js';
 import { criarBrHud } from '../ui/brHud.js';
 import { criarNetStatus } from '../ui/netStatus.js';
