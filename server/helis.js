@@ -10,6 +10,7 @@
  */
 
 import { HELI, WORLD_LIMIT } from './config.js';
+import { groundY } from './physics.js';
 import { angleDelta, clamp } from './util.js';
 
 let heliUid = 1;
@@ -34,7 +35,7 @@ export function createHelis(world, count = HELI_SPOTS.length) {
         if (!world.col.isBlocked(x + dx, z + dz, 2.2)) { x += dx; z += dz; break; }
       }
     }
-    const y = world.col.groundHeightAt(x, z, 0) + HELI.landHeight;
+    const y = groundY(world, x, z, 0) + HELI.landHeight;
     helis.push({
       id: heliUid++,
       x, y, z,
@@ -60,7 +61,7 @@ export function updateHelis(world, helis, dt) {
   for (const h of helis) {
     if (h.playerId == null) {
       // sem piloto: se ficou no ar (ex.: piloto morreu), desce até pousar
-      const surf = world.col.groundHeightAt(h.x, h.z, h.y);
+      const surf = groundY(world, h.x, h.z, h.y);
       const minY = surf + HELI.landHeight;
       if (h.y > minY) {
         h.vel.y = Math.max(h.vel.y - 8 * dt, -8);   // descida suave (autorrotação)
@@ -77,7 +78,7 @@ export function updateHelis(world, helis, dt) {
     const inp = h.inp || { forward: 0, strafe: 0, up: 0, down: 0, yawLeft: 0, yawRight: 0 };
 
     // ---- gasolina: voando consome, pousado reabastece
-    const surfIdle = world.col.groundHeightAt(h.x, h.z, h.y);
+    const surfIdle = groundY(world, h.x, h.z, h.y);
     const minYIdle = surfIdle + HELI.landHeight;
     const pousado = h.y <= minYIdle + HELI.fuelMinY;
     if (pousado) h.fuel = Math.min(HELI.fuelMax, h.fuel + HELI.fuelRefill * dt);
@@ -150,7 +151,7 @@ export function updateHelis(world, helis, dt) {
     h.z += h.vel.z * dt;
 
     // não desce abaixo da superfície (sem "afundar" ao pousar em descida)
-    const surf = world.col.groundHeightAt(h.x, h.z, h.y);
+    const surf = groundY(world, h.x, h.z, h.y);
     const minY = surf + HELI.landHeight;
     if (h.y < minY && yAntes >= minY - 0.02) {
       h.y = minY;
@@ -167,7 +168,7 @@ export function updateHelis(world, helis, dt) {
     }
 
     // teto de voo e limites do mundo
-    if (h.y > 420) { h.y = 420; h.vel.y = Math.min(0, h.vel.y); }
+    if (h.y > HELI.maxAlt) { h.y = HELI.maxAlt; h.vel.y = Math.min(0, h.vel.y); }
     h.x = clamp(h.x, -WORLD_LIMIT, WORLD_LIMIT);
     h.z = clamp(h.z, -WORLD_LIMIT, WORLD_LIMIT);
   }

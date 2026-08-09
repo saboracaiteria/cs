@@ -74,6 +74,8 @@ export const HELI = {
   fuelConsume: 0.5,   // % por segundo voando
   fuelRefill: 15,     // % por segundo pousado (~7 s p/ encher)
   fuelMinY: 0.5,      // (m) do chão p/ considerar "pousado"
+  /** [teto] altura máxima de voo no MP/BR — 150 m (prédios vão até ~36 m). */
+  maxAlt: 150,
 };
 
 // ---------------------------------------------------------------- míssil do heli (MP)

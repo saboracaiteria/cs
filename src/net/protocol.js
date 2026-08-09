@@ -40,6 +40,8 @@ export const T = {
   CAR_JOIN: 'carJoin',     // { t, id, carId }
   CAR_LEAVE: 'carLeave',   // { t, id }
   CAR_BOOM: 'carBoom',     // { t, id, x, z } — carro destruído (explode)
+  MISSIL_FIRE: 'missilFire', // { t, id, x, y, z, dx, dy, dz, v, alvo } — míssil disparado do heli
+  MISSIL: 'missil',        // { t, id, x, y, z } — explosão do míssil
 };
 
 /** Envia JSON seguro (espelho do send() do servidor). */
