@@ -100,6 +100,7 @@ export class Match {
     this._vT0 = new THREE.Vector3();
     this._vT1 = new THREE.Vector3();
     this._vT2 = new THREE.Vector3();
+    this._vPM = new THREE.Vector3();   // ponto onde a mira aponta (missil guiado do servidor)
     this._animF = 0;         // contador p/ LOD de animação (avatares distantes)
 
     this._ligarListeners();
@@ -663,9 +664,17 @@ export class Match {
       const aA = aimAssist(
         this.camera.position.x, this.camera.position.y, this.camera.position.z,
         this._fireDir.x, this._fireDir.y, this._fireDir.z,
-        alvosA, 140, 0.11,
+        alvosA, 140, 0.20,
       );
       if (aA) this._fireDir.set(aA.x, aA.y, aA.z);
+    }
+
+    // ponto onde a mira aponta no mundo — o servidor guia o missil ate aqui
+    if (noHeli && (this._fire || this._fireBtn || this._dragOn) && this.game && this.game.col) {
+      const cP = this.camera.position;
+      const hT = this.game.col.raycast(cP.x, cP.y, cP.z, this._fireDir.x, this._fireDir.y, this._fireDir.z, 500);
+      if (hT) this._vPM.set(cP.x + this._fireDir.x * hT.t, cP.y + this._fireDir.y * hT.t, cP.z + this._fireDir.z * hT.t);
+      else this._vPM.copy(cP).addScaledVector(this._fireDir, 500);
     }
 
 
@@ -730,7 +739,7 @@ export class Match {
     this._updateAimFeedback();   // mira vermelha sobre inimigos (como o solo)
     // ---- [FPS] ADS, coice e tremida replicados do camera.update do SOLO
     // (o GameCamera não roda no MP — a câmera aqui é a THREE pura)
-    const aimando = !!(this._fire || this._fireBtn);
+    const aimando = !!(this._fire || this._fireBtn) && !noHeli && !noCarro;   // [FPS] sem ADS em veiculo
     this._adsAmt = damp(this._adsAmt, aimando ? 1 : 0, CAMERA.adsSpeed, dt);
     const fovA = CAMERA.fov + (CAMERA.adsFov - CAMERA.fov) * this._adsAmt;
     if (Math.abs(this.camera.fov - fovA) > 0.01) {
@@ -830,6 +839,9 @@ export class Match {
         fpx: this.camera.position.x,
         fpy: this.camera.position.y,
         fpz: this.camera.position.z,
+        fx: this._emHeli && (this._fire || this._fireBtn || this._dragOn) ? this._vPM.x : null,
+        fy: this._emHeli && (this._fire || this._fireBtn || this._dragOn) ? this._vPM.y : null,
+        fz: this._emHeli && (this._fire || this._fireBtn || this._dragOn) ? this._vPM.z : null,
         car: alvoV ? alvoV.car : null,
         heli: alvoV ? alvoV.heli : null,
         up: this._emHeli ? (this.inp.up ? 1 : 0) : 0,

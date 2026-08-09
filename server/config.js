@@ -86,7 +86,6 @@ export const MISSIL = {
   cooldown: 0.5, // s entre disparos (míssil mais rápido)
   vida: 5,       // s de voo máximo antes de explodir no ar
   curva: 2.5,    // rad/s de curva do teleguiado (homing no alvo da mira)
-  curva: 2.5,    // rad/s de curva do teleguiado (homing no alvo da mira)
 };
 /** Quantos helicópteros espalhados pelo mapa no MP. */
 export const NUM_HELIS = 5;

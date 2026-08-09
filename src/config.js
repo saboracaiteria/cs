@@ -174,7 +174,7 @@ export const CAMERA = {
   recoilRecover: 5.0,
   /** [FPS] Espalhamento da bala: sem mirar (cintura) vs mirando (ADS). */
   spreadHip: 0.012,
-  spreadAds: 0.0015,
+  spreadAds: 0,
 };
 
 // ---------------------------------------------------------------- veículos
@@ -329,6 +329,7 @@ export const MISSILE = {
   speed: 55,                   // velocidade de saída do trilho
   accel: 70,                   // aceleração do motor
   maxSpeed: 165,
+  turn: 4.0,                // [missil] guia para o ponto exato da mira (raio de giro seguro a 165 m/s)
   life: 5.0,
   cooldown: 0.5,               // míssil do heli mais rápido [27]
   blastPed: 9.5,               // raio que pega pedestres

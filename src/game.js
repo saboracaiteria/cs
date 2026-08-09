@@ -1233,7 +1233,7 @@ export class Game {
         const pS = f.root.position;
         alvosS.push({ x: pS.x, y: pS.y + (f.alturaAlvo || 1), z: pS.z });
       }
-      const aS = aimAssist(origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, alvosS, 120, 0.10);
+      const aS = aimAssist(origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, alvosS, 120, 0.20);
       if (aS) direction.set(aS.x, aS.y, aS.z);
     }
 
@@ -1331,7 +1331,7 @@ export class Game {
         const pM = f.root.position;
         alvosM.push({ x: pM.x, y: pM.y + (f.alturaAlvo || 1), z: pM.z });
       }
-      const aM = aimAssist(origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, alvosM, 200, 0.10);
+      const aM = aimAssist(origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, alvosM, 200, 0.16);
       if (aM) direction.set(aM.x, aM.y, aM.z);
     }
 
@@ -1342,9 +1342,10 @@ export class Game {
 
     this._missileSide = -(this._missileSide || 1);
     const boca = this.heli.hardpoint(this._missileSide, this._tmpV);
+    const pontoAlvo = alvo.clone();   // ponto exato da mira (o missil guia ate aqui)
     const rumo = alvo.sub(boca).normalize();
 
-    if (this.missiles.fire(boca, rumo)) {
+    if (this.missiles.fire(boca, rumo, pontoAlvo)) {
       this.hud.recoil();
       this.camera.addShake(0.22);
       this.audio.missil();

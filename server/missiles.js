@@ -17,19 +17,22 @@ export function updateMissis(world, misseis, players, dt, onExplosao) {
     const m = misseis[i];
     m.t -= dt;
     // homing: curva em direção ao alvo travado na mira (teleguiado do solo)
+    let hx = null, hy = null, hz = null;
     if (m.alvoId != null) {
       const a = players.find((p) => p.id === m.alvoId);
-      if (a && a.body && a.hp > 0) {
-        const tx = a.body.pos.x - m.x, ty = a.body.pos.y + 1 - m.y, tz = a.body.pos.z - m.z;
-        const tl = Math.hypot(tx, ty, tz);
-        if (tl > 0.5) {
-          const k = Math.min(1, MISSIL.curva * dt);
-          m.dx += ((tx / tl) - m.dx) * k;
-          m.dy += ((ty / tl) - m.dy) * k;
-          m.dz += ((tz / tl) - m.dz) * k;
-          const nl = Math.hypot(m.dx, m.dy, m.dz) || 1;
-          m.dx /= nl; m.dy /= nl; m.dz /= nl;
-        }
+      if (a && a.body && a.hp > 0) { hx = a.body.pos.x; hy = a.body.pos.y + 1; hz = a.body.pos.z; }
+    }
+    if (hx === null && m.alvoP) { hx = m.alvoP.x; hy = m.alvoP.y; hz = m.alvoP.z; }
+    if (hx !== null) {
+      const tx = hx - m.x, ty = hy - m.y, tz = hz - m.z;
+      const tl = Math.hypot(tx, ty, tz);
+      if (tl > 0.5) {
+        const k = Math.min(1, MISSIL.curva * dt);
+        m.dx += ((tx / tl) - m.dx) * k;
+        m.dy += ((ty / tl) - m.dy) * k;
+        m.dz += ((tz / tl) - m.dz) * k;
+        const nl = Math.hypot(m.dx, m.dy, m.dz) || 1;
+        m.dx /= nl; m.dy /= nl; m.dz /= nl;
       }
     }
     // movimento com sub-passos curtos para não atravessar paredes finas

@@ -558,18 +558,25 @@ export class Room {
       dz = -Math.cos(yaw) * Math.cos(pitch);
     }
     // alvo teleguiado: o jogador mais próximo da linha de mira (lock do solo)
+    // travamento pela LINHA DA MIRA (a camera), nao pela boca: o missil vai
+    // para quem esta sob a mira — mesmo alvo que o aim assist do cliente
+    let mx = boca.x, my = boca.y, mz = boca.z;
+    if (aim.orig && Math.abs(aim.orig.x - h.x) < 60 && Math.abs(aim.orig.z - h.z) < 60 && Math.abs(aim.orig.y - h.y) < 60) {
+      mx = aim.orig.x; my = aim.orig.y; mz = aim.orig.z;
+    }
     let alvoId = null;
     let melhor = 35;
     for (const q of this._all()) {
       if (q.id === p.id || !q.body || q.hp <= 0) continue;
-      const vx = q.body.pos.x - boca.x, vy = q.body.pos.y + 1 - boca.y, vz = q.body.pos.z - boca.z;
+      const vx = q.body.pos.x - mx, vy = q.body.pos.y + 1 - my, vz = q.body.pos.z - mz;
       const proj = vx * dx + vy * dy + vz * dz;
       if (proj < 0) continue; // atrás do disparo
       const perp = Math.hypot(vx - dx * proj, vy - dy * proj, vz - dz * proj);
       if (perp < melhor) { melhor = perp; alvoId = q.id; }
     }
     const id = (this._missilUid = (this._missilUid || 0) + 1);
-    this.missis.push({ id, alvoId, x: boca.x, y: boca.y, z: boca.z, dx, dy, dz, por: p, t: MISSIL.vida });
+    const alvoP = aim.ponto ? { x: aim.ponto.x, y: aim.ponto.y, z: aim.ponto.z } : null;
+    this.missis.push({ id, alvoId, alvoP, x: boca.x, y: boca.y, z: boca.z, dx, dy, dz, por: p, t: MISSIL.vida });
     this._bcast(T.MISSIL_FIRE, {
       id,
       x: Math.round(boca.x * 100) / 100, y: Math.round(boca.y * 100) / 100, z: Math.round(boca.z * 100) / 100,
