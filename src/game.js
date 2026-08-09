@@ -46,6 +46,7 @@ import { CityBoss } from './ent/cityboss.js';
 import { Canetadas } from './sys/canetadas.js';
 import { HomingMissiles } from './sys/homing.js';
 import { Fireballs } from './sys/fireballs.js';
+import { Drops } from './sys/drops.js';
 import { aimAssist } from './util/aim.js';
 import { CHEFES } from './ent/foe.js';
 import { Audio } from './sys/audio.js';
