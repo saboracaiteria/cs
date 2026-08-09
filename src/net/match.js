@@ -703,6 +703,8 @@ export class Match {
     // olhar para cima encurta o braço: sem isto a câmera mergulha no chão
     const t = (pitchE - CAMERA.pitchTuckStart) / (CAMERA.pitchMax - CAMERA.pitchTuckStart);
     dist *= 1 - clamp(t, 0, 1) * CAMERA.pitchTuck;
+    const cp = Math.cos(pitchE), sp = Math.sin(pitchE);
+    const dir = this._vDir.set(-Math.sin(yawE) * cp, sp, -Math.cos(yawE) * cp);
     const back = this._vBack.copy(dir).negate();
     const right = this._vRight.set(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
     const col = this.game.col;
