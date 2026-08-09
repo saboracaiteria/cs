@@ -135,8 +135,11 @@ export class Minimap {
         p.proxima ? '★' : '◆', px, pz, true);
     }
     if (marks.helis && marks.helis.length) {
+      // clampToEdge=true: os helis ficam espalhados pela cidade (100-700 m dos
+      // spawns) e somiam do radar quando fora de alcance — agora grudam na
+      // borda com a setinha, como portais e jogadores
       for (const h of marks.helis) {
-        this._blip(ctx, TX, TY, h, h.playerId != null ? '#ffd24d' : '#25d0ff', 5, '🚁', px, pz, false);
+        this._blip(ctx, TX, TY, h, h.playerId != null ? '#ffd24d' : '#25d0ff', 5, '🚁', px, pz, true);
       }
     } else if (marks.heli) this._blip(ctx, TX, TY, marks.heli, '#25d0ff', 5, '🚁', px, pz, false);
     if (marks.pickup) this._blip(ctx, TX, TY, marks.pickup, '#ffb020', pulseR, 'C', px, pz, true);

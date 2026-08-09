@@ -439,6 +439,24 @@
 #ns-ping.ns-meio { color: var(--accent); }
 #ns-ping.ns-ruim { color: var(--bad); }
 
+/* celular: o #net-status caía em cima do minimapa (ambos no topo direito);
+   move para o canto superior esquerdo, alinhado ao topo do radar (o #objective
+   só começa em top:112px, então não colide) */
+body.toque #net-status{
+  top: calc(max(18px, env(safe-area-inset-top)) + 54px);
+  left: max(10px, env(safe-area-inset-left));
+  right: auto;
+}
+
+/* celular: o #net-status caía em cima do minimapa (ambos no topo direito);
+   move para o canto superior esquerdo, alinhado ao topo do radar (o #objective
+   só começa em top:112px, então não colide) */
+body.toque #net-status{
+  top: calc(max(18px, env(safe-area-inset-top)) + 54px);
+  left: max(10px, env(safe-area-inset-left));
+  right: auto;
+}
+
 /* Killfeed */
 #killfeed {
   position: fixed;
