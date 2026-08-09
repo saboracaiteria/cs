@@ -1322,7 +1322,7 @@ export class Game {
    */
   _fireMissile() {
     if (!this.missiles.canFire) return;
-    const { origin, direction } = this.camera.aimRay(this._aimOrigin, this._aimDir);
+    const { origin, direction } = this.camera.aimRay(this._aimOrigin, this._aimDir, 0, 0);
 
     // [AIM ASSIST] igual ao FPS: o míssil desvia para o inimigo mais próximo
     // da linha de mira (cone ~5,7°) — o heli acerta onde o alvo está.
@@ -1357,7 +1357,7 @@ export class Game {
       }
     }
     if (alvosM.length) {
-      const aM = aimAssist(origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, alvosM, 300, noHeli ? 0.28 : 0.16);
+      const aM = aimAssist(origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, alvosM, 300, 0.28);
       if (aM) direction.set(aM.x, aM.y, aM.z);
     }
 
