@@ -71,7 +71,7 @@ export const HELI = {
   idleCiclo: 4,       // 2 s caindo + 2 s estabilizado
   /** [MP] gasolina: 100 = tanque cheio (~3,3 min de voo contínuo). */
   fuelMax: 100,
-  fuelConsume: 0.5,   // % por segundo voando
+  fuelConsume: 1.0,   // % por segundo voando (tanque cheio ~1,7 min)
   fuelRefill: 15,     // % por segundo pousado (~7 s p/ encher)
   fuelMinY: 0.5,      // (m) do chão p/ considerar "pousado"
   /** [teto] altura máxima de voo no MP/BR — 150 m (prédios vão até ~36 m). */

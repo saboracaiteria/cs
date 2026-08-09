@@ -6,7 +6,7 @@
 import { SnapshotBuffer } from './snapshot.js';
 import { RemotePlayer } from './remotePlayer.js';
 import { predictBody } from './predict.js';
-import { criarKillfeed } from '../ui/killfeed.js';
+import { aimAssist } from '../util/aim.js';
 import { criarScoreboard } from '../ui/scoreboard.js';
 import { criarBrHud } from '../ui/brHud.js';
 import { criarNetStatus } from '../ui/netStatus.js';
@@ -492,7 +492,6 @@ export class Match {
       this._emCarro = eu.inCar != null;
       this._emHeli = eu.inHeli != null;
       this._meuHeliId = eu.inHeli ?? null;
-      if (this.game) this.game.hud.setCrosshairCentered(this._emHeli);   // [heli] míssil de frente
     }
   }
 
@@ -652,6 +651,23 @@ export class Match {
     this.camera.updateMatrixWorld();
     this._vNdc.set(0.24, 0.2, 0.5).unproject(this.camera);
     this._fireDir = this._vNdc.sub(this.camera.position).normalize();
+
+    // [AIM ASSIST] magnetismo de mira: inimigo perto da linha de tiro e o tiro
+    // desvia para o centro dele (cone ~6,3°) — acertar players/bots fica justo.
+    if (this.avatares && this.avatares.size > 1) {
+      const alvosA = [];
+      for (const [id, rp] of this.avatares) {
+        if (id !== this.meuId && rp.vivo) alvosA.push({ x: rp.x, y: rp.y + 0.95, z: rp.z });
+      }
+      const aA = aimAssist(
+        this.camera.position.x, this.camera.position.y, this.camera.position.z,
+        this._fireDir.x, this._fireDir.y, this._fireDir.z,
+        alvosA, 140, 0.11,
+      );
+      if (aA) this._fireDir.set(aA.x, aA.y, aA.z);
+    }
+
+
     // [tiro] tracer local — dano é autoritativo do servidor (feedback igual ao solo).
     // NO HELI a arma é o MÍSSIL (servidor dispara): não pode sair bala de pistola.
     if (!noHeli && (this._fire || this._fireBtn) && foc) {

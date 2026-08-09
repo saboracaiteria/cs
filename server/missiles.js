@@ -45,14 +45,14 @@ export function updateMissis(world, misseis, players, dt, onExplosao) {
       if (m.y <= g + 0.1) explodiu = true;
       else if (world.col.raycast(m.x - m.dx, m.y - m.dy, m.z - m.dz, m.dx, m.dy, m.dz, dist / sub + 0.6)) explodiu = true;
     }
-    // colisão com jogadores (esfera ~1,5 m no peito)
+    // colisão com jogadores (esfera ~2,0 m no peito)
     if (!explodiu) {
       for (const p of players) {
         if (!p.body || p.hp <= 0) continue;
         const dx = m.x - p.body.pos.x;
         const dy = m.y - (p.body.pos.y + 1);
         const dz = m.z - p.body.pos.z;
-        if (dx * dx + dy * dy + dz * dz < 2.25) { explodiu = true; break; }
+        if (dx * dx + dy * dy + dz * dz < 4.0) { explodiu = true; break; }
       }
     }
     if (explodiu || m.t <= 0) {

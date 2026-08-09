@@ -46,7 +46,7 @@ import { CityBoss } from './ent/cityboss.js';
 import { Canetadas } from './sys/canetadas.js';
 import { HomingMissiles } from './sys/homing.js';
 import { Fireballs } from './sys/fireballs.js';
-import { Drops } from './sys/drops.js';
+import { aimAssist } from './util/aim.js';
 import { CHEFES } from './ent/foe.js';
 import { Audio } from './sys/audio.js';
 import { Music } from './sys/music.js';
@@ -932,7 +932,6 @@ export class Game {
     this.camera.setInteriorBase(this.camera.yaw);
     this.heli.setInteriorView(false);
     this.hud.showHeliPanel(true);
-    this.hud.setCrosshairCentered(true);   // [heli] míssil vai de frente: mira no centro
     this.hud.setPrompt(null);
   }
 
@@ -947,7 +946,6 @@ export class Game {
     this.mode = 'foot';
     this.camera.setMode('foot');
     this.hud.showHeliPanel(false);
-    this.hud.setCrosshairCentered(false);  // [heli] de volta à mira de ombro
   }
 
   /**
@@ -1223,6 +1221,21 @@ export class Game {
     if (!this.bullets.canFire) return;
     const { origin, direction } = this.camera.aimRay(this._aimOrigin, this._aimDir);
 
+    // [AIM ASSIST] inimigo perto da linha de mira: o tiro desvia para o centro
+    // dele (cone ~5,7°). Não rouba tiro errado longe — só tira o peso de
+    // acertar um corpo fino em movimento.
+    const foesS = this.player.inimigos;
+    if (foesS && foesS.length) {
+      const alvosS = [];
+      for (const f of foesS) {
+        if (!f.vivo) continue;
+        const pS = f.root.position;
+        alvosS.push({ x: pS.x, y: pS.y + (f.alturaAlvo || 1), z: pS.z });
+      }
+      const aS = aimAssist(origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, alvosS, 120, 0.10);
+      if (aS) direction.set(aS.x, aS.y, aS.z);
+    }
+
     /*
      * [FPS] Espalhamento da bala. Sem mirar (cintura) o tiro sai com uma
      * folga aleatória; mirando (ADS) o zoom "fixa a mira" e a bala vai
@@ -1306,6 +1319,20 @@ export class Game {
   _fireMissile() {
     if (!this.missiles.canFire) return;
     const { origin, direction } = this.camera.aimRay(this._aimOrigin, this._aimDir);
+
+    // [AIM ASSIST] igual ao FPS: o míssil desvia para o inimigo mais próximo
+    // da linha de mira (cone ~5,7°) — o heli acerta onde o alvo está.
+    const foesM = this.player.inimigos;
+    if (foesM && foesM.length) {
+      const alvosM = [];
+      for (const f of foesM) {
+        if (!f.vivo) continue;
+        const pM = f.root.position;
+        alvosM.push({ x: pM.x, y: pM.y + (f.alturaAlvo || 1), z: pM.z });
+      }
+      const aM = aimAssist(origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, alvosM, 200, 0.10);
+      if (aM) direction.set(aM.x, aM.y, aM.z);
+    }
 
     const hit = this.bullets._trace(origin, direction, 500);
     const alvo = hit

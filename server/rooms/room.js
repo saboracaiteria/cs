@@ -714,7 +714,7 @@ function raySphere(ox, oy, oz, dx, dy, dz, c, r) {
  * no peito passava por cima dela: o alvo só morria mirando na base.
  */
 function rayCapsule(ox, oy, oz, dx, dy, dz, pos) {
-  const esferas = [[0.35, 0.38], [0.95, 0.52], [1.6, 0.32]];
+  const esferas = [[0.35, 0.62], [0.95, 0.80], [1.6, 0.52]];
   let menor = null, cabeca = false;
   for (let i = 0; i < esferas.length; i++) {
     const [h, r] = esferas[i];
