@@ -5,6 +5,7 @@
  */
 import { SnapshotBuffer } from './snapshot.js';
 import { RemotePlayer } from './remotePlayer.js';
+import { predictBody } from './predict.js';
 import { criarKillfeed } from '../ui/killfeed.js';
 import { criarScoreboard } from '../ui/scoreboard.js';
 import { criarBrHud } from '../ui/brHud.js';
@@ -17,7 +18,7 @@ import { T } from './protocol.js';
 import { CAMERA, HELI } from '../config.js';
 import { clamp, damp } from '../utils.js';
 
-const INPUT_HZ = 20;
+const INPUT_HZ = 30;   // 1 input por tick do servidor (30 Hz): degraus menores na fisica
 
 export class Match {
   constructor(game, net, info) {
@@ -28,6 +29,7 @@ export class Match {
     this.nick = info.nick;
 
     this.snapBuf = new SnapshotBuffer();
+    this._jumpEdge = false;   // borda do pulo para a predicao local
     this.avatares = new Map();   // id -> RemotePlayer
     this.nicks = new Map();      // id -> nick
 
@@ -551,6 +553,27 @@ export class Match {
       }
     }
     // interpola avatares
+    // [PREDICAO LOCAL] o corpo anda na hora com o input, como no modo solo —
+    // sem esperar o snapshot voltar do servidor (era o que causava o
+    // "tremelique" no MP). A fisica local replica o servidor
+    // (src/net/predict.js); o snapshot volta so para RECONCILIAR
+    // divergencias reais (RemotePlayer.update).
+    const rpPred = this.avatares.get(this.meuId);
+    if (rpPred && rpPred.vivo && !this._emCarro && !this._emHeli) {
+      rpPred._predicted = true;
+      const jEdge = this.inp.jump && !this._jumpEdge;
+      this._jumpEdge = !!this.inp.jump;
+      predictBody(rpPred, {
+        moveX: this.inp.mx,
+        moveZ: this.inp.mz,
+        yaw: this.yaw,
+        run: !!this.inp.run,
+        jump: jEdge,
+      }, dt, this.game.col);
+    } else if (rpPred) {
+      rpPred._predicted = false;
+    }
+
     const alpha = this.snapBuf.alpha();
     this._animF++;
     for (const [id, rp] of this.avatares) {
@@ -571,7 +594,9 @@ export class Match {
         rp._explodiu = false;
       }
       // velocidades do MP/BR (12.8/29 — DOBRADAS vs solo 6.4/14.5)
-      const vel = Math.hypot(d.moveX || 0, d.moveZ || 0) * (d.run ? 29 : 12.8);
+      const vel = rp.local
+        ? Math.hypot(rp._vx || 0, rp._vz || 0)   // predicao: pernas acompanham o corpo
+        : Math.hypot(d.moveX || 0, d.moveZ || 0) * (d.run ? 29 : 12.8);
       // [FPS] LOD de animação: avatar longe anima a cada 3º frame (a posição
       // continua seguindo a 60fps; só os passos/asa ficam em câmera lenta)
       const distCam = rp.local ? 0 : Math.hypot(rp.x - this.camera.position.x, rp.z - this.camera.position.z);

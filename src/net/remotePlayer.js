@@ -53,6 +53,11 @@ export class RemotePlayer {
     this.yaw = 0; this.pitch = 0;
     this.hp = 100;
     this.vivo = true;
+
+    // estado da predicao local (src/net/predict.js)
+    this._predicted = false;
+    this._vx = 0; this._vz = 0; this._vy = 0;
+    this._onGround = true;
   }
 
   /** Aplica dados do snapshot (posição já interpolada). */
@@ -71,25 +76,45 @@ export class RemotePlayer {
     // suaviza X/Z: o servidor manda a 30 Hz em degraus e a rede entrega com
     // jitter (o snapshot interpolado para e pula) — o damp mantém o corpo
     // em movimento contínuo até o alvo; teleporte (respawn/carro) vai direto
-    const dx = (this._tX ?? this.x) - this.x;
-    const dz = (this._tZ ?? this.z) - this.z;
-    if (Math.abs(dx) > 2 || Math.abs(dz) > 2) { this.x += dx; this.z += dz; }
-    else {
-      // o avatar local usa damp mais forte: ele anda a 29 m/s e um atraso
-      // grande faria o corpo "escorregar" ao parar de correr
-      const k = Math.min(1, (this.local ? 40 : 18) * dt);
-      this.x += dx * k;
-      this.z += dz * k;
+    if (this.local && this._predicted) {
+      // RECONCILIACAO (predicao local ativa): o corpo ja andou na hora com o
+      // input; o snapshot e a verdade do servidor. Erro pequeno = fisica
+      // igual — NAO mexe (sem tremor). Corrige so divergencias reais.
+      const dx = (this._tX ?? this.x) - this.x;
+      const dz = (this._tZ ?? this.z) - this.z;
+      const err = Math.hypot(dx, dz);
+      if (err > 3) {
+        // teleporte/respawn/veiculo: assume a posicao do servidor
+        this.x = this._tX; this.z = this._tZ;
+        this._vx = 0; this._vz = 0; this._vy = 0;
+      } else if (err > 0.6) {
+        // divergencia real (empurrao, colisao diferente): corrige devagar
+        const k = Math.min(1, 3 * dt);
+        this.x += dx * k;
+        this.z += dz * k;
+      }
+      // y: so corrige para BAIXO quando o servidor esta bem mais baixo
+      // (pulo cortado, chao diferente). Se o servidor esta "atras" no tempo
+      // (ainda na parabola/queda), a predicao ja esta certa — nao mexe,
+      // senao o corpo "levita" ao aterrissar.
+      const dy = (this._tY ?? this.y) - this.y;
+      if (dy < -1.2) this.y += dy * Math.min(1, 10 * dt);
+    } else {
+      const dx = (this._tX ?? this.x) - this.x;
+      const dz = (this._tZ ?? this.z) - this.z;
+      if (Math.abs(dx) > 2 || Math.abs(dz) > 2) { this.x += dx; this.z += dz; }
+      else {
+        const k = Math.min(1, (this.local ? 40 : 18) * dt);
+        this.x += dx * k;
+        this.z += dz * k;
+      }
+      const dy = (this._tY ?? this.y) - this.y;
+      this.y += Math.abs(dy) < 0.08 ? dy * Math.min(1, 18 * dt) : dy;
     }
     this.root.position.set(this.x, this.y, this.z);
-    // mesma convenção do single: o corpo olha para +Z em yaw 0 (câmera olha -Z).
-    // O avatar local ainda ganha o bodyTurn (leve giro para expor a pistola),
-    // exatamente como o Bob do modo solo.
+
     this.root.rotation.y = this.yaw + Math.PI + (this.local ? CAMERA.bodyTurn : 0);
-    // suaviza o Y: o servidor manda degraus de 0,01 m e o corpo "tremia" ao
-    // andar; pulo/queda (variação grande) passa direto (não achata a parábola)
-    const dy = (this._tY ?? this.y) - this.y;
-    this.y += Math.abs(dy) < 0.08 ? dy * Math.min(1, 18 * dt) : dy;
+
     if (!animar) return;   // posicao segue; passos/asa em camera lenta
     // [MP] bot/jogador ATIRANDO: ergue os bracos com a arma apontando
     // para o alvo (o yaw/pitch do corpo ja vem do snapshot mirando o player)
