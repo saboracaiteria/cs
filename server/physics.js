@@ -30,7 +30,13 @@ export function createBody(x, z, yaw = 0) {
 
 function groundY(world, x, z, refY = null) {
   if (!world) return 0;
-  return world.col.groundHeightAt(x, z, refY);
+  const g = world.col.groundHeightAt(x, z, refY);
+  // [46] telhado dos prédios: pisa na laje quando chega por cima (igual ao
+  // solo src/player.js _floorAt). Prédio mínimo tem 9 m e o pulo alcança
+  // ~1,8 m, então ninguém é "atraído" para um telhado pela lateral.
+  const roof = world.col.roofHeightAt(x, z);
+  if (roof > g && refY != null && refY >= roof - 0.35) return roof;
+  return g;
 }
 
 /**

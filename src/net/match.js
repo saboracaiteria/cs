@@ -581,7 +581,13 @@ export class Match {
       // caindo (ex.: saiu do heli no ar): pose de queda enquanto desce
       // pose de queda SÓ em queda alta (prédio/heli > 5 m): o pulo do solo
       // (~1,8 m no MP) continua com a animação antiga
-      rp.human.falling = rp.vivo && (rp.y - this.game.col.groundHeightAt(rp.x, rp.z, rp.y)) > 5;
+      // [46] o "chão" da pose de queda considera o telhado dos prédios:
+      // em pé na laje não pode parecer que está caindo
+      const pisoAt = Math.max(
+        this.game.col.groundHeightAt(rp.x, rp.z, rp.y),
+        this.game.col.roofHeightAt(rp.x, rp.z),
+      );
+      rp.human.falling = rp.vivo && (rp.y - pisoAt) > 5;
       rp.update(dt, vel, rp.local || distCam < 28 || (this._animF + id) % 3 === 0);
       // corpo do próprio jogador visível a pé; dentro do carro ele some
       if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro && !this._emHeli;
