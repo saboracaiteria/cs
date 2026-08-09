@@ -138,6 +138,7 @@ export class Room {
     }
     this.state = 'countdown';
     this.countdownT = 7;   // contagem regressiva de 7s (pedido), 1s a 1s na tela
+    this.cdEnd = Date.now() + 7000;   // timestamp ABSOLUTO: o cliente decrementa local
     this._bcastLobby();
     this._log('contagem para iniciar...');
   }
@@ -616,7 +617,7 @@ export class Room {
     // jogador vê quem está jogando e pode CHAMAR para a própria sala
     // salaId no payload: o lobby usa para filtrar da lista ONLINE quem já
     // está na MINHA sala (sem isso o amigo da mesma sala aparece com CHAMAR)
-    this._bcast(T.LOBBY, { salaId: this.salaId, jogadores: todos, hostId, podeIniciar, state: this.state, countdown: Math.ceil(this.countdownT), online: this.manager.online() });
+    this._bcast(T.LOBBY, { salaId: this.salaId, jogadores: todos, hostId, podeIniciar, state: this.state, countdown: Math.ceil(this.countdownT), countdownEnd: this.state === 'countdown' ? (this.cdEnd || 0) : 0, online: this.manager.online() });
   }
 
   _sendTo(p, t, data) {

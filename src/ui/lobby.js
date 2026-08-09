@@ -26,6 +26,11 @@ export function criarLobby() {
   let meuId = null;
   let conviteDe = null;   // { id, nick } do convite pendente
   let toastTimer = null;
+  let _cdEnd = 0, _cdTimer = null;
+  function _sincCd() {
+    const rest = Math.max(0, Math.ceil((_cdEnd - Date.now()) / 1000));
+    if (cd) cd.textContent = rest;
+  }
 
   function mostrar(modoLabel) {
     tela.classList.remove('hidden');
@@ -38,7 +43,10 @@ export function criarLobby() {
     limparAlerta();
   }
 
-  function esconder() { tela.classList.add('hidden'); }
+  function esconder() {
+    tela.classList.add('hidden');
+    if (_cdTimer) { clearInterval(_cdTimer); _cdTimer = null; }
+  }
 
   /** Mostra o código da sala atual (só informativo). */
   function setSala(codigo) {
@@ -97,9 +105,16 @@ export function criarLobby() {
     if (estado === 'countdown') {
       // número grande no círculo (CSS .lobby-cd) — fácil de visualizar
       cd.style.display = 'flex';
-      cd.textContent = data.countdown || 0;
+      if (data.countdownEnd) {
+        _cdEnd = data.countdownEnd;
+        _sincCd();
+        if (!_cdTimer) _cdTimer = setInterval(_sincCd, 250);
+      } else {
+        cd.textContent = data.countdown || 0;
+      }
     } else {
       cd.style.display = 'none';
+      if (_cdTimer) { clearInterval(_cdTimer); _cdTimer = null; }
     }
     // jogadores online (outras salas) — cada um com CHAMAR
     if (onlineList) {
