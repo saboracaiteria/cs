@@ -492,6 +492,7 @@ export class Match {
       this._emCarro = eu.inCar != null;
       this._emHeli = eu.inHeli != null;
       this._meuHeliId = eu.inHeli ?? null;
+      if (this.game) this.game.hud.setCrosshairCentered(this._emHeli);   // [heli] míssil de frente
     }
   }
 

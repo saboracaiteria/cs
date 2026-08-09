@@ -932,6 +932,7 @@ export class Game {
     this.camera.setInteriorBase(this.camera.yaw);
     this.heli.setInteriorView(false);
     this.hud.showHeliPanel(true);
+    this.hud.setCrosshairCentered(true);   // [heli] míssil vai de frente: mira no centro
     this.hud.setPrompt(null);
   }
 
@@ -946,6 +947,7 @@ export class Game {
     this.mode = 'foot';
     this.camera.setMode('foot');
     this.hud.showHeliPanel(false);
+    this.hud.setCrosshairCentered(false);  // [heli] de volta à mira de ombro
   }
 
   /**

@@ -171,6 +171,11 @@ export class HUD {
     this.el.crosshair.classList.toggle('ads', on);
   }
 
+  /** [heli] mira no centro da tela (o míssil sai de frente); FPS fica no ombro. */
+  setCrosshairCentered(on) {
+    this.el.crosshair.classList.toggle('heli', on);
+  }
+
   // ------------------------------------------------------------------ [28] velocímetro
   showSpeedo(on) {
     this.el.speedo.classList.toggle('hidden', !on);
