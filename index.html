@@ -91,6 +91,7 @@
   <div id="heli-panel" class="hidden">
     <div class="heli-row"><span>ALT</span><b id="heli-alt">0</b><span>m</span></div>
     <div class="heli-row"><span>VEL</span><b id="heli-spd">0</b><span>km/h</span></div>
+    <div class="heli-row"><span>FUEL</span><b id="heli-fuel">100%</b></div>
     <!-- [63] no ar, o E/clique dispara míssil no lugar da pistola -->
     <div class="heli-row heli-arm"><span>ARM</span><b>MÍSSEIS</b><span id="heli-arm-key">E / clique</span></div>
     <div id="heli-warn">DESÇA PARA SAIR</div>
@@ -476,6 +477,11 @@
   <button type="button" class="tc-btn tc-pular" id="mp-pular">PULAR</button>
   <button type="button" class="tc-btn tc-acao" id="mp-acao">AÇÃO</button>
   <button type="button" class="tc-btn tc-sec tc-descer" id="mp-correr" title="Correr">⚡</button>
+  <!-- [heli] no ar, o PULAR vira ▲ (subir) e aparece este ▼ (descer) -->
+  <button type="button" class="tc-btn tc-sec tc-descer hidden" id="mp-descer" title="Descer">▼</button>
+  <!-- [heli] ◀ ▶ giram o aparelho no ar (visíveis só pilotando) -->
+  <button type="button" class="tc-btn tc-sec tc-girar-esq hidden" id="mp-girar-esq" title="Girar esquerda">◀</button>
+  <button type="button" class="tc-btn tc-sec tc-girar-dir hidden" id="mp-girar-dir" title="Girar direita">▶</button>
 </div>
 <!-- ==================== FIM MULTIJOGADOR ==================== -->
 <div id="fatal" class="hidden"></div>

@@ -202,6 +202,7 @@ export const HELI = {
   drag: 0.62,
   rotorSpeed: 26,
   exitMaxHeight: 3.2,          // [49] só sai perto do chão
+  enterRange: 6.5,             // [MP] raio para entrar no aparelho (igual ao servidor)
   /**
    * [46] Altura do centro do helicóptero quando ele está POUSADO.
    *

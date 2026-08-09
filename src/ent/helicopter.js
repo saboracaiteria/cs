@@ -326,6 +326,24 @@ export class Helicopter {
     this.searchlight.intensity = nightFactor > 0.4 ? 900 : 0;
   }
 
+  /**
+   * [MP] Atualiza SÓ o visual (rotor, beacon, holofote) — a posição, o rumo
+   * e a física vêm do servidor (server/helis.js), então nada é integrado
+   * aqui. O `piloted` é setado pelo cliente a partir do snapshot.
+   */
+  mpUpdate(dt, nightFactor = 0) {
+    const piloted = !!this.piloted;
+    const targetSpin = piloted ? 1 : (this.isLanded ? 0.08 : 1);
+    this.rotorSpin = damp(this.rotorSpin, targetSpin, 1.4, dt);
+    this.rotorAngle += dt * HELI.rotorSpeed * this.rotorSpin;
+    this.rotorHub.rotation.y = this.rotorAngle;
+    this.tailHub.rotation.x = -this.rotorAngle * 2.4;
+    this.rotorDisc.material.opacity =
+      clamp((this.rotorSpin - 0.55) / 0.45, 0, 1) * 0.22 * (1 - nightFactor * 0.8);
+    this.beacon.visible = Math.sin(performance.now() * (piloted ? 0.009 : 0.006)) > 0;
+    this.searchlight.intensity = (piloted && nightFactor > 0.4) ? 900 : 0;
+  }
+
   _settleOnGround(dt) {
     const surf = this.surfaceBelow();
     const minY = surf + HELI.landHeight;

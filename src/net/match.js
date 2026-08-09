@@ -11,9 +11,10 @@ import { criarBrHud } from '../ui/brHud.js';
 import { criarNetStatus } from '../ui/netStatus.js';
 import { criarPausa } from '../ui/pause.js';
 import { Car } from '../ent/car.js';
+import { Helicopter } from '../ent/helicopter.js';
 import * as THREE from '../../vendor/three.module.js';
 import { T } from './protocol.js';
-import { CAMERA } from '../config.js';
+import { CAMERA, HELI } from '../config.js';
 import { clamp, damp } from '../utils.js';
 
 const INPUT_HZ = 20;
@@ -41,7 +42,7 @@ export class Match {
     this.camera.rotation.order = 'YXZ';
 
     // input local
-    this.inp = { mx: 0, mz: 0, run: false, jump: false, fire: false, ads: false };
+    this.inp = { mx: 0, mz: 0, run: false, jump: false, fire: false, ads: false, up: false, down: false };
     this.yaw = Math.PI;
     this.pitch = -0.22;
     // câmera de ombro (terceira pessoa), igual à do single
@@ -69,7 +70,13 @@ export class Match {
     // veiculos do MP (carros autoritativos vindos do servidor)
     this.carrosMp = new Map();   // id -> { mesh: Car, x, y, z, playerId }
     this._emCarro = false;
-    this._toggleCar = false;
+    this._toggleCar = false;     // E/mp-acao: entra no carro OU no helicoptero
+    // helicopteros do MP (5 espalhados pelo mapa, autoritativos do servidor)
+    this.helisMp = new Map();    // id -> { mesh: Helicopter, x, y, z, vel, playerId }
+    this._emHeli = false;
+    this._meuHeliId = null;
+    this._heliYaw = 0;           // Q/R: girar o aparelho no ar
+    this.missisVis = [];   // foguetes dos mísseis de canhão (visuais)
     this._fireBtn = false;   // gatilho do botão ATIRAR do toque (segurar = rajada)
     // true em telas de toque (mobile): o PC usa mouse e a câmera não vira no ADS
     this._isTouch = typeof window !== 'undefined' &&
@@ -109,6 +116,8 @@ export class Match {
     // esconde o transito e pedestres do single — no MP os carros vêm do servidor
     if (this.game && this.game.cars) this.game.cars.group.visible = false;
     if (this.game && this.game.peds) this.game.peds.group.visible = false;
+    // o helicoptero do single tambem some — no MP os aparelhos vem do servidor
+    if (this.game && this.game.heli) this.game.heli.root.visible = false;
 
     // esconde a tela de abertura do single
     const ab = document.getElementById('title-screen');
@@ -182,10 +191,12 @@ export class Match {
       if (k === 's' || k === 'arrowdown') this.inp.mz -= 1;
       if (k === 'a' || k === 'arrowleft') this.inp.mx -= 1;
       if (k === 'd' || k === 'arrowright') this.inp.mx += 1;
-      if (k === 'shift') this.inp.run = true;
-      if (k === ' ') { this.inp.jump = true; e.preventDefault(); }
+      if (k === 'shift') { this.inp.run = true; this.inp.down = true; }
+      if (k === ' ') { this.inp.jump = true; this.inp.up = true; e.preventDefault(); }
       if (k === 'tab') { e.preventDefault(); this.scoreboard.alternar(); }
       if (k === 'e') this._toggleCar = true;
+      if (k === 'q') this._heliYaw = 1;
+      if (k === 'r') this._heliYaw = -1;
       this._norm();
     };
     this._ku = (e) => {
@@ -194,8 +205,10 @@ export class Match {
       if (k === 's' || k === 'arrowdown') this.inp.mz += 1;
       if (k === 'a' || k === 'arrowleft') this.inp.mx += 1;
       if (k === 'd' || k === 'arrowright') this.inp.mx -= 1;
-      if (k === 'shift') this.inp.run = false;
-      if (k === ' ') this.inp.jump = false;
+      if (k === 'shift') { this.inp.run = false; this.inp.down = false; }
+      if (k === ' ') { this.inp.jump = false; this.inp.up = false; }
+      if (k === 'q') this._heliYaw = 0;
+      if (k === 'r') this._heliYaw = 0;
       this._norm();
     };
 
@@ -224,7 +237,7 @@ export class Match {
     };
     // scroll do mouse aproxima/afasta a câmera (fora do carro)
     this._zw = (e) => {
-      if (this._emCarro) return;
+      if (this._emCarro || this._emHeli) return;
       if (this._pausado) return;   // rolar o menu não mexe no zoom
       this._dist = clamp(this._dist - e.deltaY * 0.004, CAMERA.minZoom, CAMERA.maxZoom);
     };
@@ -314,9 +327,14 @@ export class Match {
       this._mpBtns.push({ el, d, u });
     };
     ligaBtn('mp-atirar', () => { this._fireBtn = true; }, () => { this._fireBtn = false; });
-    ligaBtn('mp-pular', () => { this.inp.jump = true; }, () => { this.inp.jump = false; });
+    ligaBtn('mp-pular', () => { this.inp.jump = true; this.inp.up = true; }, () => { this.inp.jump = false; this.inp.up = false; });
     ligaBtn('mp-acao', () => { this._toggleCar = true; });
     ligaBtn('mp-correr', () => { this.inp.run = true; }, () => { this.inp.run = false; });
+    // [heli] botão ▼ dedicado para descer (o PULAR vira ▲ para subir)
+    ligaBtn('mp-descer', () => { this.inp.run = true; this.inp.down = true; }, () => { this.inp.run = false; this.inp.down = false; });
+    // [heli] botões ◀ ▶ giram o aparelho no ar (alternativa ao olhar)
+    ligaBtn('mp-girar-esq', () => { this._heliYaw = 1; }, () => { this._heliYaw = 0; });
+    ligaBtn('mp-girar-dir', () => { this._heliYaw = -1; }, () => { this._heliYaw = 0; });
     // [COD Mobile] o botão ATIRAR também é o analógico de mira, igual ao
     // solo: o dedo FIRME atira em rajada; DESLIZANDO, a câmera gira e a
     // mira acompanha o arrasto — dá para segurar o recuo sem largar o
@@ -430,6 +448,12 @@ export class Match {
       case T.CAR_BOOM:
         this._explodirCarro(msg);
         break;
+      case T.MISSIL_FIRE:
+        this._missilFire(msg);
+        break;
+      case T.MISSIL:
+        this._explodirMissil(msg);
+        break;
       case T.CHAT:
         break;
       default:
@@ -459,9 +483,14 @@ export class Match {
       const pos = this.snapBuf.ultimo() && eu ? { x: eu.x, z: eu.z } : null;
       this.brHud.atualizar(msg, this.meuId, pos);
     }
-    // carros + estado do veiculo do jogador local
+    // carros + helicopteros + estado do veiculo do jogador local
     if (msg.cars) this._aplicarCarros(msg.cars);
-    if (eu) this._emCarro = eu.inCar != null;
+    if (msg.helis) this._aplicarHelis(msg.helis);
+    if (eu) {
+      this._emCarro = eu.inCar != null;
+      this._emHeli = eu.inHeli != null;
+      this._meuHeliId = eu.inHeli ?? null;
+    }
   }
 
   _garantirAvatar(id) {
@@ -549,9 +578,13 @@ export class Match {
       rp._loroSkip = !rp.local && distCam > 45;   // papagaio longe some da cena
       // fase por id: cada avatar longe anima em frames diferentes (em vez de
       // todos no mesmo, o que "pulava" a animação em rajada)
+      // caindo (ex.: saiu do heli no ar): pose de queda enquanto desce
+      // pose de queda SÓ em queda alta (prédio/heli > 5 m): o pulo do solo
+      // (~1,8 m no MP) continua com a animação antiga
+      rp.human.falling = rp.vivo && (rp.y - this.game.col.groundHeightAt(rp.x, rp.z, rp.y)) > 5;
       rp.update(dt, vel, rp.local || distCam < 28 || (this._animF + id) % 3 === 0);
       // corpo do próprio jogador visível a pé; dentro do carro ele some
-      if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro;
+      if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro && !this._emHeli;
     }
     // câmera de ombro em terceira pessoa, igual à do single: o mouse gira
     // o olhar na hora (sem a latência do servidor) e a câmera se posiciona
@@ -561,7 +594,12 @@ export class Match {
     // o foco segue o CORPO VISUAL do Bob (posição suavizada pelo damp), não o
     // snap cru — o alvo da câmera fica contínuo mesmo com jitter de rede
     const rpLoc = this.avatares.get(this.meuId);
-    if (rpLoc) foc.set(rpLoc.x, rpLoc.y + 1.48, rpLoc.z);
+    // de helicoptero a camera enquadra o aparelho (não o corpo do piloto)
+    if (this._emHeli && this._meuHeliId != null) {
+      const hl = this.helisMp.get(this._meuHeliId);
+      if (hl) foc.set(hl.x, hl.y + 1.9, hl.z);
+      else if (rpLoc) foc.set(rpLoc.x, rpLoc.y + 1.48, rpLoc.z);
+    } else if (rpLoc) foc.set(rpLoc.x, rpLoc.y + 1.48, rpLoc.z);
     else if (eu) foc.set(eu.x, eu.y + 1.48, eu.z);
     else foc.set(0, 2, 0);
     // [câmera] amortecimento do foco IGUAL ao do modo solo (camera.js lag):
@@ -573,7 +611,9 @@ export class Match {
     this._camSmooth.z = damp(this._camSmooth.z, foc.z, CAMERA.lag, dt);
     foc.copy(this._camSmooth);
     const noCarro = this._emCarro;
-    const ombro = noCarro ? 0 : CAMERA.shoulderX;
+    const noHeli = this._emHeli;
+    const noVeic = noCarro || noHeli;
+    const ombro = noVeic ? 0 : CAMERA.shoulderX;
     // direção da MIRA: raio que passa pela ponta dela (NDC 0.24/0.2 — o MESMO
     // aimRay do solo). yaw/pitch puro aponta para o CENTRO da tela, e a mira
     // fica deslocada no ombro: a bala errava tudo que se apontava.
@@ -656,11 +696,9 @@ export class Match {
     const pitchE = clamp(this.pitch + this._recoilP, CAMERA.pitchMin, CAMERA.pitchMax);
     this._camDist = damp(
       this._camDist,
-      noCarro ? CAMERA.carZoom : this._dist,
+      noCarro ? CAMERA.carZoom : noHeli ? CAMERA.heliZoom : this._dist,
       9, dt,
     );
-    const cp = Math.cos(pitchE), sp = Math.sin(pitchE);
-    const dir = this._vDir.set(-Math.sin(yawE) * cp, sp, -Math.cos(yawE) * cp);
     let dist = this._camDist;
     // olhar para cima encurta o braço: sem isto a câmera mergulha no chão
     const t = (pitchE - CAMERA.pitchTuckStart) / (CAMERA.pitchMax - CAMERA.pitchTuckStart);
@@ -713,10 +751,16 @@ export class Match {
       this._shake = Math.max(0, this._shake - dt * 2.4);
     }
 
+    // helicopteros: rotor/beacon animados + painel ALT/VEL do piloto
+    const night = this.game && this.game.sky ? this.game.sky.nightFactor : 0;
+    for (const hl of this.helisMp.values()) hl.mesh.mpUpdate(dt, night);
+    this._atualizarHeliHud();
+
     // envia input a INPUT_HZ
     this._sendAcc += dt;
     if (this._sendAcc >= 1 / INPUT_HZ) {
       this._sendAcc = 0;
+      const alvoV = this._toggleCar ? this._alvoVeiculo() : null;
       this.net.input({
         yaw: this.yaw,
         pitch: this.pitch,
@@ -734,7 +778,12 @@ export class Match {
         fpx: this.camera.position.x,
         fpy: this.camera.position.y,
         fpz: this.camera.position.z,
-        car: this._toggleCar ? this._alvoCarro() : null,
+        car: alvoV ? alvoV.car : null,
+        heli: alvoV ? alvoV.heli : null,
+        up: this._emHeli ? (this.inp.up ? 1 : 0) : 0,
+        down: this._emHeli ? (this.inp.down ? 1 : 0) : 0,
+        heliYaw: this._emHeli ? this._heliYaw : 0,
+        heliDesiredYaw: this._emHeli ? (this.yaw + Math.PI) : null,
       });
       this._toggleCar = false;
       // segurar o mouse mantém o gatilho aceso (rajada + ADS contínuos,
@@ -742,18 +791,37 @@ export class Match {
       this._fire = this._dragOn;
       this.inp.jump = false;
     }
-    // dicas no MESMO lugar do HUD do solo: carros no DM, nada de avião no BR
+    // dicas no MESMO lugar do HUD do solo: carros e helicopteros
     if (this._emCarro) this._setHint('E — sair do carro');
-    else {
-      const alvo = this._alvoCarro();
-      if (alvo != null) this._setHint('E — entrar no carro');
+    else if (this._emHeli) {
+      const hl = this.helisMp.get(this._meuHeliId);
+      const alt = hl ? Math.max(0, hl.y - hl.mesh.surfaceBelow()) : 99;
+      this._setHint(alt > HELI.exitMaxHeight ? '▼ DESÇA para sair do helicóptero' : 'E — descer do helicóptero');
+    } else {
+      const alvo = this._alvoVeiculo();
+      if (alvo) this._setHint(alvo.car != null ? 'E — entrar no carro' : 'E — pilotar o helicóptero');
       else this._setHint(null);
     }
     // minimapa do solo no MP: posição do jogador + círculo da zona no BR.
     // O yaw segue o MESMO do solo (player.yaw = câmera + PI + bodyTurn) —
     // passar o yaw da câmera direto deixava o radar de cabeça para baixo.
     if (eu && this.game && this.game.minimap) {
-      const marks = { pickup: null, deliver: null, heli: null, portais: null, players: [] };
+      const marks = { pickup: null, deliver: null, heli: null, helis: [], portais: null, players: [] };
+      // TODOS os helicópteros no radar (blip 🚁) — o que tem piloto fica em destaque
+      for (const hl of this.helisMp.values()) {
+        if (hl && hl.x != null) marks.helis.push({ x: hl.x, z: hl.z, playerId: hl.playerId });
+      }
+      // helicóptero no radar: o meu (se estiver pilotando) ou o livre mais próximo
+      if (this._emHeli && this._meuHeliId != null) {
+        const hl = this.helisMp.get(this._meuHeliId);
+        if (hl) marks.heli = { x: hl.x, z: hl.z };
+      } else {
+        const alvoH = this._alvoVeiculo();
+        if (alvoH && alvoH.heli != null) {
+          const hl = this.helisMp.get(alvoH.heli);
+          if (hl) marks.heli = { x: hl.x, z: hl.z };
+        }
+      }
       if (this.modo === 'br' && this._zona) marks.zone = this._zona;
       for (const [id, rp] of this.avatares) {
         if (id === this.meuId || !rp || !rp.root) continue;
@@ -762,6 +830,8 @@ export class Match {
       this.game.minimap.draw(dt, { x: eu.x, z: eu.z, yaw: this.yaw + Math.PI + CAMERA.bodyTurn }, marks, null);
     }
     // rodas dos carros
+    // foguetes dos mísseis de canhão em voo (visuais — o dano é do servidor)
+    this._updateMissisVis(dt);
     for (const cr of this.carrosMp.values()) cr.mesh.spinWheels(dt);
     // ping a cada 2s
     this._pingAcc += dt;
@@ -785,6 +855,9 @@ export class Match {
   _morreu(por) {
     if (this._morto) return;
     this._morto = true;
+    // morto cai do helicóptero (o servidor já removeu o jogador do aparelho)
+    this._emHeli = false;
+    this._meuHeliId = null;
     this._respawnT = 0;
     // morto não atira: zera o gatilho — o pointerup pode cair fora da janela
     // com o overlay aberto e deixar o mouse "preso" até o respawn
@@ -888,6 +961,28 @@ export class Match {
     }
   }
 
+  /** Helicópteros do MP: meshes autoritativos vindos do servidor. */
+  _aplicarHelis(lista) {
+    for (const h of lista) {
+      let hl = this.helisMp.get(h.id);
+      if (!hl) {
+        const mesh = new Helicopter(this.game.gfx.scene, this.game.col);
+        hl = { mesh, x: h.x, y: h.y, z: h.z, vel: 0, playerId: null };
+        this.helisMp.set(h.id, hl);
+      }
+      hl.x = h.x; hl.y = h.y; hl.z = h.z;
+      hl.vel = h.speed || 0;
+      hl.playerId = h.playerId;
+      hl.fuel = h.fuel ?? 100;
+      hl.mesh.root.position.set(h.x, h.y, h.z);
+      hl.mesh.yaw = h.yaw;
+      hl.mesh.pitch = h.pitch || 0;
+      hl.mesh.roll = h.roll || 0;
+      hl.mesh.root.rotation.set(hl.mesh.pitch, h.yaw, hl.mesh.roll, 'YXZ');
+      hl.mesh.piloted = h.playerId != null && (h.fuel ?? 100) > 0;
+    }
+  }
+
   /** Carro destruído no servidor: explosão grande + some da cena. */
   _explodirCarro(msg) {
     const cr = this.carrosMp.get(msg.id);
@@ -899,6 +994,87 @@ export class Match {
     }
     cr.mesh.dispose(this.game.gfx.scene);
     this.carrosMp.delete(msg.id);
+  }
+
+  /** Míssil disparado por um helicóptero: cria o foguete visual. */
+  _missilFire(msg) {
+    if (!this.game || !this.game.gfx) return;
+    const dir = new THREE.Vector3(msg.dx, msg.dy, msg.dz).normalize();
+    const grupo = new THREE.Group();
+    const corpo = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.09, 0.12, 0.7, 6),
+      new THREE.MeshBasicMaterial({ color: 0xffdd66 })
+    );
+    corpo.rotation.x = Math.PI / 2;   // cilindro ao longo de Z
+    const ponta = new THREE.Mesh(
+      new THREE.ConeGeometry(0.12, 0.3, 6),
+      new THREE.MeshBasicMaterial({ color: 0xff8844 })
+    );
+    ponta.rotation.x = Math.PI / 2;   // cone apontando +Z (sentido do voo)
+    ponta.position.z = 0.5;
+    grupo.add(corpo, ponta);
+    // orienta o foguete na direção do voo (lookAt alinha o +Z local)
+    if (dir.lengthSq() > 0.0001) {
+      const eixos = new THREE.Matrix4().lookAt(new THREE.Vector3(0, 0, 0), dir, new THREE.Vector3(0, 1, 0));
+      grupo.quaternion.setFromRotationMatrix(eixos);
+    }
+    grupo.position.set(msg.x, msg.y, msg.z);
+    this.game.gfx.scene.add(grupo);
+    this.missisVis.push({ id: msg.id, grupo, dx: msg.dx, dy: msg.dy, dz: msg.dz, v: msg.v || 55, vida: 6, alvo: msg.alvo ?? null });
+  }
+
+  /** Explosão do míssil (confirmada pelo servidor): fx + remove o foguete. */
+  _explodirMissil(msg) {
+    if (this.game && this.game.fx) {
+      this.game.fx.explode(new THREE.Vector3(msg.x, msg.y, msg.z), 2.4);
+      if (this.game.audio) this.game.audio.explosao(2.2);
+    }
+    for (let i = this.missisVis.length - 1; i >= 0; i--) {
+      if (this.missisVis[i].id !== msg.id) continue;
+      const mv = this.missisVis[i];
+      mv.grupo.traverse((o) => { if (o.material) o.material.dispose(); });
+      this.game.gfx.scene.remove(mv.grupo);
+      this.missisVis.splice(i, 1);
+      return;
+    }
+  }
+
+  /** Move os foguetes visuais; expira sozinho se a explosão não chegar. */
+  _updateMissisVis(dt) {
+    for (let i = this.missisVis.length - 1; i >= 0; i--) {
+      const mv = this.missisVis[i];
+      // homing visual: curva para o avatar do alvo (espelha o teleguiado do servidor)
+      if (mv.alvo != null) {
+        const rp = this.avatares.get(mv.alvo);
+        if (rp && rp.vivo !== false) {
+          const tx = rp.x - mv.grupo.position.x, ty = rp.y + 1 - mv.grupo.position.y, tz = rp.z - mv.grupo.position.z;
+          const tl = Math.hypot(tx, ty, tz);
+          if (tl > 0.5) {
+            const k = Math.min(1, 2.5 * dt);
+            mv.dx += ((tx / tl) - mv.dx) * k;
+            mv.dy += ((ty / tl) - mv.dy) * k;
+            mv.dz += ((tz / tl) - mv.dz) * k;
+            const nl = Math.hypot(mv.dx, mv.dy, mv.dz) || 1;
+            mv.dx /= nl; mv.dy /= nl; mv.dz /= nl;
+            mv.grupo.quaternion.setFromRotationMatrix(
+              new THREE.Matrix4().lookAt(new THREE.Vector3(0, 0, 0), new THREE.Vector3(mv.dx, mv.dy, mv.dz), new THREE.Vector3(0, 1, 0))
+            );
+          }
+        }
+      }
+      mv.vida -= dt;
+      mv.grupo.position.x += mv.dx * mv.v * dt;
+      mv.grupo.position.y += mv.dy * mv.v * dt;
+      mv.grupo.position.z += mv.dz * mv.v * dt;
+      if (mv.vida <= 0) {
+        if (this.game && this.game.fx) {
+          this.game.fx.explode(new THREE.Vector3(mv.grupo.position.x, mv.grupo.position.y, mv.grupo.position.z), 1.6);
+        }
+        mv.grupo.traverse((o) => { if (o.material) o.material.dispose(); });
+        this.game.gfx.scene.remove(mv.grupo);
+        this.missisVis.splice(i, 1);
+      }
+    }
   }
 
   /** Alvos locais das balas (avatares e carros) — o dano é do servidor;
@@ -944,20 +1120,70 @@ export class Match {
     bul.ignoreFoe = this.avatares.get(this.meuId)?._alvo || null;
   }
 
-  /** Carro livre mais proximo do jogador (raio 4.5) ou 0 (sair do atual). */
-  _alvoCarro() {
-    if (this._emCarro) return 0;
+  /** Carro/helicóptero livre mais próximo — {car, heli} ou null. 0 = sair. */
+  _alvoVeiculo() {
+    if (this._emCarro) return { car: 0, heli: null };
+    if (this._emHeli) return { car: null, heli: 0 };
     const snap = this.snapBuf.ultimo();
     const eu = snap && snap.players ? snap.players.find((p) => p.id === this.meuId) : null;
     if (!eu) return null;
-    let best = null, bestD = 4.5 * 4.5;
+    let best = null, bestD = Infinity;
     for (const [id, cr] of this.carrosMp) {
       if (cr.playerId != null) continue;
       const dx = cr.x - eu.x, dz = cr.z - eu.z;
       const d = dx * dx + dz * dz;
-      if (d < bestD) { bestD = d; best = id; }
+      if (d < bestD) { bestD = d; best = { tipo: 'carro', id }; }
     }
-    return best;
+    for (const [id, hl] of this.helisMp) {
+      if (hl.playerId != null) continue;
+      const dx = hl.x - eu.x, dz = hl.z - eu.z;
+      const d = dx * dx + dz * dz;
+      if (d < bestD) { bestD = d; best = { tipo: 'heli', id }; }
+    }
+    if (!best) return null;
+    const range = best.tipo === 'carro' ? 4.5 : HELI.enterRange;
+    if (bestD > range * range) return null;
+    return best.tipo === 'carro' ? { car: best.id, heli: null } : { car: null, heli: best.id };
+  }
+
+  /** Painel ALT/VEL do helicóptero quando o jogador está pilotando. */
+  _atualizarHeliHud() {
+    // botões do toque: no heli o PULAR vira ▲ (subir) e aparece o ▼ (descer)
+    const pularEl = document.getElementById('mp-pular');
+    if (pularEl) pularEl.textContent = this._emHeli ? '▲' : 'PULAR';
+    const descerEl = document.getElementById('mp-descer');
+    if (descerEl) descerEl.classList.toggle('hidden', !this._emHeli);
+    const correrEl = document.getElementById('mp-correr');
+    if (correrEl) correrEl.classList.toggle('hidden', this._emHeli);
+    const giroEsqEl = document.getElementById('mp-girar-esq');
+    if (giroEsqEl) giroEsqEl.classList.toggle('hidden', !this._emHeli);
+    const giroDirEl = document.getElementById('mp-girar-dir');
+    if (giroDirEl) giroDirEl.classList.toggle('hidden', !this._emHeli);
+
+    const panel = document.getElementById('heli-panel');
+    if (!panel) return;
+    if (!this._emHeli || this._meuHeliId == null) {
+      panel.classList.add('hidden');
+      return;
+    }
+    const hl = this.helisMp.get(this._meuHeliId);
+    panel.classList.remove('hidden');
+    if (!hl) return;
+    const alt = Math.max(0, hl.y - hl.mesh.surfaceBelow());
+    const elAlt = document.getElementById('heli-alt');
+    const elSpd = document.getElementById('heli-spd');
+    if (elAlt) elAlt.textContent = String(Math.round(alt));
+    if (elSpd) elSpd.textContent = String(Math.round((hl.vel || 0) * 3.6));
+    // gasolina do aparelho (verde -> amarelo -> vermelho)
+    const elFuel = document.getElementById('heli-fuel');
+    if (elFuel) {
+      const f = Math.round(hl.fuel ?? 100);
+      elFuel.textContent = f + '%';
+      elFuel.style.color = f > 40 ? '#7CFC00' : f > 15 ? '#FFD24D' : '#FF5555';
+    }
+    // aviso de "desça para sair" só quando está alto demais
+    const warn = document.getElementById('heli-warn');
+    if (warn) warn.style.display = alt > HELI.exitMaxHeight ? '' : 'none';
   }
 
   /** Dica contextual no MESMO lugar do HUD do solo. */
@@ -997,7 +1223,7 @@ export class Match {
     // dedos soltos: nada de andar/atirar sozinho ao retomar
     this._lt = null;
     this._joyTouch = null;
-    this.inp.mx = 0; this.inp.mz = 0; this.inp.run = false;
+    this.inp.mx = 0; this.inp.mz = 0; this.inp.run = false; this.inp.up = false; this.inp.down = false;
     this._fireBtn = false; this._fire = false; this._dragOn = false;
     if (this.pausa) this.pausa.mostrar();
   }
@@ -1067,6 +1293,14 @@ export class Match {
     // remove os carros do MP e devolve o transito do single
     for (const cr of this.carrosMp.values()) cr.mesh.dispose(this.game.gfx.scene);
     this.carrosMp.clear();
+    // remove os helicopteros do MP (e o painel de ALT/VEL)
+    for (const hl of this.helisMp.values()) this.game.gfx.scene.remove(hl.mesh.root);
+    this.helisMp.clear();
+    this._emHeli = false;
+    this._meuHeliId = null;
+    this._heliYaw = 0;
+    const heliPanel = document.getElementById('heli-panel');
+    if (heliPanel) heliPanel.classList.add('hidden');
     if (this._tracer) { this.game.gfx.scene.remove(this._tracer); this._tracer.geometry.dispose(); this._tracer.material.dispose(); this._tracer = null; }
     // devolve as balas do single: alvos do trânsito e callbacks originais
     if (this.game && this.game.bullets) {
@@ -1084,6 +1318,7 @@ export class Match {
     }
     if (this.game && this.game.cars) this.game.cars.group.visible = true;
     if (this.game && this.game.peds) this.game.peds.group.visible = true;
+    if (this.game && this.game.heli) this.game.heli.root.visible = true;
     // pausa: desliga handlers do MP e devolve o comando ao modo solo
     if (this._backHandler) { window.removeEventListener('popstate', this._backHandler); this._backHandler = null; }
     if (this.pausa) {

@@ -151,6 +151,7 @@ button{font-family:var(--font)}
 .heli-row{display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:11px; opacity:.75}
 .heli-row b{font-size:22px; font-weight:800; opacity:1; font-variant-numeric:tabular-nums}
 /* [63] linha do armamento: o número grande atrapalharia, aqui é só um rótulo */
+#heli-fuel{color:#7CFC00}
 .heli-arm{margin-top:4px; border-top:1px solid var(--stroke); padding-top:5px}
 .heli-arm b{font-size:12px; letter-spacing:1.2px; color:var(--accent)}
 #heli-warn{margin-top:6px; font-size:10px; font-weight:800; color:var(--bad); letter-spacing:1px; display:none}
@@ -884,6 +885,8 @@ body.toque #keys-touch{display:block}
 .tc-missil{right:26px; bottom:128px}
 .tc-visao{right:198px; bottom:98px}
 .tc-descer{right:198px; bottom:24px}
+.tc-girar-esq{right:198px; bottom:88px}
+.tc-girar-dir{right:254px; bottom:88px}
 
 /* telas curtas (celular deitado): o conjunto encolhe junto */
 @media (max-height:430px){

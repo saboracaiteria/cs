@@ -134,7 +134,11 @@ export class Minimap {
       this._blip(ctx, TX, TY, p, cor, p.proxima ? pulseR : 5,
         p.proxima ? '★' : '◆', px, pz, true);
     }
-    if (marks.heli) this._blip(ctx, TX, TY, marks.heli, '#25d0ff', 5, '🚁', px, pz, false);
+    if (marks.helis && marks.helis.length) {
+      for (const h of marks.helis) {
+        this._blip(ctx, TX, TY, h, h.playerId != null ? '#ffd24d' : '#25d0ff', 5, '🚁', px, pz, false);
+      }
+    } else if (marks.heli) this._blip(ctx, TX, TY, marks.heli, '#25d0ff', 5, '🚁', px, pz, false);
     if (marks.pickup) this._blip(ctx, TX, TY, marks.pickup, '#ffb020', pulseR, 'C', px, pz, true);
     if (marks.deliver) this._blip(ctx, TX, TY, marks.deliver, '#3ddc84', pulseR, 'E', px, pz, true);
 

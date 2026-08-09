@@ -52,6 +52,44 @@ export const CAR = {
 };
 export const NUM_CARS = 8;
 
+// ---------------------------------------------------------------- helicopteros MP
+export const HELI = {
+  liftAccel: 13,
+  maxLift: 16,
+  tiltAccel: 17,
+  maxSpeed: 42,
+  yawRate: 1.35,
+  drag: 0.62,
+  landHeight: 0.02,
+  /** [MP] só dá para entrar perto do aparelho (mesmo raio do hint do cliente). */
+  enterRange: 6.5,
+  /** [MP] só dá para sair com o aparelho quase pousado (igual ao solo [49]). */
+  exitMaxHeight: 3.2,
+  /** [MP] parado no ar sem interagir: depois de 20 s desce de ~25 em 25 m. */
+  idleMax: 20,        // s parado antes de descer (anti-"escondido no céu")
+  idleDesc: 12,       // m/s da descida forçada (~25 m a cada 2 s)
+  idleCiclo: 4,       // 2 s caindo + 2 s estabilizado
+  /** [MP] gasolina: 100 = tanque cheio (~3,3 min de voo contínuo). */
+  fuelMax: 100,
+  fuelConsume: 0.5,   // % por segundo voando
+  fuelRefill: 15,     // % por segundo pousado (~7 s p/ encher)
+  fuelMinY: 0.5,      // (m) do chão p/ considerar "pousado"
+};
+
+// ---------------------------------------------------------------- míssil do heli (MP)
+export const MISSIL = {
+  speed: 55,     // m/s
+  dano: 70,      // no centro da explosão (cai com a distância)
+  raio: 7,       // m de alcance do dano em área
+  cooldown: 1.5, // s entre disparos
+  vida: 5,       // s de voo máximo antes de explodir no ar
+  curva: 2.5,    // rad/s de curva do teleguiado (homing no alvo da mira)
+  curva: 2.5,    // rad/s de curva do teleguiado (homing no alvo da mira)
+};
+/** Quantos helicópteros espalhados pelo mapa no MP. */
+export const NUM_HELIS = 5;
+
+
 
 // ---------------------------------------------------------------- combate
 export const GAME = {

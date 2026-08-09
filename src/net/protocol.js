@@ -7,7 +7,7 @@ export const NET_VERSION = 1;
 export const T = {
   // cliente -> servidor
   HELLO: 'hello',          // { t, v, nick, modo }
-  INPUT: 'input',          // { t, seq, yaw, pitch, moveX, moveZ, run, jump, fire, ads }
+  INPUT: 'input',          // { t, seq, yaw, pitch, moveX, moveZ, run, jump, fire, ads, car?, heli?, up?, down?, heliYaw? }
   READY: 'ready',          // { t }
   START: 'start',          // { t } host inicia a partida (todos os humanos prontos)
   INVITE: 'invite',        // { t, alvoId } chamar um jogador online para a sua sala

@@ -3,10 +3,12 @@
  * DM e BR herdam daqui e só acrescentam as regras do modo.
  */
 
-import { NET, MODES, CAR, NUM_CARS } from '../config.js';
+import { NET, MODES, CAR, NUM_CARS, HELI, NUM_HELIS, MISSIL } from '../config.js';
 import { T, send, lobbyPlayer } from '../protocol.js';
 import { stepBody } from '../physics.js';
 import { createCars, updateCars } from '../cars.js';
+import { createHelis, updateHelis } from '../helis.js';
+import { createMissis, updateMissis } from '../missiles.js';
 import { WEAPONS } from '../weapons.js';
 import { makeRng, findFreeSpot, dist2D } from '../util.js';
 
@@ -28,6 +30,7 @@ export class Room {
     this.elapsed = 0;
     this.world = null;          // preenchido no startGame
     this.cars = [];             // veiculos do MP (server/cars.js)
+    this.helis = [];            // helicopteros do MP (server/helis.js)
     this._lastTick = Date.now();
 
     this._inputLog = new Map(); // anti-flood: id -> {count, t0}
@@ -160,6 +163,8 @@ export class Room {
     this._step(dt);
     this._stepBodies(dt);
     this._stepCars(dt);
+    this._stepHelis(dt);
+    this._stepMissis(dt);
     this._broadcastSnapshot();
   }
 
@@ -169,6 +174,8 @@ export class Room {
     this.elapsed = 0;
     this._setupWorld();
     this.cars = createCars(this.world, NUM_CARS);
+    this.helis = createHelis(this.world, NUM_HELIS);
+    this.missis = createMissis();
     this._spawnAll();
     this._bcast(T.GAME_START, {
       modo: this.modo,
@@ -212,6 +219,8 @@ export class Room {
     p.hp = 100;
     p.invuln = 3;
     p.arma = 'pistola';
+    p.inCar = null;
+    p.inHeli = null;
     this._sendTo(p, T.SPAWN, { id: p.id, x: pt.x, y: pt.y, z: pt.z, yaw: p.body.yaw });
     if (p.id > 0) {
       this._bcast(T.RESPAWN, { id: p.id, x: pt.x, y: pt.y, z: pt.z, yaw: p.body.yaw, invuln: 3 });
@@ -221,6 +230,7 @@ export class Room {
   _applyInput(p, msg) {
     if (!p.body) return;
     if (msg.car != null) this._veiculo(p, msg.car);
+    if (msg.heli != null) this._veiculoHeli(p, msg.heli);
     const inp = {
       moveX: clampNum(msg.moveX, -1, 1),
       moveZ: clampNum(msg.moveZ, -1, 1),
@@ -228,6 +238,11 @@ export class Room {
       pitch: msg.pitch ?? p.body.pitch,
       run: !!msg.run,
       jump: !!msg.jump,
+      // controles do helicóptero (o corpo vira piloto no _stepHelis)
+      up: !!msg.up,
+      down: !!msg.down,
+      heliYaw: clampNum(msg.heliYaw, -1, 1),
+      heliDesiredYaw: msg.heliDesiredYaw ?? null,
     };
     p.body.moveX = inp.moveX;
     p.body.moveZ = inp.moveZ;
@@ -239,7 +254,8 @@ export class Room {
       return;
     }
     const r = stepBody(this.world, p.body, inp, 1 / NET.tickRate);
-    if (r.fallDamage > 0) this._damage(p, null, r.fallDamage, 'queda');
+    if (p.body.onGround) p.body._caiuHeli = false;
+    if (r.fallDamage > 0) this._danoQueda(p, r);
   }
 
   /** Integra a física dos jogadores humanos a 30 Hz com o último input. */
@@ -247,8 +263,10 @@ export class Room {
     for (const p of this.players.values()) {
       if (!p.body || !p.body._inp) continue;
       if (p.inCar != null) continue;   // o carro move o corpo do motorista
+      if (p.inHeli != null) continue;  // o helicóptero move o corpo do piloto
       const r = stepBody(this.world, p.body, p.body._inp, dt);
-      if (r.fallDamage > 0) this._damage(p, null, r.fallDamage, 'queda');
+      if (p.body.onGround) p.body._caiuHeli = false;
+      if (r.fallDamage > 0) this._danoQueda(p, r);
     }
   }
 
@@ -257,6 +275,7 @@ export class Room {
     if (!this.cars || this.cars.length === 0) return;
     if (!p.body) return;
     if (p.inCar == null) {
+      if (p.inHeli != null) return;   // pilotando: sai do helicóptero antes
       const c = this.cars.find((cc) => cc.id === alvo && cc.playerId == null && !cc.destroyed);
       if (!c) return;
       const d = dist2D(p.body.pos.x, p.body.pos.z, c.x, c.z);
@@ -287,6 +306,81 @@ export class Room {
     this._bcast(T.CAR_LEAVE, { id: p.id });
   }
 
+  /** Entra/sai do helicóptero: msg.heli = id do aparelho (entrar) ou 0 (sair). */
+  _veiculoHeli(p, alvo) {
+    if (!this.helis || this.helis.length === 0) return;
+    if (!p.body) return;
+    if (p.inHeli == null) {
+      if (p.inCar != null) return;   // sem troca direta: sai do carro antes
+      const h = this.helis.find((hh) => hh.id === alvo && hh.playerId == null);
+      if (!h) return;
+      const d = dist2D(p.body.pos.x, p.body.pos.z, h.x, h.z);
+      if (d > HELI.enterRange) return;
+      p.inHeli = h.id;
+      h.playerId = p.id;
+      h.inp = { forward: 0, strafe: 0, up: 0, down: 0, yawLeft: 0, yawRight: 0 };
+      this._log(p.nick + ' embarcou no helicóptero #' + h.id);
+    } else {
+      this._sairHeli(p);
+    }
+  }
+
+  _sairHeli(p) {
+    const h = this.helis.find((hh) => hh.id === p.inHeli);
+    if (h) {
+      if (p.body) {
+        // o piloto fica na posição do aparelho (pode estar no ar) e cai
+        // com a gravidade normal — nada de teletransporte para o chão
+        p.body.pos.x = h.x;
+        p.body.pos.y = h.y;
+        p.body.pos.z = h.z;
+        p.body.vel = { x: 0, y: 0, z: 0 };
+        p.body.onGround = false;
+        p.body._caiuHeli = true;   // queda do heli: regra própria de dano (só > 100 m morre)
+      }
+      h.playerId = null;
+      h.inp = null;
+      h.vel.x = 0; h.vel.z = 0;
+      h.vel.y = Math.min(0, h.vel.y);
+    }
+    p.inHeli = null;
+  }
+
+  /** Move os helicópteros pilotados e faz o piloto acompanhar o aparelho. */
+  _stepHelis(dt) {
+    if (!this.helis || this.helis.length === 0) return;
+    for (const h of this.helis) {
+      if (h.playerId == null) { h.inp = null; continue; }
+      const p = this._all().find((pp) => pp.id === h.playerId);
+      h.inp = p && p.body
+        ? {
+            forward: clampNum(p.body.moveZ || 0, -1, 1),
+            strafe: clampNum(p.body.moveX || 0, -1, 1),
+            up: p.body._inp ? (p.body._inp.up ? 1 : 0) : 0,
+            down: p.body._inp ? (p.body._inp.down ? 1 : 0) : 0,
+            yawLeft: p.body._inp ? (p.body._inp.heliYaw > 0 ? 1 : 0) : 0,
+            yawRight: p.body._inp ? (p.body._inp.heliYaw < 0 ? 1 : 0) : 0,
+            desiredYaw: p.body._inp ? (p.body._inp.heliDesiredYaw ?? null) : null,
+          }
+        : { forward: 0, strafe: 0, up: 0, down: 0, yawLeft: 0, yawRight: 0 };
+    }
+    updateHelis(this.world, this.helis, dt);
+    for (const p of this._all()) {
+      if (p.inHeli != null && p.body) {
+        const h = this.helis.find((hh) => hh.id === p.inHeli);
+        if (h) {
+          p.body.pos.x = h.x;
+          p.body.pos.y = h.y;
+          p.body.pos.z = h.z;
+          p.body.yaw = h.yaw;
+          p.body.pitch = 0;
+          p.body.onGround = false;
+          p.body.vel = { x: 0, y: 0, z: 0 };
+        }
+      }
+    }
+  }
+
   /** Move os carros dirigidos e faz o motorista acompanhar o carro. */
   _stepCars(dt) {
     if (!this.cars || this.cars.length === 0) return;
@@ -314,6 +408,35 @@ export class Room {
     }
   }
 
+  /** Dano de queda com a regra do helicóptero: caiu do aparelho, só morre
+   *  acima de ~100 m (74,8 m/s com a gravidade 28 do MP); abaixo, dano zero. */
+  _danoQueda(p, r) {
+    if (r.fallDamage <= 0) return;
+    let dmg = r.fallDamage;
+    const b = p.body;
+    if (b && b._caiuHeli) {
+      dmg = b.vel.y <= -74.8 ? 100 : 0;
+      if (b.onGround) b._caiuHeli = false;
+    }
+    if (dmg > 0) this._damage(p, null, dmg, 'queda');
+  }
+
+  /** Integra os mísseis em voo; na explosão, dano em área + visual p/ todos. */
+  _stepMissis(dt) {
+    if (!this.missis || this.missis.length === 0) return;
+    updateMissis(this.world, this.missis, this._all(), dt, (m) => {
+      for (const p of this._all()) {
+        if (!p.body || p.hp <= 0) continue;
+        const d = Math.hypot(p.body.pos.x - m.x, (p.body.pos.y + 1) - m.y, p.body.pos.z - m.z);
+        if (d < MISSIL.raio) {
+          const dmg = Math.round(MISSIL.dano * (1 - d / MISSIL.raio));
+          if (dmg > 0) this._damage(p, m.por, dmg, 'missil');
+        }
+      }
+      this._bcast(T.MISSIL, { id: m.id, x: Math.round(m.x * 10) / 10, y: Math.round(m.y * 10) / 10, z: Math.round(m.z * 10) / 10 });
+    });
+  }
+
   _damage(alvo, por, dmg, arma = 'arma') {
     if (!alvo || alvo.hp <= 0) return;
     if (alvo.invuln > 0 && por) return;   // spawn protegido
@@ -327,6 +450,7 @@ export class Room {
 
   _kill(morto, por, arma) {
     if (morto.inCar != null) this._sairCarro(morto);
+    if (morto.inHeli != null) this._sairHeli(morto);
     if (morto.deaths != null) morto.deaths++;
     if (por && por.kills != null && por !== morto) por.kills++;
     this._bcast(T.DEATH, { id: morto.id, por: por ? por.id : null, arma });
@@ -341,6 +465,8 @@ export class Room {
    */
   onShoot(p, aim) {
     if (!p.body || p.hp <= 0) return;
+    // de helicóptero o E/clique dispara o MÍSSIL de canhão (igual ao solo)
+    if (p.inHeli != null) { this._fireMissil(p, aim); return; }
     const W = WEAPONS[p.arma] || WEAPONS.pistola;
     const now = Date.now();
     if (now - (p._lastFire || 0) < W.cooldown * 1000) return;
@@ -351,7 +477,11 @@ export class Room {
     // de onde o tracer/bala saem). Valida que está perto do peito (anti-cheat);
     // fallback: o peito do jogador.
     let ox = p.body.pos.x, oy = p.body.pos.y + 1.5, oz = p.body.pos.z;
-    if (aim.orig && Math.abs(aim.orig.x - ox) < 6 && Math.abs(aim.orig.z - oz) < 6 && Math.abs(aim.orig.y - oy) < 4) {
+    // de helicóptero a câmera fica longe do corpo (3ª pessoa + zoom): o
+    // anti-cheat do pé no chão (raio 6/4 m) rejeitaria o tiro legítimo
+    const emHeli = p.inHeli != null;
+    const tol = emHeli ? 45 : 6;
+    if (aim.orig && Math.abs(aim.orig.x - ox) < tol && Math.abs(aim.orig.z - oz) < tol && Math.abs(aim.orig.y - oy) < (emHeli ? 45 : 4)) {
       ox = aim.orig.x; oy = aim.orig.y; oz = aim.orig.z;
     }
     // direção do tiro: com a direção da MIRA do cliente (NDC), usa-se ela
@@ -401,6 +531,51 @@ export class Room {
     const dmg = (atiradorBot ? W.damage * 0.18 : W.damage) * mult;
     if (best.carro) this._carDano(best.carro, dmg);
     else this._damage(best.alvo, p, dmg, p.arma);
+  }
+
+  /** Míssil de canhão do helicóptero — projétil server-side que explode em área. */
+  _fireMissil(p, aim) {
+    const now = Date.now();
+    if (now - (p._lastMissil || 0) < MISSIL.cooldown * 1000) return;
+    p._lastMissil = now;
+    const h = this.helis.find((hh) => hh.id === p.inHeli);
+    if (!h) return;
+    // trilho lateral (hardpoint) alternando os lados, como no solo
+    const lado = (p._missilSide = -(p._missilSide || 1));
+    const fx = Math.sin(h.yaw), fz = Math.cos(h.yaw);
+    const rx = -Math.cos(h.yaw), rz = Math.sin(h.yaw);
+    const boca = { x: h.x + rx * 1.5 * lado, y: h.y + 0.35, z: h.z + rz * 1.5 * lado };
+    // direção: a MIRA do cliente (exata), fallback para a frente do aparelho
+    let dx, dy, dz;
+    if (aim.dir) {
+      const l = Math.hypot(aim.dir.x, aim.dir.y, aim.dir.z) || 1;
+      dx = aim.dir.x / l; dy = aim.dir.y / l; dz = aim.dir.z / l;
+    } else {
+      const yaw = aim.yaw != null ? aim.yaw : h.yaw;
+      const pitch = aim.pitch || 0;
+      dx = -Math.sin(yaw) * Math.cos(pitch);
+      dy = Math.sin(pitch);
+      dz = -Math.cos(yaw) * Math.cos(pitch);
+    }
+    // alvo teleguiado: o jogador mais próximo da linha de mira (lock do solo)
+    let alvoId = null;
+    let melhor = 35;
+    for (const q of this._all()) {
+      if (q.id === p.id || !q.body || q.hp <= 0) continue;
+      const vx = q.body.pos.x - boca.x, vy = q.body.pos.y + 1 - boca.y, vz = q.body.pos.z - boca.z;
+      const proj = vx * dx + vy * dy + vz * dz;
+      if (proj < 0) continue; // atrás do disparo
+      const perp = Math.hypot(vx - dx * proj, vy - dy * proj, vz - dz * proj);
+      if (perp < melhor) { melhor = perp; alvoId = q.id; }
+    }
+    const id = (this._missilUid = (this._missilUid || 0) + 1);
+    this.missis.push({ id, alvoId, x: boca.x, y: boca.y, z: boca.z, dx, dy, dz, por: p, t: MISSIL.vida });
+    this._bcast(T.MISSIL_FIRE, {
+      id,
+      x: Math.round(boca.x * 100) / 100, y: Math.round(boca.y * 100) / 100, z: Math.round(boca.z * 100) / 100,
+      dx: Math.round(dx * 100) / 100, dy: Math.round(dy * 100) / 100, dz: Math.round(dz * 100) / 100,
+      v: MISSIL.speed, alvo: alvoId,
+    });
   }
 
   /** Carro levou tiro: perde vida e explode ao zerar (expulsa o motorista). */
@@ -480,6 +655,7 @@ export class Room {
       moveZ: p.body ? (p.body.moveZ||0) : 0,
       run: p.body ? !!(p.body._inp && p.body._inp.run) : false,
       inCar: p.inCar ?? null,
+      inHeli: p.inHeli ?? null,
       fire: (p._fireVis && Date.now() - p._fireVis < 350) ? 1 : 0,
     }));
     const snap = { t: T.SNAPSHOT, seq: this.seq, players };
@@ -494,6 +670,18 @@ export class Room {
       playerId: c.playerId,
       cor: c.cor,
       destroyed: !!c.destroyed,
+    }));
+    snap.helis = this.helis.map((h) => ({
+      id: h.id,
+      x: Math.round(h.x * 100) / 100,
+      y: Math.round(h.y * 100) / 100,
+      z: Math.round(h.z * 100) / 100,
+      yaw: Math.round(h.yaw * 1000) / 1000,
+      pitch: Math.round(h.pitch * 1000) / 1000,
+      roll: Math.round(h.roll * 1000) / 1000,
+      speed: Math.round(Math.hypot(h.vel.x, h.vel.z) * 10) / 10,
+      playerId: h.playerId,
+      fuel: Math.round(h.fuel ?? 100),
     }));
     this._bcast(T.SNAPSHOT, snap);
   }

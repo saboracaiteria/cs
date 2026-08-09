@@ -73,6 +73,7 @@ export class Human {
      * plano e é uma entidade só.
      */
     this.fullShadow = opts.fullShadow === true;
+    this.falling = false;   // pose de queda (braços erguidos) — MP
     this.shirt = opts.shirt ?? rngPick(rng, PALETTE.shirt);
     this.pants = opts.pants ?? rngPick(rng, PALETTE.pants);
     this.skin = opts.skin ?? rngPick(rng, PALETTE.skin);
@@ -308,6 +309,19 @@ export class Human {
       this.armR.group.rotation.x = -2.5;
       this.armR.group.rotation.z = -0.35 + w * 0.3;
       this.armR.fore.rotation.x = -0.4 + w;
+    } else if (this.falling) {
+      // caindo no ar (MP — saiu do helicóptero): braços erguidos e pernas
+      // levemente flexionadas; a gravidade do servidor cuida da descida
+      this.armL.group.rotation.x = -2.4;
+      this.armR.group.rotation.x = -2.4;
+      this.armL.group.rotation.z = 0.55;
+      this.armR.group.rotation.z = -0.55;
+      this.armL.fore.rotation.x = -0.3;
+      this.armR.fore.rotation.x = -0.3;
+      this.legL.group.rotation.x = 0.18;
+      this.legR.group.rotation.x = -0.18;
+      this.legL.shin.rotation.x = 0.3;
+      this.legR.shin.rotation.x = 0.3;
     } else {
       this.armL.group.rotation.x = -s * amp * 0.85;
       this.armR.group.rotation.x = s * amp * 0.85;
