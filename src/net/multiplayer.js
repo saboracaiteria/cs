@@ -21,6 +21,7 @@ let net = null;
 let match = null;
 let lobby = null;
 let gameRef = null;
+let watchdog = null;  // conexão aberta sem WELCOME = cache/versão antiga
 
 export function iniciarMultiplayer(game, modo, nick) {
   gameRef = game;
@@ -57,7 +58,30 @@ export function iniciarMultiplayer(game, modo, nick) {
   net = new ClientNet(url);
   net._onMsg = onMsg;
   net._onStatus = (estado) => {
-    if (estado === 'erro') lobby.mostrar('⚠ Sem conexão com o servidor');
+    if (!lobby) return;
+    if (estado === 'aberto') {
+      lobby.limparAlerta();
+      clearTimeout(watchdog);
+      // se o servidor não responder o WELCOME em 10s, o cliente quase sempre
+      // é uma VERSÃO ANTIGA no cache (apontava para o host errado) — o lobby
+      // ficava 'conectado mas mudo' para sempre sem este aviso
+      watchdog = setTimeout(() => {
+        if (!net.id) lobby.alerta('⚠ Conectado ao servidor, mas ele não respondeu. Quase sempre é VERSÃO ANTIGA no cache — recarregue com Ctrl+Shift+R (ou limpe os dados do site) e tente de novo.', 'erro');
+      }, 10000);
+      return;
+    }
+    const n = net.tentativas || 0;
+    if (estado === 'erro' || estado === 'off') {
+      if (n >= 2) {
+        lobby.alerta('⚠ Não foi possível conectar ao servidor (' + n + 'ª tentativa). Confira se NET.wsUrl aponta para wss://…onrender.com/ws. No Render free o 1º acesso demora até 1 min (o servidor dorme após ~15 min sem uso).', 'erro');
+      } else {
+        lobby.alerta('⚠ Sem conexão com o servidor — reconectando…', 'erro');
+      }
+      return;
+    }
+    if (estado === 'conectando' && n > 0) {
+      lobby.alerta('🔄 Servidor acordando… (Render free: 1º acesso pode demorar até 1 min)', 'aviso');
+    }
   };
   net._onReplay = () => net.enviar({ t: T.HELLO, v: NET_VERSION, nick, modo });
   net.conectar();   // o onopen do ClientNet já reenvia o HELLO (_onReplay)
@@ -66,6 +90,7 @@ export function iniciarMultiplayer(game, modo, nick) {
 function onMsg(msg) {
   switch (msg.t) {
     case T.WELCOME:
+      clearTimeout(watchdog);
       net.id = msg.id;
       net.salaId = msg.salaId;
       net.modo = msg.modo;

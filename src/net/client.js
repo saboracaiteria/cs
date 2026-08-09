@@ -25,6 +25,7 @@ export class ClientNet {
     this._onReplay = null;        // () => void — reenvia hello na reconexao
     this._sairIntencional = false;
     this._reconT = null;
+    this._recon = 0;      // quantas reconexões automáticas já rolaram (cold start do Render)
   }
 
   conectar() {
@@ -40,6 +41,7 @@ export class ClientNet {
     }
     this.ws.onopen = () => {
       this.estado = 'aberto';
+      this._recon = 0;
       if (this._onReplay) this._onReplay();
       // limpa reconexao pendente
       if (this._reconT) { clearTimeout(this._reconT); this._reconT = null; }
@@ -61,6 +63,7 @@ export class ClientNet {
       // reconecta sozinho se nao foi saida intencional (preview/celular pausam o JS)
       if (!this._sairIntencional && this.url) {
         clearTimeout(this._reconT);
+        this._recon++;
         this._reconT = setTimeout(() => {
           this.conectar();
           if (this._onReplay) this._onReplay();
@@ -104,6 +107,8 @@ export class ClientNet {
     this.estado = 'off';
   }
 
+  /** Quantas reconexões automáticas já aconteceram (para avisos de cold start). */
+  get tentativas() { return this._recon; }
   _status() {
     if (this._onStatus) this._onStatus(this.estado);
   }

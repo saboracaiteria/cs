@@ -17,6 +17,7 @@ export function criarLobby() {
   const btnAceitar = document.getElementById('invite-aceitar');
   const btnRecusar = document.getElementById('invite-recusar');
   const toastEl = document.getElementById('lobby-toast');
+  const alertaEl = document.getElementById('lobby-alerta');
 
   if (!tela) return { mostrar() {}, esconder() {}, atualizar() {}, onReady() {}, onStart() {}, onLeave() {}, nick() { return ''; } };
 
@@ -34,6 +35,7 @@ export function criarLobby() {
     // convite/banner de sessão anterior não podem reaparecer (fantasma)
     conviteDe = null;
     if (inviteEl) inviteEl.classList.add('hidden');
+    limparAlerta();
   }
 
   function esconder() { tela.classList.add('hidden'); }
@@ -64,6 +66,19 @@ export function criarLobby() {
     toastEl.classList.remove('hidden');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toastEl.classList.add('hidden'), ms);
+  }
+
+  /** Alerta PERSISTENTE de conexão: fica visível até reconectar ou limpar. */
+  function alerta(msg, tipo = 'erro') {
+    if (!alertaEl) return;
+    alertaEl.textContent = msg;
+    alertaEl.className = 'lobby-alerta ' + (tipo || 'erro');
+    alertaEl.classList.remove('hidden');
+  }
+  function limparAlerta() {
+    if (!alertaEl) return;
+    alertaEl.classList.add('hidden');
+    alertaEl.textContent = '';
   }
 
   function atualizar(data) {
@@ -151,7 +166,7 @@ export function criarLobby() {
   let onInviteCb = null, onAceitarCb = null, onRecusarCb = null;
 
   return {
-    mostrar, esconder, atualizar, setSala, setMeuId, mostrarConvite, aviso,
+    mostrar, esconder, atualizar, setSala, setMeuId, mostrarConvite, aviso, alerta, limparAlerta,
     nick: () => nick ? nick.value.trim() || 'Jogador' : 'Jogador',
     setNick: (v) => { if (nick) nick.value = v; },
     onReady: (fn) => { onReadyCb = fn; },

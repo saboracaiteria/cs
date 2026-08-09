@@ -5,11 +5,11 @@
 
 // ---------------------------------------------------------------- malha urbana
 // ------------------------------------------------------------ multiplayer
+// URL do servidor MP. O site fica no GitHub Pages (estatico, sem WebSocket): o
+// cliente precisa do endereco real do servidor, hospedado no Render.
 export const NET = {
-  wsUrl: '',  // ← se o site (frontend) for servido em domínio diferente do servidor
-             //   (ex.: GitHub Pages), preencha com:  wss://SEU-SERVIDOR.onrender.com/ws
+  wsUrl: 'wss://tiroteio-cs.onrender.com/ws',
 };
-
 
 
 export const GRID = 8;                 // linhas de cruzamento por eixo (8x8 = 64 nós)
