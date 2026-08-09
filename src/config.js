@@ -330,7 +330,7 @@ export const MISSILE = {
   accel: 70,                   // aceleração do motor
   maxSpeed: 165,
   life: 5.0,
-  cooldown: 0.7,               // mais lento que a pistola [27]
+  cooldown: 0.5,               // míssil do heli mais rápido [27]
   blastPed: 9.5,               // raio que pega pedestres
   blastCar: 8.5,               // raio que pega carros
   blastFx: 3.2,                // escala da explosão

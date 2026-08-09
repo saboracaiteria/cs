@@ -83,7 +83,7 @@ export const MISSIL = {
   speed: 55,     // m/s
   dano: 70,      // no centro da explosão (cai com a distância)
   raio: 7,       // m de alcance do dano em área
-  cooldown: 1.5, // s entre disparos
+  cooldown: 0.5, // s entre disparos (míssil mais rápido)
   vida: 5,       // s de voo máximo antes de explodir no ar
   curva: 2.5,    // rad/s de curva do teleguiado (homing no alvo da mira)
   curva: 2.5,    // rad/s de curva do teleguiado (homing no alvo da mira)

@@ -626,8 +626,9 @@ export class Match {
     this.camera.updateMatrixWorld();
     this._vNdc.set(0.24, 0.2, 0.5).unproject(this.camera);
     this._fireDir = this._vNdc.sub(this.camera.position).normalize();
-    // [tiro] tracer local — dano é autoritativo do servidor (feedback igual ao solo)
-    if ((this._fire || this._fireBtn) && foc) {
+    // [tiro] tracer local — dano é autoritativo do servidor (feedback igual ao solo).
+    // NO HELI a arma é o MÍSSIL (servidor dispara): não pode sair bala de pistola.
+    if (!noHeli && (this._fire || this._fireBtn) && foc) {
       const agoraT = performance.now();
       if (agoraT - (this._lastTiroT || 0) > 130) {
         this._lastTiroT = agoraT;
