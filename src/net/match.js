@@ -36,6 +36,8 @@ export class Match {
 
     this.killfeed = criarKillfeed();
     this.scoreboard = criarScoreboard();
+    const _btnPlacar = document.getElementById('mp-placar');
+    if (_btnPlacar) _btnPlacar.addEventListener('click', () => this.scoreboard.alternar());
     this.brHud = criarBrHud();
     this.netStatus = criarNetStatus();
 
@@ -154,6 +156,8 @@ export class Match {
       this._pausaBtnHandler = () => this._togglePausa();
       this._pausaBtn.addEventListener('click', this._pausaBtnHandler);
     }
+    const _placarBtn = document.getElementById('mp-placar');
+    if (_placarBtn) _placarBtn.classList.toggle('hidden', !(this.game && this.game.toque));
 
     // pausa única — os MESMOS menus de OPÇÕES e CONTROLES do modo solo
     this.pausa = criarPausa();

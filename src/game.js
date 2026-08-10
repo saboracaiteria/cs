@@ -1361,17 +1361,12 @@ export class Game {
       if (aM) direction.set(aM.x, aM.y, aM.z);
     }
 
-    const hit = this.bullets._trace(origin, direction, 500);
-    const alvo = hit
-      ? hit.point.clone()
-      : origin.clone().addScaledVector(direction, 500);
-
-    this._missileSide = -(this._missileSide || 1);
-    const boca = this.heli.hardpoint(this._missileSide, this._tmpV);
-    const pontoAlvo = alvo.clone();   // ponto exato da mira (o missil guia ate aqui)
-    const rumo = alvo.sub(boca).normalize();
-
-    if (this.missiles.fire(boca, rumo, pontoAlvo)) {
+    // [MÍSSIL = PISTOLA] o míssil sai da MIRA (mesma origem/direção da bala) e
+    // segue RETO na linha de mira até o primeiro alvo — sem teleguiado, sem
+    // curva, sem hardpoint lateral. (alvo=null → o MissileSystem não persegue
+    // ponto nenhum: só acelera reto e detona no impacto, exatamente como a
+    // bala da pistola viaja e acerta o primeiro obstáculo/alvo na mira.)
+    if (this.missiles.fire(origin, direction, null)) {
       this.hud.recoil();
       this.camera.addShake(0.22);
       this.audio.missil();
