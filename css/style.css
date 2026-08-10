@@ -36,7 +36,7 @@ button{font-family:var(--font)}
   transform:translate(-50%,-50%);
   width:64px; height:64px;
   filter:drop-shadow(0 0 3px rgba(0,0,0,.9));
-  transition:transform .06s ease-out;
+  transition:transform .06s ease-out, left .11s ease-out, top .11s ease-out;
 }
 #crosshair.recoil{transform:translate(-50%,-50%) scale(1.28)}
 #crosshair.center{left:50%; top:50%}

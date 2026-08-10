@@ -2425,6 +2425,9 @@ export class Game {
     this.hud.setCrosshairVisible(true);
     // [FPS] com o zoom de mira fechado, a mira desliza para o centro
     this.hud.setAds(this.camera.isAds);
+    // [CODM-ADS] garante a classe .center no crosshair ao entrar em ADS
+    // (no multiplayer isso já era feito via match.js:796)
+    this.hud.setCrosshairCenter(this.camera.isAds);
     this._updateAimFeedback();
   }
 

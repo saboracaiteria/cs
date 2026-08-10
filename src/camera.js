@@ -216,7 +216,12 @@ export class GameCamera {
      * também a trajetória lateral, e a câmera não afunda numa parede ao
      * passar perto de um prédio.
      */
-    const ombro = this.mode === 'foot' ? CAMERA.shoulderX : (this.mode === 'heli-out' ? CAMERA.heliShoulderX : 0);
+    // [CODM-ADS] No ADS o offset de ombro é anulado suavemente pelo mesmo
+    // fator `this.ads` que controla o FOV — câmera e zoom transitam em sincronia.
+    // Hip-fire: ombro = shoulderX (jogador à esquerda, arma visível).
+    // ADS:      ombro → 0 (câmera centraliza, mira fica exatamente no centro).
+    const ombroBase = this.mode === 'foot' ? CAMERA.shoulderX : (this.mode === 'heli-out' ? CAMERA.heliShoulderX : 0);
+    const ombro = ombroBase * (1 - this.ads);
     const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
     const baseX = this._smoothFocus.x + right.x * ombro;
     const baseZ = this._smoothFocus.z + right.z * ombro;
