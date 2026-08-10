@@ -47,6 +47,10 @@ export class HUD {
     this._shownSpeed = 0;
     this._fpsAcc = 0;
     this._fpsFrames = 0;
+    this._lastScore = -1;
+    this._lastDeliveries = -1;
+    this._lastClockText = null;
+    this._lastIsNight = null;
   }
 
   /** Contador de FPS, atualizado 4x por segundo para o número não tremer. */
@@ -93,8 +97,16 @@ export class HUD {
   }
 
   // ------------------------------------------------------------------ números
-  setScore(v) { this.el.score.textContent = v; }
-  setDeliveries(v) { this.el.deliveries.textContent = v; }
+  setScore(v) {
+    if (v === this._lastScore) return;              // [perf F3-4] HUD so quando muda
+    this._lastScore = v;
+    this.el.score.textContent = v;
+  }
+  setDeliveries(v) {
+    if (v === this._lastDeliveries) return;
+    this._lastDeliveries = v;
+    this.el.deliveries.textContent = v;
+  }
 
   /** [8] Tempo restante — pode estar desativado. */
   setTimer(seconds, enabled) {
@@ -110,6 +122,9 @@ export class HUD {
   }
 
   setClock(text, isNight) {
+    if (text === this._lastClockText && isNight === this._lastIsNight) return;  // [perf F3-4]
+    this._lastClockText = text;
+    this._lastIsNight = isNight;
     this.el.clock.textContent = text;
     this.el.daynight.textContent = isNight ? '🌙' : '☀️';
   }

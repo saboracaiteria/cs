@@ -11,6 +11,12 @@ const MAX_RINGS = 6;
  * [24][26][35] Explosões: bola de fogo, fumaça, estilhaços, onda de choque e
  * um clarão de luz real. Tudo em pools — nenhuma alocação durante o jogo.
  */
+const _M = new THREE.Matrix4(); // [perf F3-4] temps reutilizados (zero alocacao por frame)
+const _Q = new THREE.Quaternion();
+const _E = new THREE.Euler();
+const _S = new THREE.Vector3();
+const _OFF = new THREE.Matrix4().makeScale(0.0001, 0.0001, 0.0001);
+
 export class FX {
   constructor(scene) {
     this.scene = scene;
@@ -345,11 +351,7 @@ export class FX {
     }
 
     // ---- estilhaços
-    const m = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    const e = new THREE.Euler();
-    const s = new THREE.Vector3();
-    const off = new THREE.Matrix4().makeScale(0.0001, 0.0001, 0.0001);
+    const m = _M, q = _Q, e = _E, s = _S, off = _OFF; // [perf F3-4] temps do modulo
     let anyD = false;
     for (let i = 0; i < MAX_DEBRIS; i++) {
       const d = this.debris[i];

@@ -48,6 +48,8 @@ export class SkySystem {
     this.nightFactor = 0;
     this._envTimer = 99;
     this._lastEnvHour = -999;   // [perf F2] PMREM por evento
+    this._clockMin = -1;
+    this._clockCache = '';   // [perf F3-4] relogio: 1 formatacao por minuto
     this._paused = false;
     /** [13] 'ciclo' | 'dia' | 'noite' */
     this.cycleMode = 'ciclo';
@@ -360,6 +362,10 @@ export class SkySystem {
     this.scene.environmentIntensity = QUALITY.envIntensity * (1 - this.nightFactor * 0.72);
   }
 
-  get clockText() { return formatClock(this.hour); }
+  get clockText() {
+    const m = Math.floor(this.hour * 60);           // [perf F3-4] 1 formatacao por minuto
+    if (m !== this._clockMin) { this._clockMin = m; this._clockCache = formatClock(this.hour); }
+    return this._clockCache;
+  }
   get isNight() { return this.nightFactor > 0.5; }
 }

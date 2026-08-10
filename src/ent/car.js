@@ -328,10 +328,10 @@ export class CarSystem {
   }
 
   // ---------------------------------------------------------------- IA
-  update(dt, playerCar) {
+  update(dt, refPos = null) {
     for (const car of this.cars) {
       if (!car.alive || car.isPlayer || car.state === 'parked') continue;
-      this._updateAI(car, dt);
+      this._updateAI(car, dt, refPos);
     }
     // acende/apaga faróis conforme a noite
     for (const car of this.cars) {
@@ -342,7 +342,7 @@ export class CarSystem {
 
   setNight(night) { this.nightOn = night > 0.35; }
 
-  _updateAI(car, dt) {
+  _updateAI(car, dt, refPos) {
     if (car.state === 'cross') {
       // atravessando o cruzamento por um arco
       const b = car.bez;
@@ -366,7 +366,7 @@ export class CarSystem {
         car.root.position.z = pz;
         car.yaw = Math.atan2(dx, dz);
         car.syncTransform();
-        car.spinWheels(dt);
+        this._spin(car, dt, refPos);
         car._steer = clamp(car.turnSign * 0.5, -0.5, 0.5);
         return;
       }
@@ -438,10 +438,17 @@ export class CarSystem {
     car.root.position.z = p.z;
     car.yaw = Math.atan2(d.x, d.z);
     car.syncTransform();
-    car.spinWheels(dt);
+    this._spin(car, dt, refPos);
   }
 
   /** Distância livre até o veículo à frente (inclui o carro do jogador). */
+  _spin(car, dt, refPos) {
+    const far = refPos && dist2Sq(car.root.position.x, car.root.position.z, refPos.x, refPos.z) > 3600;
+    if (!far) { car.spinWheels(dt); car.lodAcc = 0; return; }
+    car.lodAcc = (car.lodAcc || 0) + dt;
+    if (car.lodAcc >= 1 / 30) { car.spinWheels(car.lodAcc); car.lodAcc = 0; }
+  }
+
   _frontGap(car) {
     const fx = Math.sin(car.yaw), fz = Math.cos(car.yaw);
     const px = car.root.position.x, pz = car.root.position.z;

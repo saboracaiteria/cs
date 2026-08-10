@@ -2001,9 +2001,9 @@ export class Game {
     this.landmarks.update(dt, night);
     this.terrain.update(dt);
     this.traffic.update(dt, night);
-    this.peds.update(dt);
+    this.peds.update(dt, this._focus.x, this._focus.z);
     this.cars.setNight(night);
-    this.cars.update(dt, null);
+    this.cars.update(dt, this._focus);
     this.heli.update(dt, this._heliInput(true), night);
     this.fx.update(dt);
   }
@@ -2104,9 +2104,9 @@ export class Game {
     }
     this.terrain.update(dt);
     this.traffic.update(dt, night);                           // [4]
-    this.peds.update(dt);                                     // [2]
+    this.peds.update(dt, this._focus.x, this._focus.z);                                     // [2]
     this.cars.setNight(night);
-    this.cars.update(dt, this.playerCar);                     // [3]
+    this.cars.update(dt, this._focus);                     // [3]
     this.heli.update(dt, this._heliInput(blocked), night);    // [43]
 
     this.bullets.update(dt);                                  // [38][41]
