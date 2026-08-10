@@ -706,7 +706,7 @@ body.toque #net-status{
 
 /* botões de ação do toque do MP (ATIRAR/PULAR/AÇÃO/CORRER) — mesmo padrão do solo */
 #mp-pad{
-  position:absolute; width:264px; height:200px; pointer-events:none; touch-action:none;
+  position:absolute; width:360px; height:200px; pointer-events:none; touch-action:none;
   right:calc(env(safe-area-inset-right) + 2px);
   bottom:calc(env(safe-area-inset-bottom) + 6px);
   z-index:96;
@@ -714,6 +714,10 @@ body.toque #net-status{
 #mp-pad .tc-btn{ pointer-events:auto; }
 #mp-correr{ background:rgba(20,120,255,.25); border-color:rgba(20,120,255,.55); color:#cfe4ff; }
 #mp-correr.press{ background:rgba(20,120,255,.5); }
+#mp-girar-esq{right:8px; bottom:204px; width:164px; height:164px; font-size:22px}
+#mp-girar-dir{right:184px; bottom:204px; width:164px; height:164px; font-size:22px}
+#mp-girar-esq{right:8px; bottom:204px; width:164px; height:164px; font-size:22px}
+#mp-girar-dir{right:184px; bottom:204px; width:164px; height:164px; font-size:22px}
 
 /* ---------------------------------------------------------------- lobby: online + convite */
 .lobby-online{

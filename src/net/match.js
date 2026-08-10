@@ -155,11 +155,11 @@ export class Match {
     if (look) look.classList.toggle('hidden', !(this.game && this.game.toque));
     const pad = document.getElementById("mp-pad");
     if (pad) pad.classList.toggle("hidden", !(this.game && this.game.toque));
+    const tSolo = document.getElementById("touch");
     if (this.game && this.game.toque && this.game._telaCheia) this.game._telaCheia();
+    if (this.game) this.game._mp = true;
     // botão de pausa na tela (só no toque; no PC é ESC/Pause)
-    this._pausaBtn = document.getElementById('mp-pausa');
     if (this._pausaBtn) {
-      this._pausaBtn.classList.toggle('hidden', !(this.game && this.game.toque));
       this._pausaBtnHandler = () => this._togglePausa();
       this._pausaBtn.addEventListener('click', this._pausaBtnHandler);
     }
@@ -212,8 +212,8 @@ export class Match {
       if (k === 'e') this._toggleCar = true;
       if (k === 'v') this._alternarVisao();
       if (k === 'n' && this.game) this.game.cycleDayNight();
-      if (k === 'q') { this._heliYaw = 1; this._carSteer = -1; }
-      if (k === 'r') { this._heliYaw = -1; this._carSteer = 1; }
+      if (k === 'q') { this._heliYaw = 1; this._carSteer = 1; }
+      if (k === 'r') { this._heliYaw = -1; this._carSteer = -1; }
       this._norm();
     };
     this._ku = (e) => {
@@ -349,8 +349,8 @@ export class Match {
     // [heli] botão ▼ dedicado para descer (o PULAR vira ▲ para subir)
     ligaBtn('mp-descer', () => { this.inp.run = true; this.inp.down = true; }, () => { this.inp.run = false; this.inp.down = false; });
     // [heli] botões ◀ ▶ giram o aparelho no ar (alternativa ao olhar)
-    ligaBtn('mp-girar-esq', () => { this._heliYaw = 1; this._carSteer = -1; }, () => { this._heliYaw = 0; this._carSteer = 0; });
-    ligaBtn('mp-girar-dir', () => { this._heliYaw = -1; this._carSteer = 1; }, () => { this._heliYaw = 0; this._carSteer = 0; });
+    ligaBtn('mp-girar-esq', () => { this._heliYaw = 1; this._carSteer = 1; }, () => { this._heliYaw = 0; this._carSteer = 0; });
+    ligaBtn('mp-girar-dir', () => { this._heliYaw = -1; this._carSteer = -1; }, () => { this._heliYaw = 0; this._carSteer = 0; });
     // [COD Mobile] o botão ATIRAR também é o analógico de mira, igual ao
     // solo: o dedo FIRME atira em rajada; DESLIZANDO, a câmera gira e a
     // mira acompanha o arrasto — dá para segurar o recuo sem largar o
@@ -882,9 +882,9 @@ export class Match {
         foc.z + (this.camera.position.z - foc.z) * (1 - f),
       );
       const cpf = Math.cos(pitchE);
-      const ax = foc.x + Math.sin(yawE) * cpf * 10;
+      const ax = foc.x - Math.sin(yawE) * cpf * 10;
       const ay = foc.y + Math.sin(pitchE) * 10;
-      const az = foc.z + Math.cos(yawE) * cpf * 10;
+      const az = foc.z - Math.cos(yawE) * cpf * 10;
       this._camLook.set(
         this._camLook.x + (ax - this._camLook.x) * f,
         this._camLook.y + (ay - this._camLook.y) * f,
@@ -1443,9 +1443,9 @@ export class Match {
     window.addEventListener('popstate', this._backHandler);
     try { history.pushState(null, ''); } catch {}
   }
-
   // ------------------------------------------------------------ sair
   sair() {
+    if (this.game) this.game._mp = false;
     this._rodando = false;
     if (this._raf) cancelAnimationFrame(this._raf);
     window.removeEventListener('keydown', this._kd);

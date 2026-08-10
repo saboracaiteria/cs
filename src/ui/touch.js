@@ -73,7 +73,7 @@ export class TouchControls {
    */
   atualizar({ jogando, modal, modo, emFase, deus }) {
     if (!this.ativo) return;
-    const mostrar = jogando && !modal;
+    const mostrar = jogando && !modal && !this.game._mp;
     this.el.classList.toggle('hidden', !mostrar);
     if (!mostrar) { this._soltarTudo(); return; }
 

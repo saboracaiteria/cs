@@ -887,8 +887,8 @@ body.toque #keys-touch{display:block}
 .tc-missil{right:26px; bottom:128px}
 .tc-visao{right:198px; bottom:98px}
 .tc-descer{right:198px; bottom:24px}
-.tc-girar-esq{right:16px; bottom:180px; width:94px; height:94px; font-size:13px}
-.tc-girar-dir{right:118px; bottom:180px; width:94px; height:94px; font-size:13px}
+.tc-girar-esq{right:calc(20px + env(safe-area-inset-right)); bottom:calc(210px + env(safe-area-inset-bottom)); width:164px; height:164px; font-size:22px}
+.tc-girar-dir{right:calc(196px + env(safe-area-inset-right)); bottom:calc(210px + env(safe-area-inset-bottom)); width:164px; height:164px; font-size:22px}
 
 /* telas curtas (celular deitado): o conjunto encolhe junto */
 @media (max-height:430px){
