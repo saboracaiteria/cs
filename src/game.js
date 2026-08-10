@@ -1263,7 +1263,7 @@ export class Game {
     if (this.bullets.fire(origin, direction)) {               // [37][38][41]
       if (this.range) this.range.marcarImpacto(origin, direction, this.col, this.camera.cam);
       this.hud.recoil();
-      this.camera.addRecoil();          // [FPS] coice leve: a mira sobe, você puxa para baixo
+      // [FIXO] sem coice de camera: a mira fica 100% parada ao atirar (raycast do centro)
       this.audio.tiro();
       if (this.viewmodel) this.viewmodel.darCoice();
       this._companheiroAtaca();

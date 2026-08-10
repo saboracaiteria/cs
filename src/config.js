@@ -165,7 +165,7 @@ export const CAMERA = {
   adsFov: 45,             // [ADS-ZOOM] zoom real: FOV 62 -> 45 no celular (estilo COD Mobile)
   adsFovPc: 31,             // [PC] mira 2x no botão direito (FOV pela metade)
   adsSpeed: 9,
-  adsDolly: 0.5,           // [ADS-ZOOM] dolly: a camera aproxima 50% ao mirar, na LINHA de visada (a mira nao muda)
+  adsDolly: 0,              // [ADS-ZOOM] SEM translacao: a camera NAO se move ao mirar. Zoom 100% FOV (62->45). Zero paralaxe: o alvo no centro nao muda nada.
   /**
    * [FPS] SEM coice de câmera: ao atirar a mira NUNCA sai do lugar
    * (sniper-friendly). O recuo ficou só visual — a arma sobe no

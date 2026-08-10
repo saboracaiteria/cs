@@ -30,20 +30,18 @@ button{font-family:var(--font)}
 /* ------------------------- HUD ------------------------- */
 #hud{position:fixed; inset:0; pointer-events:none; z-index:30}
 
-/* [42] mira estilo COD Mobile: 62% da largura, 40% do topo */
+/* [FIXO] reticulado HARD-LOCKED no centro absoluto do viewport (50%, 50%) — nunca desloca */
 #crosshair{
   position:absolute; left:50%; top:50%;
   transform:translate(-50%,-50%);
   width:64px; height:64px;
   filter:drop-shadow(0 0 3px rgba(0,0,0,.9));
-  transition:transform .06s ease-out, left .11s ease-out, top .11s ease-out;
+  /* [FIXO] sem transicao de posicao: left/top nunca mudam (retido 100% fixo no centro) */
 }
-#crosshair.recoil{transform:translate(-50%,-50%) scale(1.28)}
-#crosshair.center{left:50%; top:50%}
+#crosshair.center{left:50%; top:50%}   /* [FIXO] central absoluto (redundante com o default, por seguranca) */
 
-/* [FPS] zoom de mira (ADS): a mira desliza para o centro da tela */
-/* [FPS] ADS: a mira NÃO anda de lugar — fica no ombro. O anel só
-   clareia/engrossa para sinalizar que o zoom de mira está ativo. */
+/* [FPS] ADS: o reticulado permanece FIXO no centro — o anel fica dourado
+   apenas como feedback do zoom de mira (FOV 62->45). Posicao nunca muda. */
 #crosshair.ads .ch-ring{stroke:rgba(255,225,150,.95); stroke-width:1.7}
 #crosshair.ads .ch-line{stroke:rgba(255,225,150,.85)}
 #crosshair.ads .ch-dot{fill:#ffd778}
