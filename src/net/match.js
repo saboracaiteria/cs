@@ -1034,7 +1034,7 @@ export class Match {
     for (const h of lista) {
       let hl = this.helisMp.get(h.id);
       if (!hl) {
-        const mesh = new Helicopter(this.game.gfx.scene, this.game.col);
+        const mesh = new Helicopter(this.game.gfx.scene, this.game.col, h.cor || 0x1f4f8f);
         hl = { mesh, x: h.x, y: h.y, z: h.z, vel: 0, playerId: null };
         this.helisMp.set(h.id, hl);
       }

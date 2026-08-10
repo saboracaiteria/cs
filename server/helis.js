@@ -16,6 +16,10 @@ import { angleDelta, clamp } from './util.js';
 let heliUid = 1;
 
 /** Posições dos 5 helicópteros (validadas contra o terreno/colisão). */
+export const HELI_COLORS = [0x1f4f8f, 0xb3302f, 0x2e7d32, 0xe8b800, 0x7a5cc7];
+
+
+// Cor de identificacao — cada heli do mapa tem uma cor distinta.
 export const HELI_SPOTS = [
   { x: -64, z: 64 },        // heliporto principal (bloco 2,4 do centro)
   { x: -500, z: -400 },     // base do Corcovado, sul do Cristo
@@ -38,6 +42,7 @@ export function createHelis(world, count = HELI_SPOTS.length) {
     const y = groundY(world, x, z, 0) + HELI.landHeight;
     helis.push({
       id: heliUid++,
+      cor: HELI_COLORS[i % HELI_COLORS.length],
       x, y, z,
       yaw: 0,
       vel: { x: 0, y: 0, z: 0 },

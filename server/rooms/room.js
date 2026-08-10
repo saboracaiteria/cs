@@ -690,6 +690,7 @@ export class Room {
       speed: Math.round(Math.hypot(h.vel.x, h.vel.z) * 10) / 10,
       playerId: h.playerId,
       fuel: Math.round(h.fuel ?? 100),
+      cor: h.cor,
     }));
     this._bcast(T.SNAPSHOT, snap);
   }

@@ -218,7 +218,7 @@ export class GameCamera {
      * também a trajetória lateral, e a câmera não afunda numa parede ao
      * passar perto de um prédio.
      */
-    const ombro = this.mode === 'foot' ? CAMERA.shoulderX : 0;
+    const ombro = this.mode === 'foot' ? CAMERA.shoulderX : (this.mode === 'heli-out' ? CAMERA.heliShoulderX : 0);
     const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
     const baseX = this._smoothFocus.x + right.x * ombro;
     const baseZ = this._smoothFocus.z + right.z * ombro;

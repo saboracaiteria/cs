@@ -1358,19 +1358,19 @@ export class Game {
       const aM = aimAssist(origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, alvosM, 300, 0.28);
       if (aM) direction.set(aM.x, aM.y, aM.z);
     }
-    // [MIRA] O projetil nasce NA LINHA DA MIRA (onde o reticulo esta), a frente do
-    // helicoptero — nao na camera, que na visao externa fica 18 m atras. Assim ele
-    // aparece exatamente no ponto da mira e segue reto, sem "atravessar" o heli.
-    const heliP = this.heli.root.position;
-    let dist = 7;
+    // [MIRA] O projetil nasce a partir da CAMERA, na linha do reticulo do player —
+    // aparece exatamente no ponto da mira na tela; com a camera de ombro do heli
+    // essa linha passa ao lado da fuselagem, nunca atras dela.
+    let dist = 6;
+    const ox = origin.x, oy = origin.y, oz = origin.z;
     for (const a of alvosM) {
-      const lx = a.x - heliP.x, ly = a.y - heliP.y, lz = a.z - heliP.z;
+      const lx = a.x - ox, ly = a.y - oy, lz = a.z - oz;
       const d = Math.hypot(lx, ly, lz);
       if (d < 0.01) continue;
       const dot = (lx * direction.x + ly * direction.y + lz * direction.z) / d;
-      if (dot > 0.95 && d < dist) dist = Math.max(d - 1.5, 0.8);
+      if (dot > 0.95 && d < dist) dist = Math.max(d - 1.2, 0.8);
     }
-    const originM = this._tmpV.set(heliP.x + direction.x * dist, heliP.y + direction.y * dist, heliP.z + direction.z * dist);
+    const originM = this._tmpV.set(ox + direction.x * dist, oy + direction.y * dist, oz + direction.z * dist);
 
     // [MÍSSIL = PISTOLA] o míssil sai da MIRA (mesma origem/direção da bala) e
     // segue RETO na linha de mira até o primeiro alvo — sem teleguiado, sem

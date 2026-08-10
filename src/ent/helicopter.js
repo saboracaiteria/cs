@@ -9,7 +9,8 @@ import { clamp, damp, angleDelta } from '../utils.js';
  * [49] Só dá para sair quando está perto do chão.
  */
 export class Helicopter {
-  constructor(scene, collision) {
+  constructor(scene, collision, cor = 0x1f4f8f) {
+    this.cor = cor;
     this.col = collision;
     this.root = new THREE.Group();
     this.root.name = 'helicopter';
@@ -29,7 +30,7 @@ export class Helicopter {
 
   _build() {
     const bodyMat = new THREE.MeshPhysicalMaterial({
-      color: 0x1f4f8f, roughness: 0.34, metalness: 0.55,
+      color: this.cor, roughness: 0.34, metalness: 0.55,
       clearcoat: 0.8, clearcoatRoughness: 0.12, envMapIntensity: 1.4,
     });
     const darkMat = new THREE.MeshStandardMaterial({ color: 0x22262d, roughness: 0.5, metalness: 0.75 });

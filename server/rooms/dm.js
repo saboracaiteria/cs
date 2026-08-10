@@ -6,6 +6,7 @@
 import { Room } from './room.js';
 import { T, send } from '../protocol.js';
 import { buildWorld } from '../world/world.js';
+import { WORLD_EDGE } from '../config.js';
 import { WEAPONS } from '../weapons.js';
 import { makeRng, rngPick, dist2D, findFreeSpot } from '../util.js';
 
@@ -19,12 +20,17 @@ export class DMRoom extends Room {
     this.respawnQueue = new Map();   // id -> tempo restante
   }
 
-  _makeSpawns() {
-    // 8 pontos espalhados pela cidade, sempre em ruas (nunca dentro de prédio)
-    const pts = [
-      [-160, -160], [160, -160], [-160, 160], [160, 160],
-      [-40, -40], [40, 40], [-200, 0], [200, 0],
-    ];
+    _makeSpawns() {
+    // [borda] TODOS os spawns ficam no PERÍMETRO da cidade (borda do mapa),
+    // nunca perto do centro: 12 pontos espalhados pelas 4 arestas.
+    const pts = [];
+    const L = WORLD_EDGE - 12;                 // 244: rua externa da borda
+    for (let i = 0; i < 12; i++) {
+      const ang = (i / 12) * Math.PI * 2;
+      const x = Math.cos(ang), z = Math.sin(ang);
+      const m = Math.max(Math.abs(x), Math.abs(z));
+      pts.push([Math.round((x / m) * L), Math.round((z / m) * L)]);
+    }
     const out = [];
     for (const [x, z] of pts) {
       if (!this.world.col.isBlocked(x, z, 0.6)) {
@@ -34,11 +40,19 @@ export class DMRoom extends Room {
     return out;
   }
 
-  _spawnPoint(p) {
-    // time par: índice pelo id para distribuir nos dois lados
-    const idx = Math.abs(p.id) % Math.max(1, this.spawns.length);
-    const s = this.spawns[idx] || this.spawns[0];
-    return s;
+    _spawnPoint(p) {
+    // [borda] nunca renasce no mesmo local: sorteia entre os pontos LIVRES
+    // (longe de qualquer player vivo); se todos ocupados, usa qualquer um.
+    const ocupado = (sp) => {
+      for (const q of this._all()) {
+        if (q === p || !q.body || q.hp <= 0) continue;
+        if (dist2D(q.body.x, q.body.z, sp.x, sp.z) < 40) return true;
+      }
+      return false;
+    };
+    const livres = this.spawns.filter((sp) => !ocupado(sp));
+    const pool = livres.length ? livres : this.spawns;
+    return pool[Math.floor(Math.random() * pool.length)];
   }
 
   _spawn(p) {
