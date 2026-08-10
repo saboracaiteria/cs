@@ -221,7 +221,7 @@ export class GameCamera {
     // Hip-fire: ombro = shoulderX (jogador à esquerda, arma visível).
     // ADS:      ombro → 0 (câmera centraliza, mira fica exatamente no centro).
     const ombroBase = this.mode === 'foot' ? CAMERA.shoulderX : (this.mode === 'heli-out' ? CAMERA.heliShoulderX : 0);
-    const ombro = ombroBase * (1 - this.ads);
+    const ombro = ombroBase;   // [CALIBRACAO] ombro fixo no ADS: a camera nao desliza, a mira permanece no alvo
     const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
     const baseX = this._smoothFocus.x + right.x * ombro;
     const baseZ = this._smoothFocus.z + right.z * ombro;
@@ -250,8 +250,8 @@ export class GameCamera {
      * não para o peito do player: o crosshair fica no alvo e o corpo
      * sai do centro da tela. No ADS (ombro->0) o lookAt sobe 1.5u para
      * enxergar por cima do ombro em vez de apontar para o próprio corpo. */
-    this._look.copy(this._smoothFocus).addScaledVector(dir, 10);
-    this._look.y += lift + dist * this.frameLift + this.ads * 1.5;
+    this._look.copy(this._pos).addScaledVector(dir, 40);   // [CALIBRACAO] centro da tela = linha de tiro (yaw/pitch do jogador)
+    this._look.y += lift + dist * this.frameLift;   // [CALIBRACAO] removido ads*1.5: a mira nao sobe no ADS
     this.cam.lookAt(this._look);
     this._applyShake(dt);
   }
