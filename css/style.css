@@ -40,6 +40,10 @@ button{font-family:var(--font)}
 }
 #crosshair.center{left:50%; top:50%}   /* [FIXO] central absoluto (redundante com o default, por seguranca) */
 
+/* [CODM-FIX] Red Dot óptico: ponto vermelho no centro durante o ADS — UI por cima
+   da arma 3D (z-index do #hud), visibilidade 100% no alvo mesmo com o slide na tela */
+#red-dot{position:absolute; left:50%; top:50%; width:6px; height:6px; margin:-3px 0 0 -3px; border-radius:50%; background:#ff2d2d; box-shadow:0 0 4px rgba(255,45,45,.9), 0 0 12px rgba(255,45,45,.4); opacity:0; transition:opacity .15s; pointer-events:none}
+
 /* [FPS] ADS: o reticulado permanece FIXO no centro — o anel fica dourado
    apenas como feedback do zoom de mira (FOV 62->45). Posicao nunca muda. */
 #crosshair.ads .ch-ring{stroke:rgba(255,225,150,.95); stroke-width:1.7}

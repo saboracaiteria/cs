@@ -3,7 +3,7 @@ import { voxMaterial, VX } from './voxel.js';
 
 const POS_REPOUSO = new THREE.Vector3(0.26, -0.22, -0.52);
 
-const POS_ADS = new THREE.Vector3(0, -0.08, -0.45);   // [CODM-FPP] alça de mira no CENTRO da tela (1a pessoa)
+const POS_ADS = new THREE.Vector3(0, -0.22, -0.45);   // [CODM-FIX] arma ABAIXO do centro: o slide fica abaixo da linha de visao (nao tapa o alvo)
 
 export class ViewModel {
   constructor(camera, scene) {

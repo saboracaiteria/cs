@@ -2453,7 +2453,7 @@ export class Game {
     // [CODM-FPP] o corpo some quando a câmera chega aos olhos; a arma 3D assume
     this.player.human.root.visible = this.camera.ads < 0.45;
     if (this.viewmodel) {
-      this.viewmodel.visible = this.camera.ads > 0.6;
+      this.viewmodel.visible = this.camera.ads > 0.2;   // [CODM-FIX] aparece cedo, no canto (repouso), e SOBE de baixo — sem pop no centro
       if (this.viewmodel.visible) { this.viewmodel.setAds(true); this.viewmodel.setTransicao(this.camera.ads); }
     }
     this._updateAimFeedback();

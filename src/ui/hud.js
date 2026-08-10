@@ -32,6 +32,7 @@ export class HUD {
       toasts: $('toasts'),
       carrying: $('carrying'),
       crosshair: $('crosshair'),
+      redDot: $('red-dot'),
       hitmarker: $('hitmarker'),
       clock: $('clock'),
       daynight: $('daynight'),
@@ -174,6 +175,9 @@ export class HUD {
   /** [FPS] Zoom de mira: a mira desliza do canto (62%, 2/5) para o centro. */
   setAds(on) {
     this.el.crosshair.classList.toggle('ads', on);
+    // [CODM-FIX] Red Dot óptico: ponto vermelho no centro durante o ADS,
+    // renderizado por cima da arma 3D — a mira nunca é obstruída pelo slide
+    this.el.redDot.style.opacity = on ? '1' : '0';
   }
 
 

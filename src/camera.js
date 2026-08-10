@@ -146,7 +146,7 @@ export class GameCamera {
     // ---- [FPS] ADS: suaviza o zoom de mira e o FOV (só a pé; dentro de
     // veículo o enquadramento já é do modo, e o zoom ficaria estranho)
     const queroAds = this._adsQuero && (this.mode === 'foot' || this.mode === 'fps') ? 1 : 0;
-    this.ads = damp(this.ads, queroAds, CAMERA.adsSpeed, dt);
+    this.ads = damp(this.ads, queroAds, CAMERA.adsSpeed, Math.min(dt, 0.05));   // [CODM-FIX] clamp: sem salto de FOV/posicao em FPS baixo (frame snap)
 
     const fov = CAMERA.fov + (this._adsFov - CAMERA.fov) * this.ads;
     if (Math.abs(this.cam.fov - fov) > 0.01) {

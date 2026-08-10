@@ -703,7 +703,7 @@ export class Match {
     const fpp = this._fpp;
     if (this.game && this.game.viewmodel) {
       const vm = this.game.viewmodel;
-      vm.visible = this._fpp > 0.6;   // [CODM-FPP] arma 3D na 1a pessoa (a mira é a geometria dela)
+      vm.visible = this._fpp > 0.2;   // [CODM-FIX] arma 3D na 1a pessoa: aparece cedo no canto e sobe — sem pop no centro
       if (vm.visible) {
         vm.setAds(true);
         vm.setTransicao(fpp); vm.update(dt, this.inp && this.inp.run ? 6 : 0);
