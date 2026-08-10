@@ -165,7 +165,11 @@ export const CAMERA = {
   adsFov: 45,             // [ADS-ZOOM] zoom real: FOV 62 -> 45 no celular (estilo COD Mobile)
   adsFovPc: 31,             // [PC] mira 2x no botão direito (FOV pela metade)
   adsSpeed: 9,
-  adsDolly: 0,              // [ADS-ZOOM] SEM translacao: a camera NAO se move ao mirar. Zoom 100% FOV (62->45). Zero paralaxe: o alvo no centro nao muda nada.
+  adsEyeHeight: 0.22,           // [CODM-FPP] olhos: focus(1.48m) + 0.22 = 1.70m
+  adsEyeForward: 0.18,          // [CODM-FPP] camera um pouco a frente do centro do corpo (olhos)
+  adsEyeHeight: 0.22,           // [CODM-FPP] olhos: focus(1.48m) + 0.22 = 1.70m
+  adsEyeForward: 0.18,          // [CODM-FPP] camera um pouco a frente do centro do corpo (olhos)
+  adsDolly: 0,              // [CODM-FPP] a translacao virou o blend 1a pessoa (adsEyeHeight/adsEyeForward) — campo desativado
   /**
    * [FPS] SEM coice de câmera: ao atirar a mira NUNCA sai do lugar
    * (sniper-friendly). O recuo ficou só visual — a arma sobe no

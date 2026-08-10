@@ -103,6 +103,10 @@ export class Match {
     // [FPS] vetores temporários reutilizados — sem new Vector3 por frame
     // (alocação/GC derrubava o FPS no MP, que já roda 8 avatares extras)
     this._vNdc = new THREE.Vector3(0.24, 0.2, 0.5);
+    this._anchorFpp = new THREE.Vector3();   // [CODM-FPP] ponto mirado travado na transicao p/ 1a pessoa
+    this._anchorFppAtivo = false;
+    this._anchorFppYaw = 0;
+    this._anchorFppPitch = 0;
     this._vDir = new THREE.Vector3();
     this._vBack = new THREE.Vector3();
     this._vRight = new THREE.Vector3();
@@ -635,7 +639,7 @@ export class Match {
       rp.human.falling = rp.vivo && (rp.y - pisoAt) > 5;
       rp.update(dt, vel, rp.local || distCam < 28 || (this._animF + id) % 3 === 0);
       // corpo do próprio jogador visível a pé; dentro do carro ele some
-      if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro && !this._emHeli ;
+      if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro && !this._emHeli && this._fpp < 0.45;   // [CODM-FPP] corpo some na 1a pessoa
     }
     // câmera de ombro em terceira pessoa, igual à do single: o mouse gira
     // o olhar na hora (sem a latência do servidor) e a câmera se posiciona
@@ -699,9 +703,9 @@ export class Match {
     const fpp = this._fpp;
     if (this.game && this.game.viewmodel) {
       const vm = this.game.viewmodel;
-      vm.visible = false;   // [CALIBRACAO MP] viewmodel invisivel igual ao solo (corpo do Bob na 3a pessoa)
+      vm.visible = this._fpp > 0.6;   // [CODM-FPP] arma 3D na 1a pessoa (a mira é a geometria dela)
       if (vm.visible) {
-        vm.setAds(fpp > 0.5);
+        vm.setAds(true);
         vm.setTransicao(fpp); vm.update(dt, this.inp && this.inp.run ? 6 : 0);
       }
     }
@@ -712,6 +716,7 @@ export class Match {
         this.game.hud.setAds(fppAds);
         this.game.hud.setCrosshairCenter(fppAds);
       }
+      this.game.hud.setCrosshairVisible(fpp < 0.6);   // [CODM-FPP] retícula 2D some na 1a pessoa
     }
     const fovA = CAMERA.fov + (CAMERA.adsFov - CAMERA.fov) * this._adsAmt;
     if (Math.abs(this.camera.fov - fovA) > 0.01) {
@@ -775,6 +780,38 @@ export class Match {
     }
     this._camLook.y += lift;
     this.camera.lookAt(this._camLook);
+
+    // [CODM-FPP] 1a pessoa: câmera para os olhos + alvo travado no centro (igual ao solo)
+    if (fpp > 0.001 && !noVeic) {
+      if (!this._anchorFppAtivo) {
+        const o = new THREE.Vector3(), d = new THREE.Vector3();
+        this.camera.updateMatrixWorld();
+        const ndc = this._vNdc.set(0, 0, 0.5).unproject(this.camera);
+        o.copy(this.camera.position);
+        d.copy(ndc).sub(o).normalize();
+        const h = col ? col.raycast(o.x, o.y, o.z, d.x, d.y, d.z, 2000) : null;
+        if (h) this._anchorFpp.set(o.x + d.x * h.t, o.y + d.y * h.t, o.z + d.z * h.t);
+        else this._anchorFpp.set(o.x + d.x * 2000, o.y + d.y * 2000, o.z + d.z * 2000);
+        this._anchorFppAtivo = true;
+        this._anchorFppYaw = this.yaw;
+        this._anchorFppPitch = this.pitch;
+      } else {
+        const dy = Math.abs(this.yaw - this._anchorFppYaw);
+        const dp = Math.abs(this.pitch - this._anchorFppPitch);
+        if (dy + dp > 0.06) this._anchorFppAtivo = false;
+      }
+      const olhos = new THREE.Vector3(foc.x + dir.x * CAMERA.adsEyeForward, foc.y + CAMERA.adsEyeHeight, foc.z + dir.z * CAMERA.adsEyeForward);
+      this.camera.position.lerpVectors(this.camera.position, olhos, fpp);
+      if (this._anchorFppAtivo) {
+        this.camera.lookAt(this._anchorFpp);
+      } else {
+        this._camLook.copy(this.camera.position).addScaledVector(dir, 40);
+        this._camLook.y += lift;
+        this.camera.lookAt(this._camLook);
+      }
+    } else {
+      this._anchorFppAtivo = false;
+    }
 
     // [solo] visão INTERNA (cockpit) do heli/carro — tecla V, igual ao single:
     // câmera na cabine olhando para onde o piloto olha (yaw/pitch)

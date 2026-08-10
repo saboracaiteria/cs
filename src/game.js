@@ -2444,12 +2444,18 @@ export class Game {
     if (!this.phone.open) this._updatePrompt();
 
     // ---- mira só faz sentido quando dá para atirar
-    this.hud.setCrosshairVisible(true);
+    this.hud.setCrosshairVisible(this.camera.ads < 0.6);   // [CODM-FPP] retícula 2D some na 1a pessoa (a mira é a arma 3D)
     // [FPS] com o zoom de mira fechado, a mira desliza para o centro
     this.hud.setAds(this.camera.isAds);
     // [CODM-ADS] garante a classe .center no crosshair ao entrar em ADS
     // (no multiplayer isso já era feito via match.js:796)
     this.hud.setCrosshairCenter(this.camera.isAds);
+    // [CODM-FPP] o corpo some quando a câmera chega aos olhos; a arma 3D assume
+    this.player.human.root.visible = this.camera.ads < 0.45;
+    if (this.viewmodel) {
+      this.viewmodel.visible = this.camera.ads > 0.6;
+      if (this.viewmodel.visible) { this.viewmodel.setAds(true); this.viewmodel.setTransicao(this.camera.ads); }
+    }
     this._updateAimFeedback();
   }
 

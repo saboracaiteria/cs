@@ -23,7 +23,15 @@ const scene = new THREE.Scene();
 const cam = new THREE.PerspectiveCamera(62, 800 / 600, 0.15, 2600);
 // colisao simulada: o alvo do campo de tiro (esfera raio 0.9 em (0, 2.4, -25))
 // captura o raio -> o impacto para no alvo, como com um collider real
-const col = { raycast: () => null, groundHeightAt: () => 0 };
+const col = {
+  raycast: (x, y, z, dx, dy, dz, dist) => {
+    // simula o prédio/árvore mirado a 25 m (os raios de colisão da câmera,
+    // que vão para TRÁS, não acertam)
+    if (dz < -0.1 && dy > -0.6 && dy < 0.6) return { t: 25 };
+    return null;
+  },
+  groundHeightAt: () => 0,
+};
 const gc = new GameCamera(cam, col);
 gc.setMode('foot');
 const FOCUS = new THREE.Vector3(0, 1.48, 0);
@@ -81,18 +89,14 @@ for (const c of [
   gc.yaw = c.yaw; gc.pitch = c.pitch; rodar(N);
   const p1 = pontoMira(25);                 // ponto do mundo mirado em 3a pessoa
   gc.setAds(true, 46); rodar(N);
-  // [dolly] com o zoom a camera aproxima ao longo da MESMA reta, entao o
-  // que importa e: o ponto mirado em TPP continua SOBRE a linha de visada
-  // do ADS? (distancia ponto->reta ~ 0)
-  const o2 = new THREE.Vector3(), d2 = new THREE.Vector3();
-  gc.aimRay(o2, d2, 0, 0);
-  const v = p1.clone().sub(o2);
-  const t = v.dot(d2);
-  const prox = o2.clone().addScaledVector(d2, t);
-  const pulo = p1.distanceTo(prox);         // distancia do ponto a reta do ADS
-  const ok = pulo < 0.05 && t > 0;
+  // [CODM-FPP] anchoring: o ponto mirado em TPP permanece NO CENTRO da tela
+  // da camera ADS (a camera rotaciona para ficar travada nele). Projeta p1
+  // e mede o desvio do centro (NDC 0,0).
+  const pNDC = p1.clone().project(gc.cam);
+  const pulo = Math.hypot(pNDC.x, pNDC.y);  // desvio do centro da tela (NDC)
+  const ok = pulo < 0.03;
   puloOk = puloOk && ok;
-  console.log(`  ${c.rotulo.padEnd(8)} pulo ${pulo.toFixed(4)} m  ${falha(ok)}`);
+  console.log(`  ${c.rotulo.padEnd(8)} pulo ${pulo.toFixed(4)} NDC  ${falha(ok)}`);
 }
 console.log(`  RESULTADO: ${falha(puloOk)}`);
 
