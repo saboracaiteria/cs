@@ -713,12 +713,8 @@ body.toque #net-status{
 }
 #mp-pad .tc-btn{ pointer-events:auto; }
 #mp-correr{ background:rgba(20,120,255,.25); border-color:rgba(20,120,255,.55); color:#cfe4ff; }
-#mp-correr.press{ background:rgba(20,120,255,.5); }
-#mp-girar-esq{right:8px; bottom:204px; width:164px; height:164px; font-size:22px}
-#mp-girar-dir{right:184px; bottom:204px; width:164px; height:164px; font-size:22px}
-#mp-girar-esq{right:8px; bottom:204px; width:164px; height:164px; font-size:22px}
-#mp-girar-dir{right:184px; bottom:204px; width:164px; height:164px; font-size:22px}
-
+#mp-girar-esq{right:8px; bottom:204px; width:82px; height:82px; font-size:11px}
+#mp-girar-dir{right:102px; bottom:204px; width:82px; height:82px; font-size:11px}
 /* ---------------------------------------------------------------- lobby: online + convite */
 .lobby-online{
   margin-top:14px; text-align:left;
