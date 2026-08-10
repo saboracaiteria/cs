@@ -7,6 +7,7 @@ set -euo pipefail
 cd /srv/cs
 
 echo "==> Buscando atualizações do git..."
+git checkout -- .
 git pull --ff-only
 
 echo "==> Instalando dependências..."
