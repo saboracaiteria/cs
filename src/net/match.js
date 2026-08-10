@@ -80,6 +80,10 @@ export class Match {
     this.helisMp = new Map();    // id -> { mesh: Helicopter, x, y, z, vel, playerId }
     this._emHeli = false;
     this._meuHeliId = null;
+    this._meuCarroId = null;
+    this._visaoInt = false;   // [solo] tecla V: câmera externa <-> cockpit
+    this._visaoMesh = null;   // mesh com interior aberto (para resetar ao sair)
+    this._ultNoite = null;    // [solo] último nightFactor aplicado na cidade
     this._heliYaw = 0;           // Q/R: girar o aparelho no ar
     this.missisVis = [];   // foguetes dos mísseis de canhão (visuais)
     this._fireBtn = false;   // gatilho do botão ATIRAR do toque (segurar = rajada)
@@ -203,6 +207,8 @@ export class Match {
       if (k === ' ') { this.inp.jump = true; this.inp.up = true; e.preventDefault(); }
       if (k === 'tab') { e.preventDefault(); this.scoreboard.alternar(); }
       if (k === 'e') this._toggleCar = true;
+      if (k === 'v') this._alternarVisao();
+      if (k === 'n' && this.game) this.game.cycleDayNight();
       if (k === 'q') this._heliYaw = 1;
       if (k === 'r') this._heliYaw = -1;
       this._norm();
@@ -498,6 +504,12 @@ export class Match {
       this._emCarro = eu.inCar != null;
       this._emHeli = eu.inHeli != null;
       this._meuHeliId = eu.inHeli ?? null;
+      this._meuCarroId = eu.inCar ?? null;
+      if (this._visaoMesh && !this._emCarro && !this._emHeli) {
+        this._visaoMesh.setInteriorView(false);
+        this._visaoMesh = null;
+        this._visaoInt = false;
+      }
     }
   }
 
@@ -647,6 +659,20 @@ export class Match {
     this._camSmooth.y = damp(this._camSmooth.y, foc.y, CAMERA.lag * 0.7, dt);
     this._camSmooth.z = damp(this._camSmooth.z, foc.z, CAMERA.lag, dt);
     foc.copy(this._camSmooth);
+
+    // [noite] o loop do SOLO fica parado durante o MP — o céu não avançava;
+    // aqui replicamos o update do céu + luzes da cidade (igual ao solo)
+    if (this.game && this.game.sky) {
+      this.game.sky.setPaused(false);
+      this.game.sky.update(dt, foc);
+      const night = this.game.sky.nightFactor;
+      if (night !== this._ultNoite) {
+        this._ultNoite = night;
+        if (this.game.city) this.game.city.setNight(night);
+        if (this.game.cars) this.game.cars.setNight(night);
+      }
+    }
+
     const noCarro = this._emCarro;
     const noHeli = this._emHeli;
     const noVeic = noCarro || noHeli;
@@ -655,7 +681,7 @@ export class Match {
     // aimRay do solo). yaw/pitch puro aponta para o CENTRO da tela, e a mira
     // fica deslocada no ombro: a bala errava tudo que se apontava.
     this.camera.updateMatrixWorld();
-    this._vNdc.set(this._emHeli ? 0 : 0.24, this._emHeli ? 0 : 0.2, 0.5).unproject(this.camera);
+    this._vNdc.set(0.24, 0.2, 0.5).unproject(this.camera);   // [solo] mira no retículo
     this._fireDir = this._vNdc.sub(this.camera.position).normalize();
 
     // [AIM ASSIST] magnetismo de mira: inimigo perto da linha de tiro e o tiro
@@ -807,6 +833,20 @@ export class Match {
     }
     this._camLook.y += lift;
     this.camera.lookAt(this._camLook);
+
+    // [solo] visão INTERNA (cockpit) do heli/carro — tecla V, igual ao single:
+    // câmera na cabine olhando para onde o piloto olha (yaw/pitch)
+    if (this._visaoInt && (this._emHeli || this._emCarro)) {
+      this.camera.position.copy(foc);
+      const cpi = Math.cos(pitchE);
+      this._camLook.set(
+        foc.x + Math.sin(yawE) * cpi * 10,
+        foc.y + Math.sin(pitchE) * 10,
+        foc.z + Math.cos(yawE) * cpi * 10,
+      );
+      this.camera.lookAt(this._camLook);
+    }
+
     // [FPS] tremida do tiro (mesma _applyShake do solo)
     if (this._shake > 0.001) {
       const s = this._shake;
@@ -1265,6 +1305,23 @@ export class Match {
 
   // ------------------------------------------------------------ pausa
   /** Pausa única — mesma tela e os mesmos menus de OPÇÕES/CONTROLES do solo. */
+  _alternarVisao() {
+    // [solo] tecla V: câmera externa <-> interna (cockpit), como no single
+    if (this._emHeli && this._meuHeliId != null) {
+      this._visaoInt = !this._visaoInt;
+      const hl = this.helisMp.get(this._meuHeliId);
+      const mesh = hl && hl.mesh;
+      if (mesh && mesh.setInteriorView) mesh.setInteriorView(this._visaoInt);
+      this._visaoMesh = this._visaoInt ? mesh : null;
+    } else if (this._emCarro && this._meuCarroId != null) {
+      this._visaoInt = !this._visaoInt;
+      const c = this.carrosMp.get(this._meuCarroId);
+      const mesh = c && c.mesh;
+      if (mesh && mesh.setInteriorView) mesh.setInteriorView(this._visaoInt);
+      this._visaoMesh = this._visaoInt ? mesh : null;
+    }
+  }
+
   _togglePausa() {
     // telas abertas fecham antes da pausa (mesma ordem do modo solo)
     const opcoes = document.getElementById('options-screen');

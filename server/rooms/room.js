@@ -542,10 +542,7 @@ export class Room {
     const h = this.helis.find((hh) => hh.id === p.inHeli);
     if (!h) return;
     // trilho lateral (hardpoint) alternando os lados, como no solo
-    const lado = (p._missilSide = -(p._missilSide || 1));
-    const fx = Math.sin(h.yaw), fz = Math.cos(h.yaw);
-    const rx = -Math.cos(h.yaw), rz = Math.sin(h.yaw);
-    const boca = { x: h.x + rx * 1.5 * lado, y: h.y + 0.35, z: h.z + rz * 1.5 * lado };
+    // [solo] o míssil nasce na LINHA DA MIRA do piloto (não no trilho lateral):
     // direção: a MIRA do cliente (exata), fallback para a frente do aparelho
     let dx, dy, dz;
     if (aim.dir) {
@@ -561,10 +558,21 @@ export class Room {
     // alvo teleguiado: o jogador mais próximo da linha de mira (lock do solo)
     // travamento pela LINHA DA MIRA (a camera), nao pela boca: o missil vai
     // para quem esta sob a mira — mesmo alvo que o aim assist do cliente
-    let mx = boca.x, my = boca.y, mz = boca.z;
-    if (aim.orig && Math.abs(aim.orig.x - h.x) < 60 && Math.abs(aim.orig.z - h.z) < 60 && Math.abs(aim.orig.y - h.y) < 60) {
-      mx = aim.orig.x; my = aim.orig.y; mz = aim.orig.z;
+    // origem na linha da mira (câmera + direção * 6), exatamente como o
+    // single (game.js _fireMissile): o míssil aparece no ponto do retículo.
+    let dist = 6;
+    const ox = (aim.orig && Math.abs(aim.orig.x - h.x) < 80 && Math.abs(aim.orig.z - h.z) < 80 && Math.abs(aim.orig.y - h.y) < 80) ? aim.orig.x : h.x;
+    const oy = (aim.orig && Math.abs(aim.orig.x - h.x) < 80 && Math.abs(aim.orig.z - h.z) < 80 && Math.abs(aim.orig.y - h.y) < 80) ? aim.orig.y : h.y;
+    const oz = (aim.orig && Math.abs(aim.orig.x - h.x) < 80 && Math.abs(aim.orig.z - h.z) < 80 && Math.abs(aim.orig.y - h.y) < 80) ? aim.orig.z : h.z;
+    for (const q of this._all()) {
+      if (q.id === p.id || !q.body || q.hp <= 0) continue;
+      const vx = q.body.pos.x - ox, vy = q.body.pos.y + 1 - oy, vz = q.body.pos.z - oz;
+      const dq = Math.hypot(vx, vy, vz);
+      if (dq < 0.01) continue;
+      const dot = (vx * dx + vy * dy + vz * dz) / dq;
+      if (dot > 0.95 && dq < dist) dist = Math.max(dq - 1.2, 0.8);
     }
+    const mx = ox + dx * dist, my = oy + dy * dist, mz = oz + dz * dist;
     let alvoId = null;
     let melhor = 35;
     for (const q of this._all()) {
@@ -577,10 +585,10 @@ export class Room {
     }
     const id = (this._missilUid = (this._missilUid || 0) + 1);
     const alvoP = aim.ponto ? { x: aim.ponto.x, y: aim.ponto.y, z: aim.ponto.z } : null;
-    this.missis.push({ id, alvoId, alvoP, x: boca.x, y: boca.y, z: boca.z, dx, dy, dz, por: p, t: MISSIL.vida });
+    this.missis.push({ id, alvoId, alvoP, x: mx, y: my, z: mz, dx, dy, dz, por: p, t: MISSIL.vida });
     this._bcast(T.MISSIL_FIRE, {
       id,
-      x: Math.round(boca.x * 100) / 100, y: Math.round(boca.y * 100) / 100, z: Math.round(boca.z * 100) / 100,
+      x: Math.round(mx * 100) / 100, y: Math.round(my * 100) / 100, z: Math.round(mz * 100) / 100,
       dx: Math.round(dx * 100) / 100, dy: Math.round(dy * 100) / 100, dz: Math.round(dz * 100) / 100,
       v: MISSIL.speed, alvo: alvoId,
     });
