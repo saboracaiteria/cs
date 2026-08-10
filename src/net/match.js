@@ -688,96 +688,7 @@ export class Match {
     // direção da MIRA: raio que passa pela ponta dela (NDC 0.24/0.2 — o MESMO
     // aimRay do solo). yaw/pitch puro aponta para o CENTRO da tela, e a mira
     // fica deslocada no ombro: a bala errava tudo que se apontava.
-    this.camera.updateMatrixWorld();
-    // [CODM] em 1ª pessoa a mira vai para o CENTRO da tela (igual COD Mobile)
-    this._vNdc.set(0, 0, 0.5);   // [FIXO] tiro sempre no centro exato da tela
-    this._vNdc.unproject(this.camera);
-    this._fireDir = this._vNdc.sub(this.camera.position).normalize();
-
-    // [AIM ASSIST] magnetismo de mira: inimigo perto da linha de tiro e o tiro
-    // desvia para o centro dele (cone ~6,3°) — acertar players/bots fica justo.
-    if (this.avatares && this.avatares.size > 1) {
-      const alvosA = [];
-      for (const [id, rp] of this.avatares) {
-        if (id !== this.meuId && rp.vivo) alvosA.push({ x: rp.x, y: rp.y + 0.95, z: rp.z });
-      }
-      const aA = aimAssist(
-        this.camera.position.x, this.camera.position.y, this.camera.position.z,
-        this._fireDir.x, this._fireDir.y, this._fireDir.z,
-        alvosA, 140, 0.20,
-      );
-      if (aA) this._fireDir.set(aA.x, aA.y, aA.z);
-    }
-
-    // ponto onde a mira aponta no mundo — o servidor guia o missil ate aqui
-    if (noHeli && (this._fire || this._fireBtn || this._dragOn) && this.game && this.game.col) {
-      const cP = this.camera.position;
-      const hT = this.game.col.raycast(cP.x, cP.y, cP.z, this._fireDir.x, this._fireDir.y, this._fireDir.z, 500);
-      if (hT) this._vPM.set(cP.x + this._fireDir.x * hT.t, cP.y + this._fireDir.y * hT.t, cP.z + this._fireDir.z * hT.t);
-      else this._vPM.copy(cP).addScaledVector(this._fireDir, 500);
-    }
-
-
-    // [tiro] tracer local — dano é autoritativo do servidor (feedback igual ao solo).
-    // NO HELI a arma é o MÍSSIL (servidor dispara): não pode sair bala de pistola.
-    if (!noHeli && (this._fire || this._fireBtn) && foc) {
-      const agoraT = performance.now();
-      if (agoraT - (this._lastTiroT || 0) > 130) {
-        this._lastTiroT = agoraT;
-        const rpLoc = this.avatares.get(this.meuId);
-        if (rpLoc) rpLoc.setAiming(true);
-        const dxT = this._fireDir.x, dyT = this._fireDir.y, dzT = this._fireDir.z;
-        // a bala/tracer VISUAL nascem à FRENTE do peito do Bob, na linha EXATA
-        // da mira (câmera→NDC): o dano do servidor não muda — ele valida com a
-        // origem da câmera (fpx/fpy/fpz) e esta MESMA direção. Sem o deslocamento,
-        // o traço começava atrás do ombro da câmera e o tiro parecia sair de trás
-        // do corpo do jogador.
-        const oT = this._vT0.copy(this.camera.position);
-        const tIni = Math.max(0, (foc.x - oT.x) * dxT + (foc.y - oT.y) * dyT + (foc.z - oT.z) * dzT - 0.2);
-        oT.addScaledVector(this._fireDir, tIni);
-        const colT = this.game.col;
-        const fimT = this._vT1;
-        if (colT) {
-          const hitT = colT.raycast(oT.x, oT.y, oT.z, dxT, dyT, dzT, 160);
-          if (hitT) fimT.set(oT.x + dxT * hitT.t, oT.y + dyT * hitT.t, oT.z + dzT * hitT.t);
-          else fimT.copy(oT).addScaledVector(this._fireDir, 160);
-        } else {
-          fimT.copy(oT).addScaledVector(this._fireDir, 160);
-        }
-        if (!this._tracer) {
-          const gT = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-          this._tracer = new THREE.Line(gT, new THREE.LineBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0.85 }));
-          this._tracer.frustumCulled = false;
-          this.game.gfx.scene.add(this._tracer);
-        }
-        const posT = this._tracer.geometry.attributes.position;
-        posT.setXYZ(0, oT.x, oT.y, oT.z);
-        posT.setXYZ(1, fimT.x, fimT.y, fimT.z);
-        posT.needsUpdate = true;
-        this._tracer.visible = true;
-        this._tracerVida = 0.08;
-        this.game.bullets?.fire(oT, this._vT2.set(dxT, dyT, dzT));
-        if (this.game && this.game.audio) this.game.audio.tiro();
-        if (this.game && this.game.viewmodel) this.game.viewmodel.darCoice();
-        // [FPS] coice/tremida da camera REMOVIDO nos modos online (DM/BR):
-        // o recuo tremia a mira e atrapalhava em rede lenta (lag).
-        // O SOLO (game.js) mantem o recuo normal.
-      }
-    }
-    if (this._tracer) {
-      if (this._tracerVida > 0) this._tracerVida -= dt;
-      else this._tracer.visible = false;
-    }
-    if (!(this._fire || this._fireBtn)) {
-      const rpLoc2 = this.avatares.get(this.meuId);
-      if (rpLoc2) rpLoc2.setAiming(false);
-    }
-    // balas e partículas do SOLO rodando no MP: sem isto o projétil não
-    // avança nem cria faísca ao bater (e explosão nenhuma anima)
-    this._sincronizarAlvosBala();
-    if (this.game && this.game.bullets) this.game.bullets.update(dt);
-    if (this.game && this.game.fx) this.game.fx.update(dt);
-    this._updateAimFeedback();   // mira vermelha sobre inimigos (como o solo)
+    // [TIRO-FINAL] o bloco do tiro foi movido para DEPOIS da câmera final do frame.
     // ---- [FPS] ADS, coice e tremida replicados do camera.update do SOLO
     // (o GameCamera não roda no MP — a câmera aqui é a THREE pura)
     const aimando = !!(this._fire || this._fireBtn) && !noHeli && !noCarro;   // [FPS] sem ADS em veiculo
@@ -897,6 +808,107 @@ export class Match {
       );
       this.camera.lookAt(this._camLook);
     }
+
+    // ================= [TIRO-FINAL] =================
+    // Tudo do TIRO roda AQUI, DEPOIS da câmera final do frame (FPP/ADS/FOV já
+    // aplicados). Antes o raio era calculado no início do update com a câmera
+    // do frame ANTERIOR (posição do ombro, FOV aberto, sem 1ª pessoa) e a bala
+    // saía FORA do eixo da mira — "a mira nascia à esquerda e puxava a tela
+    // para baixo, perdendo o alvo de vista".
+    this.camera.updateMatrixWorld();
+    this._vNdc.set(0, 0, 0.5);   // [FIXO] tiro sempre no centro exato da tela
+    this._vNdc.unproject(this.camera);
+    this._fireDir = this._vNdc.sub(this.camera.position).normalize();
+
+    // [AIM ASSIST] magnetismo de mira: inimigo perto da linha de tiro e o tiro
+    // desvia para o centro dele (cone ~6,3°) — acertar players/bots fica justo.
+    if (this.avatares && this.avatares.size > 1) {
+      const alvosA = [];
+      for (const [id, rp] of this.avatares) {
+        if (id !== this.meuId && rp.vivo) alvosA.push({ x: rp.x, y: rp.y + 0.95, z: rp.z });
+      }
+      const aA = aimAssist(
+        this.camera.position.x, this.camera.position.y, this.camera.position.z,
+        this._fireDir.x, this._fireDir.y, this._fireDir.z,
+        alvosA, 140, 0.20,
+      );
+      if (aA) this._fireDir.set(aA.x, aA.y, aA.z);
+    }
+
+    // ponto onde a mira aponta no mundo — o servidor guia o missil ate aqui
+    if (noHeli && (this._fire || this._fireBtn || this._dragOn) && this.game && this.game.col) {
+      const cP = this.camera.position;
+      const hT = this.game.col.raycast(cP.x, cP.y, cP.z, this._fireDir.x, this._fireDir.y, this._fireDir.z, 500);
+      if (hT) this._vPM.set(cP.x + this._fireDir.x * hT.t, cP.y + this._fireDir.y * hT.t, cP.z + this._fireDir.z * hT.t);
+      else this._vPM.copy(cP).addScaledVector(this._fireDir, 500);
+    }
+
+    // [tiro] tracer local — dano é autoritativo do servidor (feedback igual ao solo).
+    // NO HELI a arma é o MÍSSIL (servidor dispara): não pode sair bala de pistola.
+    if (!noHeli && (this._fire || this._fireBtn) && foc) {
+      const agoraT = performance.now();
+      if (agoraT - (this._lastTiroT || 0) > 130) {
+        this._lastTiroT = agoraT;
+        const rpLoc = this.avatares.get(this.meuId);
+        if (rpLoc) rpLoc.setAiming(true);
+        const dxT = this._fireDir.x, dyT = this._fireDir.y, dzT = this._fireDir.z;
+        // a bala/tracer VISUAL nascem à FRENTE do peito do Bob, na linha EXATA
+        // da mira (câmera→NDC): o dano do servidor não muda — ele valida com a
+        // origem da câmera (fpx/fpy/fpz) e esta MESMA direção. Sem o deslocamento,
+        // o traço começava atrás do ombro da câmera e o tiro parecia sair de trás
+        // do corpo do jogador.
+        const oT = this._vT0.copy(this.camera.position);
+        const tIni = Math.max(0, (foc.x - oT.x) * dxT + (foc.y - oT.y) * dyT + (foc.z - oT.z) * dzT - 0.2);
+        oT.addScaledVector(this._fireDir, tIni);
+        const colT = this.game.col;
+        const fimT = this._vT1;
+        if (colT) {
+          const hitT = colT.raycast(oT.x, oT.y, oT.z, dxT, dyT, dzT, 160);
+          if (hitT) fimT.set(oT.x + dxT * hitT.t, oT.y + dyT * hitT.t, oT.z + dzT * hitT.t);
+          else fimT.copy(oT).addScaledVector(this._fireDir, 160);
+        } else {
+          fimT.copy(oT).addScaledVector(this._fireDir, 160);
+        }
+        if (!this._tracer) {
+          const gT = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+          this._tracer = new THREE.Line(gT, new THREE.LineBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0.85 }));
+          this._tracer.frustumCulled = false;
+          this.game.gfx.scene.add(this._tracer);
+        }
+        const posT = this._tracer.geometry.attributes.position;
+        posT.setXYZ(0, oT.x, oT.y, oT.z);
+        posT.setXYZ(1, fimT.x, fimT.y, fimT.z);
+        posT.needsUpdate = true;
+        this._tracer.visible = true;
+        this._tracerVida = 0.08;
+        this.game.bullets?.fire(oT, this._vT2.set(dxT, dyT, dzT));
+        if (this.game && this.game.range) this.game.range.marcarImpacto(oT, this._vT2, this.game.col, this.camera);
+        if (this.game && this.game.audio) this.game.audio.tiro();
+        if (this.game && this.game.viewmodel) this.game.viewmodel.darCoice();
+        // [FPS] coice/tremida da camera REMOVIDO nos modos online (DM/BR):
+        // o recuo tremia a mira e atrapalhava em rede lenta (lag).
+        // O SOLO (game.js) mantem o recuo normal.
+      }
+    }
+    if (this._tracer) {
+      if (this._tracerVida > 0) this._tracerVida -= dt;
+      else this._tracer.visible = false;
+    }
+    if (!(this._fire || this._fireBtn)) {
+      const rpLoc2 = this.avatares.get(this.meuId);
+      if (rpLoc2) rpLoc2.setAiming(false);
+    }
+    // balas e partículas do SOLO rodando no MP: sem isto o projétil não
+    // avança nem cria faísca ao bater (e explosão nenhuma anima)
+    this._sincronizarAlvosBala();
+    if (this.game && this.game.bullets) this.game.bullets.update(dt);
+    if (this.game && this.game.fx) this.game.fx.update(dt);
+    this._updateAimFeedback();   // mira vermelha sobre inimigos (como o solo)
+    // [debug] campo de tiro (?range=1): marcador verde = centro óptico da tela
+    if (this.game && this.game.range) {
+      this.game.range.update(this.camera, this.game.col, 'MP ' + (fpp > 0.5 ? 'FPP' : 'TPP') + (aimando ? ' ATIRANDO' : ''));
+    }
+    // ================ fim [TIRO-FINAL] ================
 
     // [FPS] tremida do tiro (mesma _applyShake do solo)
     if (this._shake > 0.001) {
@@ -1243,7 +1255,7 @@ export class Match {
     this._aimTick = (this._aimTick || 0) + 1;
     if (this._aimTick & 1) return;
     if (!this.game || !this.game.hud || !this.game.bullets) return;
-    const ndc = this._aimNdc || new THREE.Vector3(0.24, 0.2, 0.5);
+    const ndc = this._aimNdc || new THREE.Vector3(0, 0, 0.5);   // [FIXO] centro da tela
     this._aimNdc = ndc;
     this.camera.updateMatrixWorld();
     const dir = ndc.clone().unproject(this.camera).sub(this.camera.position).normalize();

@@ -38,6 +38,7 @@ import { TouchControls, ehToque } from './ui/touch.js';
 // ---- campanha: Bob em Busca da AGI Sagrada
 import { carregarCampanha, salvarCampanha, zerarCampanha, proximaFase } from './story/story.js';
 import { Dialogue } from './ui/dialogue.js';
+import { CampoTiro } from './range.js';
 import { PlanScreen } from './ui/plan.js';
 import { PortalSystem } from './sys/portal.js';
 import { StageRunner } from './sys/stage.js';
@@ -826,6 +827,13 @@ export class Game {
     this.camera.pitch = -0.2;
     this.camera.wantDistance = CAMERA.defaultZoom;
 
+    // [debug] campo de tiro interno (?range=1 na URL)
+    if (location.port === '8085' || /[?&]range=1/.test(location.search) || /#range/.test(location.hash)) {
+      this.range = new CampoTiro(this.gfx.scene);
+      this.range.posicionar(spawn.x, spawn.z, this.camera.yaw);
+      this._rangeAutoT = 0;
+    }
+
     // [13] reiniciar não pode desfazer "sempre dia" / "sempre noite"
     if (this.sky.cycleFrozen) this.sky.setCycleMode(this.sky.cycleMode);
     else this.sky.setHour(DAY.startHour);
@@ -1253,6 +1261,7 @@ export class Game {
     }
 
     if (this.bullets.fire(origin, direction)) {               // [37][38][41]
+      if (this.range) this.range.marcarImpacto(origin, direction, this.col, this.camera.cam);
       this.hud.recoil();
       this.camera.addRecoil();          // [FPS] coice leve: a mira sobe, você puxa para baixo
       this.audio.tiro();
@@ -2020,19 +2029,9 @@ export class Game {
       const m = this.input.consumeMouse();
       this.camera.look(m.dx, m.dy);                           // [11]
       this.camera.zoom(this.input.consumeWheel());            // [12]
-      // o clique que captura o ponteiro não deve virar tiro
-      const clicked = this.input.consumeClick();
-      if (clicked && this.input.locked) this._shoot();        // [27]
-      /*
-       * No toque, o botão de atirar é SEGURADO, não tocado uma vez por
-       * disparo: metralhar a dedadas não é jogo, é tendinite. A cadência
-       * continua sendo a da arma — `_shoot` respeita o `canFire`.
-       */
-      if (this.input.toque.atirar) this._shoot();
     } else {
       this.input.consumeMouse();
       this.input.consumeWheel();
-      this.input.consumeClick();
     }
 
     const blocked = this.phone.open || emCena;
@@ -2133,6 +2132,31 @@ export class Game {
 
     // ------------------------------------------------ câmera
     this.camera.update(dt, this._focus, this._interiorTransform());
+
+    // [FIXO-tiro] o disparo sai DEPOIS da câmera final do frame (ADS/FOV já
+    // aplicados). Antes usava a câmera do frame anterior e a bala saía fora
+    // do eixo da mira (o alvo "escapava" ao apertar o disparo).
+    if (!this.phone.open && !emCena) {
+      // o clique que captura o ponteiro não deve virar tiro
+      const clicked = this.input.consumeClick();
+      if (clicked && this.input.locked) this._shoot();        // [27]
+      /*
+       * No toque, o botão de atirar é SEGURADO, não tocado uma vez por
+       * disparo: metralhar a dedadas não é jogo, é tendinite. A cadência
+       * continua sendo a da arma — _shoot respeita o canFire.
+       */
+      if (this.input.toque.atirar) this._shoot();
+    } else {
+      this.input.consumeClick();
+    }
+
+    // [debug] campo de tiro (?range=1): marcador verde = centro óptico da tela;
+    // modo AUTO atira sozinho a cada 0,4 s para calibrar sem precisar interagir.
+    if (this.range) {
+      this.range.update(this.camera.cam, this.col, 'SOLO ' + this.mode + (this.camera.isAds ? ' ADS' : ''));
+      this._rangeAutoT = (this._rangeAutoT || 0) + dt;
+      if (this._rangeAutoT > 0.4) { this._rangeAutoT = 0; this._shoot(); }
+    }
 
     // ------------------------------------------------ HUD
     this._updateHUD(dt);
