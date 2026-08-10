@@ -34,7 +34,7 @@ export class Graphics {
 
     // [44] sombras suaves
     this.renderer.shadowMap.enabled = this.preset.shadows;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = this.preset.shadowType === 'basic' ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
     /*
      * [perf] Sombra SOB DEMANDA: o game marca requestShadow() a cada 2
      * frames, em vez de o three re-renderizar o passe TODO frame.
@@ -42,7 +42,7 @@ export class Graphics {
     this.renderer.shadowMap.autoUpdate = false;
     // [perf] resolucao dinamica (multiplicador sobre o renderScale do perfil)
     this._dynScale = 1;
-    this._dynFloor = 0.75;
+    this._dynFloor = this.preset.dynFloor ?? 0.75;
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(
@@ -81,7 +81,7 @@ export class Graphics {
    * O teto de 2 evita explodir a conta em telas de altíssimo DPI.
    */
   _pixelRatioFor(preset) {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, preset.pixelRatioCap ?? 2);
     return Math.max(0.5, dpr * preset.renderScale * (this._dynScale || 1));
   }
 
@@ -158,6 +158,8 @@ export class Graphics {
   applyPreset(preset, scene) {
     this.preset = preset;
     this._dynScale = 1;      // [perf] trocar de perfil reinicia a escala dinamica
+    this._dynFloor = preset.dynFloor ?? 0.75;
+    this.renderer.shadowMap.type = preset.shadowType === 'basic' ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 
     this.renderer.setPixelRatio(this._pixelRatioFor(preset));
     this.renderer.setSize(window.innerWidth, window.innerHeight);

@@ -1893,16 +1893,17 @@ export class Game {
   _adaptative() {
     // ---- sombra a cada 2 frames (1/2 do custo do passe)
     this._shadowTick = (this._shadowTick || 0) + 1;
-    if (this._shadowTick & 1) this.gfx.requestShadow();
+    const p = PRESETS[this.presetIndex] || PRESETS[DEFAULT_PRESET];
+    if (this._shadowTick % (p.shadowTickEvery || 2) === 0) this.gfx.requestShadow();
 
     // ---- resolucao dinamica com histerese (nao fica oscilando)
     const ema = this._ema ? this._ema * 0.88 + this._frameMs * 0.12 : this._frameMs;
     this._ema = ema;
-    if (ema > 15.5) {
+    if (ema > (p.targetMsHigh || 15.5)) {
       // passou do alvo de 60 FPS: reduz a escala e espera estabilizar
       this.gfx.setDynamicScale(this.gfx.dynamicScale * 0.9);
       this._boostT = 0;
-    } else if (ema < 13.5) {
+    } else if (ema < (p.targetMsLow || 13.5)) {
       // com folga consistente, devolve resolucao aos poucos
       this._boostT = (this._boostT || 0) + this._frameMs / 1000;
       if (this._boostT > 0.9) {

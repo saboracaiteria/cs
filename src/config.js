@@ -477,6 +477,21 @@ export const PRESETS = [
     fogFar: 2300,
     envUpdate: 3,
   },
+  {
+    id: '120fps', label: '120 FPS',
+    renderScale: 0.5,
+    shadows: true, shadowMapSize: 1024, shadowRadius: 40,
+    shadowType: 'basic',
+    bloom: false, smaa: false, bloomScale: 0.4,
+    dynamicLights: 1,
+    fogFar: 1500,
+    envUpdate: 12,
+    pixelRatioCap: 1.25,
+    dynFloor: 0.55,
+    targetMsHigh: 8.0,
+    targetMsLow: 6.5,
+    shadowTickEvery: 3,
+  },
 ];
 
 /** Perfil inicial (índice em PRESETS): MÉDIA, que roda liso na maioria das máquinas. */
