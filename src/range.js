@@ -16,6 +16,18 @@ export class CampoTiro {
   constructor(scene) {
     this.scene = scene;
     this.posAlvo = new THREE.Vector3();
+    this._va = new THREE.Vector3();
+    this._vb = new THREE.Vector3();
+    this._vc = new THREE.Vector3();
+    this._vd = new THREE.Vector3();
+    this._ve = new THREE.Vector3();
+    this._vf = new THREE.Vector3();
+    this._va = new THREE.Vector3();
+    this._vb = new THREE.Vector3();
+    this._vc = new THREE.Vector3();
+    this._vd = new THREE.Vector3();
+    this._ve = new THREE.Vector3();
+    this._vf = new THREE.Vector3();
     this._ultimoTiro = null;
     this._criarAlvo();
     this._criarMarcadores();
