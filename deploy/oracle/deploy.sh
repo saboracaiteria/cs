@@ -13,7 +13,7 @@ echo "==> Instalando dependências..."
 npm install --omit=dev
 
 echo "==> Reaplicando wsUrl para este servidor..."
-DOMAIN="seujogo.duckdns.org"
+DOMAIN="tiroteio.duckdns.org"
 sed -i "s#wsUrl: 'wss://[^']*'#wsUrl: 'wss://$DOMAIN/ws'#" src/config.js
 
 echo "==> Reiniciando o serviço..."
