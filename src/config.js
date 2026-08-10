@@ -8,7 +8,7 @@
 // URL do servidor MP. O site fica no GitHub Pages (estatico, sem WebSocket): o
 // cliente precisa do endereco real do servidor, hospedado no Render.
 export const NET = {
-  wsUrl: 'wss://tiroteio-cs.onrender.com/ws',
+  wsUrl: 'wss://tiroteio.duckdns.org/ws',
 };
 
 
