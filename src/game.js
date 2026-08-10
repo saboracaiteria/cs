@@ -934,7 +934,6 @@ export class Game {
     this.heli.setInteriorView(false);
     this.hud.showHeliPanel(true);
     this.hud.setPrompt(null);
-    this.hud.setCrosshairCenter(true);
   }
 
   _exitHeli() {
@@ -948,7 +947,6 @@ export class Game {
     this.mode = 'foot';
     this.camera.setMode('foot');
     this.hud.showHeliPanel(false);
-    this.hud.setCrosshairCenter(false);
   }
 
   /**
@@ -1322,7 +1320,7 @@ export class Game {
    */
   _fireMissile() {
     if (!this.missiles.canFire) return;
-    const { origin, direction } = this.camera.aimRay(this._aimOrigin, this._aimDir, 0, 0);
+    const { origin, direction } = this.camera.aimRay(this._aimOrigin, this._aimDir, 0.24, 0.2);
 
     // [AIM ASSIST] igual ao FPS: o míssil desvia para o inimigo mais próximo
     // da linha de mira (cone ~5,7°) — o heli acerta onde o alvo está.
