@@ -1052,3 +1052,13 @@ body.toque #dlg-text{font-size:clamp(15px,2vw,24px)}
 #btn-fs:active{ background:rgba(30,60,110,.6); }
 
 /* botão fullscreen global — discreto, topo da tela, todos os modos */
+
+/* ===== [perf F2] touch: sem backdrop-filter ===== */
+/* No Android, 13+ blurs recompositados por cima do WebGL custam caro a cada frame.
+   Em telas touch o HUD usa fundo semi-transparente solido (--panel ja e rgba). */
+@media (hover: none) and (pointer: coarse) {
+  * {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}

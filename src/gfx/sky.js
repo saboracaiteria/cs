@@ -47,6 +47,7 @@ export class SkySystem {
     this.hour = DAY.startHour;
     this.nightFactor = 0;
     this._envTimer = 99;
+    this._lastEnvHour = -999;   // [perf F2] PMREM por evento
     this._paused = false;
     /** [13] 'ciclo' | 'dia' | 'noite' */
     this.cycleMode = 'ciclo';
@@ -238,6 +239,7 @@ export class SkySystem {
   setHour(h) {
     this.hour = h;
     this._envTimer = 99;
+    this._lastEnvHour = -999;   // [perf F2] forca recalc no proximo update
     this._refreshSunState();
   }
 
@@ -311,7 +313,11 @@ export class SkySystem {
 
     // ------------------------------------------------ reflexos (PMREM)
     this._envTimer += dt;
-    if (this._envTimer > this.envUpdateInterval) {
+    // [perf F2] PMREM por evento: recalcula so quando a hora do jogo mudou >= 2h
+    // (ou fallback no modo ciclo). Hora congelada (dia/noite fixo) = reflexos fixos = zero hitches.
+    const hourDelta = Math.abs(this.hour - this._lastEnvHour);
+    if (hourDelta >= 2.0 || (!this.cycleFrozen && this._envTimer > this.envUpdateInterval)) {
+      this._lastEnvHour = this.hour;
       this._envTimer = 0;
       this._updateEnvironment();
     }
