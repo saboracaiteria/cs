@@ -167,8 +167,6 @@ export const CAMERA = {
   adsSpeed: 9,
   adsEyeHeight: 0.22,           // [CODM-FPP] olhos: focus(1.48m) + 0.22 = 1.70m
   adsEyeForward: 0.18,          // [CODM-FPP] camera um pouco a frente do centro do corpo (olhos)
-  adsEyeHeight: 0.22,           // [CODM-FPP] olhos: focus(1.48m) + 0.22 = 1.70m
-  adsEyeForward: 0.18,          // [CODM-FPP] camera um pouco a frente do centro do corpo (olhos)
   adsDolly: 0,              // [CODM-FPP] a translacao virou o blend 1a pessoa (adsEyeHeight/adsEyeForward) — campo desativado
   /**
    * [FPS] SEM coice de câmera: ao atirar a mira NUNCA sai do lugar
