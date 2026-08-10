@@ -340,7 +340,7 @@ export const MISSILE = {
 
 // ---------------------------------------------------------------- ciclo dia/noite [13]
 export const DAY = {
-  duration: 210,               // segundos por dia completo
+  duration: 135.5,   // 55% mais rapido (era 210s)               // segundos por dia completo
   startHour: 8.5,
   sunriseHour: 6,
   sunsetHour: 18.5,

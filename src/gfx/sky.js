@@ -245,7 +245,9 @@ export class SkySystem {
   _refreshSunState() {
     const phi = ((this.hour - 6) / 12) * Math.PI;      // 6h nasce, 18h se põe
     this.sunDir.set(Math.cos(phi), Math.sin(phi), 0.28).normalize();
-    this.nightFactor = 1 - clamp(invLerp(-0.14, 0.16, this.sunDir.y), 0, 1);
+    // [noite mais clara] escuridao maxima limitada a 60% do original
+    // (luz hemisferica, nevoeiro, environment e estrelas ficam mais suaves)
+    this.nightFactor = (1 - clamp(invLerp(-0.14, 0.16, this.sunDir.y), 0, 1)) * 0.6;
   }
 
   update(dt, focus) {
