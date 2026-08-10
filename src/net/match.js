@@ -649,9 +649,11 @@ export class Match {
     if (this._emHeli && this._meuHeliId != null) {
       const hl = this.helisMp.get(this._meuHeliId);
       if (hl) foc.set(hl.x, hl.y + 1.9, hl.z);
-      else if (rpLoc) foc.set(rpLoc.x, rpLoc.y + 1.48, rpLoc.z);
-    } else if (rpLoc) foc.set(rpLoc.x, rpLoc.y + 1.48, rpLoc.z);
-    else if (eu) foc.set(eu.x, eu.y + 1.48, eu.z);
+      else if (rpLoc) foc.set(rpLoc.x, rpLoc.y + 1.62, rpLoc.z);
+    } else if (rpLoc) foc.set(rpLoc.x, rpLoc.y + 1.62, rpLoc.z);
+    // [Bug2-fix] foco na altura dos olhos (+1.62) em vez dos ombros (+1.48):
+    // Bob desce no enquadramento e a visão à frente fica desobstruída.
+    else if (eu) foc.set(eu.x, eu.y + 1.62, eu.z);
     else foc.set(0, 2, 0);
     // [câmera] amortecimento do foco IGUAL ao do modo solo (camera.js lag):
     // sem este suavizador a câmera do MP acompanhava o jogador SEM atraso e
@@ -678,7 +680,11 @@ export class Match {
     const noCarro = this._emCarro;
     const noHeli = this._emHeli;
     const noVeic = noCarro || noHeli;
-    const ombro = noVeic ? 0 : CAMERA.shoulderX;
+    // [Bug1-fix] ao entrar em 1ª pessoa (_fpp 0→1) o offset lateral anula
+    // suavemente — câmera desliza para o centro sem o salto diagonal que
+    // fazia o alvo escapar da mira ao pressionar o botão de disparo.
+    const ombroBase = noVeic ? 0 : CAMERA.shoulderX;
+    const ombro = ombroBase * (1 - this._fpp);
     // direção da MIRA: raio que passa pela ponta dela (NDC 0.24/0.2 — o MESMO
     // aimRay do solo). yaw/pitch puro aponta para o CENTRO da tela, e a mira
     // fica deslocada no ombro: a bala errava tudo que se apontava.
