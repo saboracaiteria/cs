@@ -635,7 +635,7 @@ export class Match {
       rp.human.falling = rp.vivo && (rp.y - pisoAt) > 5;
       rp.update(dt, vel, rp.local || distCam < 28 || (this._animF + id) % 3 === 0);
       // corpo do próprio jogador visível a pé; dentro do carro ele some
-      if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro && !this._emHeli && !(this._fpp > 0.5);
+      if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro && !this._emHeli && !(this._fpp > 0.05);
     }
     // câmera de ombro em terceira pessoa, igual à do single: o mouse gira
     // o olhar na hora (sem a latência do servidor) e a câmera se posiciona
@@ -786,7 +786,7 @@ export class Match {
       vm.visible = fpp > 0.02;
       if (vm.visible) {
         vm.setAds(fpp > 0.5);
-        vm.update(dt, this.inp && this.inp.run ? 6 : 0);
+        vm.setTransicao(fpp); vm.setTransicao(fpp); vm.update(dt, this.inp && this.inp.run ? 6 : 0);
       }
     }
     if (this.game && this.game.hud) {
