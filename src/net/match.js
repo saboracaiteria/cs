@@ -635,7 +635,7 @@ export class Match {
       rp.human.falling = rp.vivo && (rp.y - pisoAt) > 5;
       rp.update(dt, vel, rp.local || distCam < 28 || (this._animF + id) % 3 === 0);
       // corpo do próprio jogador visível a pé; dentro do carro ele some
-      if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro && !this._emHeli && !(this._fpp > 0.05);
+      if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro && !this._emHeli ;
     }
     // câmera de ombro em terceira pessoa, igual à do single: o mouse gira
     // o olhar na hora (sem a latência do servidor) e a câmera se posiciona
@@ -684,7 +684,7 @@ export class Match {
     // suavemente — câmera desliza para o centro sem o salto diagonal que
     // fazia o alvo escapar da mira ao pressionar o botão de disparo.
     const ombroBase = noVeic ? 0 : CAMERA.shoulderX;
-    const ombro = ombroBase * (1 - this._fpp);
+    const ombro = ombroBase;   // [CALIBRACAO MP] ombro FIXO igual ao solo: a camera nao entra no personagem ao atirar
     // direção da MIRA: raio que passa pela ponta dela (NDC 0.24/0.2 — o MESMO
     // aimRay do solo). yaw/pitch puro aponta para o CENTRO da tela, e a mira
     // fica deslocada no ombro: a bala errava tudo que se apontava.
@@ -699,7 +699,7 @@ export class Match {
     const fpp = this._fpp;
     if (this.game && this.game.viewmodel) {
       const vm = this.game.viewmodel;
-      vm.visible = fpp > 0.02;
+      vm.visible = false;   // [CALIBRACAO MP] viewmodel invisivel igual ao solo (corpo do Bob na 3a pessoa)
       if (vm.visible) {
         vm.setAds(fpp > 0.5);
         vm.setTransicao(fpp); vm.update(dt, this.inp && this.inp.run ? 6 : 0);
@@ -790,46 +790,6 @@ export class Match {
     }
 
     // [CODM] em 1ª pessoa: câmera na CABEÇA olhando na direção da mira
-    if (this._fpp > 0.01) {
-      const f = this._fpp;
-      this.camera.position.set(
-        foc.x + (this.camera.position.x - foc.x) * (1 - f),
-        foc.y + (this.camera.position.y - foc.y) * (1 - f) + 1.55 * f,
-        foc.z + (this.camera.position.z - foc.z) * (1 - f),
-      );
-      const cpf = Math.cos(pitchE);
-      const ax = foc.x - Math.sin(yawE) * cpf * 10;
-      const ay = foc.y + Math.sin(pitchE) * 10;
-      const az = foc.z - Math.cos(yawE) * cpf * 10;
-      this._camLook.set(
-        this._camLook.x + (ax - this._camLook.x) * f,
-        this._camLook.y + (ay - this._camLook.y) * f,
-        this._camLook.z + (az - this._camLook.z) * f,
-      );
-      this.camera.lookAt(this._camLook);
-    }
-
-    // ================= [TIRO-FINAL] =================
-    // Tudo do TIRO roda AQUI, DEPOIS da câmera final do frame (FPP/ADS/FOV já
-    // aplicados). Antes o raio era calculado no início do update com a câmera
-    // do frame ANTERIOR (posição do ombro, FOV aberto, sem 1ª pessoa) e a bala
-    // saía FORA do eixo da mira — "a mira nascia à esquerda e puxava a tela
-    // para baixo, perdendo o alvo de vista".
-    this.camera.updateMatrixWorld();
-    this._vNdc.set(0, 0, 0.5);   // [FIXO] tiro sempre no centro exato da tela
-    this._vNdc.unproject(this.camera);
-    this._fireDir = this._vNdc.sub(this.camera.position).normalize();
-
-    // [AIM ASSIST] magnetismo de mira: inimigo perto da linha de tiro e o tiro
-    // desvia para o centro dele (cone ~6,3°) — acertar players/bots fica justo.
-    if (this.avatares && this.avatares.size > 1) {
-      const alvosA = [];
-      for (const [id, rp] of this.avatares) {
-        if (id !== this.meuId && rp.vivo) alvosA.push({ x: rp.x, y: rp.y + 0.95, z: rp.z });
-      }
-      const aA = aimAssist(
-        this.camera.position.x, this.camera.position.y, this.camera.position.z,
-        this._fireDir.x, this._fireDir.y, this._fireDir.z,
         alvosA, 140, 0.20,
       );
       if (aA) this._fireDir.set(aA.x, aA.y, aA.z);
