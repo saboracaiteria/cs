@@ -29,7 +29,7 @@ export class ViewModel {
 
   _montar() {
     const g = new THREE.Group();
-    g.scale.setScalar(0.5);
+    g.scale.setScalar(0.36);
     this.root.add(g);
 
     const bloco = (w, h, d, x, y, z, mat) => {
@@ -81,17 +81,17 @@ export class ViewModel {
     const bx = Math.sin(this.t * 7.5) * 0.014 * b;
     const by = Math.abs(Math.cos(this.t * 7.5)) * 0.016 * b;
 
-    this.ads = damp(this.ads, this._adsQuero ? 1 : 0, 10, dt);
+    this.ads = damp(this.ads, this._adsQuero ? 1 : 0, 16, dt);
     const a = this.ads;
     const pos = new THREE.Vector3().lerpVectors(POS_REPOUSO, POS_ADS, a);
 
     const c = this.coice * this.coice;
     this.root.position.set(
       pos.x + bx,
-      pos.y - by + c * 0.03 - (1 - this.transicao) * 0.6,
-      pos.z + c * 0.10,
+      pos.y - by + c * 0.03 - (1 - this.transicao) * 0.15,
+      pos.z + c * 0.06,
     );
-    this.root.rotation.x = c * 0.42 + a * 0.17;
+    this.root.rotation.x = c * 0.25 + a * 0.17;
     this.root.rotation.z = Math.sin(this.t * 3.7) * 0.02 * b * (1 - a);
   }
 }
