@@ -1360,13 +1360,26 @@ export class Game {
       const aM = aimAssist(origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, alvosM, 300, 0.28);
       if (aM) direction.set(aM.x, aM.y, aM.z);
     }
+    // [MIRA] O projetil nasce NA LINHA DA MIRA (onde o reticulo esta), a frente do
+    // helicoptero — nao na camera, que na visao externa fica 18 m atras. Assim ele
+    // aparece exatamente no ponto da mira e segue reto, sem "atravessar" o heli.
+    const heliP = this.heli.root.position;
+    let dist = 7;
+    for (const a of alvosM) {
+      const lx = a.x - heliP.x, ly = a.y - heliP.y, lz = a.z - heliP.z;
+      const d = Math.hypot(lx, ly, lz);
+      if (d < 0.01) continue;
+      const dot = (lx * direction.x + ly * direction.y + lz * direction.z) / d;
+      if (dot > 0.95 && d < dist) dist = Math.max(d - 1.5, 0.8);
+    }
+    const originM = this._tmpV.set(heliP.x + direction.x * dist, heliP.y + direction.y * dist, heliP.z + direction.z * dist);
 
     // [MÍSSIL = PISTOLA] o míssil sai da MIRA (mesma origem/direção da bala) e
     // segue RETO na linha de mira até o primeiro alvo — sem teleguiado, sem
     // curva, sem hardpoint lateral. (alvo=null → o MissileSystem não persegue
     // ponto nenhum: só acelera reto e detona no impacto, exatamente como a
     // bala da pistola viaja e acerta o primeiro obstáculo/alvo na mira.)
-    if (this.missiles.fire(origin, direction, null)) {
+    if (this.missiles.fire(originM, direction, null)) {
       this.hud.recoil();
       this.camera.addShake(0.22);
       this.audio.missil();
