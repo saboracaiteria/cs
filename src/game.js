@@ -2222,7 +2222,7 @@ export class Game {
 
     // [FPS] O mouse é só a cabeça: a direção do carro vem SÓ do volante
     // (A/D). Olhar ao redor não esterça o carro — nem na câmera externa.
-    let steer = -ax.strafe;                            // manual: D vira à direita
+    let steer = -ax.strafe + (this.toque.girarEsq - this.toque.girarDir);  // [carro] ◀ ▶ também viram
     steer = clamp(steer, -1, 1);
 
     // esterço proporcional à velocidade (parado não vira)

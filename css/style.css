@@ -887,8 +887,8 @@ body.toque #keys-touch{display:block}
 .tc-missil{right:26px; bottom:128px}
 .tc-visao{right:198px; bottom:98px}
 .tc-descer{right:198px; bottom:24px}
-.tc-girar-esq{right:198px; bottom:88px}
-.tc-girar-dir{right:254px; bottom:88px}
+.tc-girar-esq{right:16px; bottom:180px; width:94px; height:94px; font-size:13px}
+.tc-girar-dir{right:118px; bottom:180px; width:94px; height:94px; font-size:13px}
 
 /* telas curtas (celular deitado): o conjunto encolhe junto */
 @media (max-height:430px){

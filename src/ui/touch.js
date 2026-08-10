@@ -86,6 +86,8 @@ export class TouchControls {
     this._rotular('tc-pular', voando ? '▲' : 'PULAR');
     this._mostrar('tc-visao', noVeiculo);          // [25] só há visão interna em veículo
     this._mostrar('tc-missil', !!emFase);          // o teleguiado só existe em fase
+    this._mostrar('tc-girar-esq', modo === 'car');      // [carro] ◀ ▶ direcionam o veículo
+    this._mostrar('tc-girar-dir', modo === 'car');
   }
 
   _mostrar(id, on) {

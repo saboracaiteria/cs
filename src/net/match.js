@@ -85,6 +85,9 @@ export class Match {
     this._visaoMesh = null;   // mesh com interior aberto (para resetar ao sair)
     this._ultNoite = null;    // [solo] último nightFactor aplicado na cidade
     this._heliYaw = 0;           // Q/R: girar o aparelho no ar
+    this._carSteer = 0;          // [carro] ◀ ▶ do toque: esterça o carro (moveX)
+    this._fpp = 0;               // [CODM] transição ombro -> 1ª pessoa ao atirar
+    this._fppAdsAntes = null;    // [CODM] último estado do retículo 1ª pessoa
     this.missisVis = [];   // foguetes dos mísseis de canhão (visuais)
     this._fireBtn = false;   // gatilho do botão ATIRAR do toque (segurar = rajada)
     // true em telas de toque (mobile): o PC usa mouse e a câmera não vira no ADS
@@ -209,8 +212,8 @@ export class Match {
       if (k === 'e') this._toggleCar = true;
       if (k === 'v') this._alternarVisao();
       if (k === 'n' && this.game) this.game.cycleDayNight();
-      if (k === 'q') this._heliYaw = 1;
-      if (k === 'r') this._heliYaw = -1;
+      if (k === 'q') { this._heliYaw = 1; this._carSteer = -1; }
+      if (k === 'r') { this._heliYaw = -1; this._carSteer = 1; }
       this._norm();
     };
     this._ku = (e) => {
@@ -221,8 +224,7 @@ export class Match {
       if (k === 'd' || k === 'arrowright') this.inp.mx -= 1;
       if (k === 'shift') { this.inp.run = false; this.inp.down = false; }
       if (k === ' ') { this.inp.jump = false; this.inp.up = false; }
-      if (k === 'q') this._heliYaw = 0;
-      if (k === 'r') this._heliYaw = 0;
+      if (k === 'q' || k === 'r') { this._heliYaw = 0; this._carSteer = 0; }
       this._norm();
     };
 
@@ -347,8 +349,8 @@ export class Match {
     // [heli] botão ▼ dedicado para descer (o PULAR vira ▲ para subir)
     ligaBtn('mp-descer', () => { this.inp.run = true; this.inp.down = true; }, () => { this.inp.run = false; this.inp.down = false; });
     // [heli] botões ◀ ▶ giram o aparelho no ar (alternativa ao olhar)
-    ligaBtn('mp-girar-esq', () => { this._heliYaw = 1; }, () => { this._heliYaw = 0; });
-    ligaBtn('mp-girar-dir', () => { this._heliYaw = -1; }, () => { this._heliYaw = 0; });
+    ligaBtn('mp-girar-esq', () => { this._heliYaw = 1; this._carSteer = -1; }, () => { this._heliYaw = 0; this._carSteer = 0; });
+    ligaBtn('mp-girar-dir', () => { this._heliYaw = -1; this._carSteer = 1; }, () => { this._heliYaw = 0; this._carSteer = 0; });
     // [COD Mobile] o botão ATIRAR também é o analógico de mira, igual ao
     // solo: o dedo FIRME atira em rajada; DESLIZANDO, a câmera gira e a
     // mira acompanha o arrasto — dá para segurar o recuo sem largar o
@@ -633,7 +635,7 @@ export class Match {
       rp.human.falling = rp.vivo && (rp.y - pisoAt) > 5;
       rp.update(dt, vel, rp.local || distCam < 28 || (this._animF + id) % 3 === 0);
       // corpo do próprio jogador visível a pé; dentro do carro ele some
-      if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro && !this._emHeli;
+      if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro && !this._emHeli && !(this._fpp > 0.5);
     }
     // câmera de ombro em terceira pessoa, igual à do single: o mouse gira
     // o olhar na hora (sem a latência do servidor) e a câmera se posiciona
@@ -681,7 +683,10 @@ export class Match {
     // aimRay do solo). yaw/pitch puro aponta para o CENTRO da tela, e a mira
     // fica deslocada no ombro: a bala errava tudo que se apontava.
     this.camera.updateMatrixWorld();
-    this._vNdc.set(0.24, 0.2, 0.5).unproject(this.camera);   // [solo] mira no retículo
+    // [CODM] em 1ª pessoa a mira vai para o CENTRO da tela (igual COD Mobile)
+    if (this._fpp > 0.5) this._vNdc.set(0, 0, 0.5);
+    else this._vNdc.set(0.24, 0.2, 0.5);
+    this._vNdc.unproject(this.camera);
     this._fireDir = this._vNdc.sub(this.camera.position).normalize();
 
     // [AIM ASSIST] magnetismo de mira: inimigo perto da linha de tiro e o tiro
@@ -748,6 +753,7 @@ export class Match {
         this._tracerVida = 0.08;
         this.game.bullets?.fire(oT, this._vT2.set(dxT, dyT, dzT));
         if (this.game && this.game.audio) this.game.audio.tiro();
+        if (this.game && this.game.viewmodel) this.game.viewmodel.darCoice();
         // [FPS] coice/tremida da camera REMOVIDO nos modos online (DM/BR):
         // o recuo tremia a mira e atrapalhava em rede lenta (lag).
         // O SOLO (game.js) mantem o recuo normal.
@@ -771,6 +777,26 @@ export class Match {
     // (o GameCamera não roda no MP — a câmera aqui é a THREE pura)
     const aimando = !!(this._fire || this._fireBtn) && !noHeli && !noCarro;   // [FPS] sem ADS em veiculo
     this._adsAmt = damp(this._adsAmt, aimando ? 1 : 0, CAMERA.adsSpeed, dt);
+
+    // [CODM] ao atirar a pé: câmera desliza para 1ª pessoa (braço + arma na tela)
+    this._fpp = damp(this._fpp, aimando ? 1 : 0, 9, dt);
+    const fpp = this._fpp;
+    if (this.game && this.game.viewmodel) {
+      const vm = this.game.viewmodel;
+      vm.visible = fpp > 0.02;
+      if (vm.visible) {
+        vm.setAds(fpp > 0.5);
+        vm.update(dt, this.inp && this.inp.run ? 6 : 0);
+      }
+    }
+    if (this.game && this.game.hud) {
+      const fppAds = fpp > 0.5;
+      if (fppAds !== this._fppAdsAntes) {
+        this._fppAdsAntes = fppAds;
+        this.game.hud.setAds(fppAds);
+        this.game.hud.setCrosshairCenter(fppAds);
+      }
+    }
     const fovA = CAMERA.fov + (CAMERA.adsFov - CAMERA.fov) * this._adsAmt;
     if (Math.abs(this.camera.fov - fovA) > 0.01) {
       this.camera.fov = fovA;
@@ -847,6 +873,26 @@ export class Match {
       this.camera.lookAt(this._camLook);
     }
 
+    // [CODM] em 1ª pessoa: câmera na CABEÇA olhando na direção da mira
+    if (this._fpp > 0.01) {
+      const f = this._fpp;
+      this.camera.position.set(
+        foc.x + (this.camera.position.x - foc.x) * (1 - f),
+        foc.y + (this.camera.position.y - foc.y) * (1 - f) + 1.55 * f,
+        foc.z + (this.camera.position.z - foc.z) * (1 - f),
+      );
+      const cpf = Math.cos(pitchE);
+      const ax = foc.x + Math.sin(yawE) * cpf * 10;
+      const ay = foc.y + Math.sin(pitchE) * 10;
+      const az = foc.z + Math.cos(yawE) * cpf * 10;
+      this._camLook.set(
+        this._camLook.x + (ax - this._camLook.x) * f,
+        this._camLook.y + (ay - this._camLook.y) * f,
+        this._camLook.z + (az - this._camLook.z) * f,
+      );
+      this.camera.lookAt(this._camLook);
+    }
+
     // [FPS] tremida do tiro (mesma _applyShake do solo)
     if (this._shake > 0.001) {
       const s = this._shake;
@@ -869,7 +915,7 @@ export class Match {
       this.net.input({
         yaw: this.yaw,
         pitch: this.pitch,
-        moveX: this.inp.mx,
+        moveX: this._emCarro ? clamp(this.inp.mx + this._carSteer, -1, 1) : this.inp.mx,
         moveZ: this.inp.mz,
         run: this.inp.run,
         jump: this.inp.jump,
@@ -1264,9 +1310,9 @@ export class Match {
     const correrEl = document.getElementById('mp-correr');
     if (correrEl) correrEl.classList.toggle('hidden', this._emHeli);
     const giroEsqEl = document.getElementById('mp-girar-esq');
-    if (giroEsqEl) giroEsqEl.classList.toggle('hidden', !this._emHeli);
+    if (giroEsqEl) giroEsqEl.classList.toggle('hidden', !this._emHeli && !this._emCarro);
     const giroDirEl = document.getElementById('mp-girar-dir');
-    if (giroDirEl) giroDirEl.classList.toggle('hidden', !this._emHeli);
+    if (giroDirEl) giroDirEl.classList.toggle('hidden', !this._emHeli && !this._emCarro);
 
     const panel = document.getElementById('heli-panel');
     if (!panel) return;
