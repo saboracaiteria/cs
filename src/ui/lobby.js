@@ -128,16 +128,16 @@ export function criarLobby() {
       }
       for (const j of online) {
         if (j.id === meuId) continue;                 // eu mesmo
-        if (j.salaId === data.salaId) continue;       // já está na minha sala
+        const naMinhaSala = j.salaId === data.salaId; // se já está na minha sala, mostra badge sem CHAMAR
         const li = document.createElement('li');
         const estadoTxt = j.estado === 'lobby' ? 'na sala' : (j.estado === 'countdown' ? 'contagem…' : 'em partida');
         // deixa claro quem é jogador de verdade e quem é bot (na lista online
         // só entram humanos; a etiqueta evita confusão com o CHAMAR)
         const tipo = j.bot ? '🤖 bot' : '👤 jogador';
-        const podeChamar = !j.bot && j.estado === 'lobby';
+        const podeChamar = !j.bot && !naMinhaSala && j.estado === 'lobby';
         li.innerHTML = `<span class="lb-on-nick">${esc(j.nick || '?')}</span>` +
           `<span class="lb-on-tipo ${j.bot ? 'lb-on-bot' : ''}">${tipo}</span>` +
-          `<span class="lb-on-sala">${j.modo === 'br' ? 'BR' : 'DM'} · ${estadoTxt}</span>` +
+          `<span class="lb-on-sala">${j.modo === 'br' ? 'BR' : 'DM'} · ${estadoTxt}${naMinhaSala ? ' · na sua sala' : ''}</span>` +
           (podeChamar ? `<button type="button" class="lb-chamar" data-id="${j.id}">CHAMAR</button>` : '');
         onlineList.appendChild(li);
         if (podeChamar) {

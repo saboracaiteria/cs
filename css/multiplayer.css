@@ -294,11 +294,9 @@
   gap: 10px;
   justify-content: center;
   flex-wrap: wrap;
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 400;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, .08);
 }
 .lobby-srv {
   margin: 4px 0 10px;
