@@ -111,7 +111,7 @@ export const CAMERA = {
    * põe o braço e a mão segurando a arma visíveis no canto da tela — sem
    * isto, o braço direito fica escondido atrás do corpo.
    */
-  shoulderX: 1.35,
+  shoulderX: 1.8,
   heliShoulderX: 3.0,          // [heli] camera de ombro: heli sai do centro da tela, mira livre
   /**
    * [Ombro] Quanto o CORPO do Bob gira para a esquerda em relação à

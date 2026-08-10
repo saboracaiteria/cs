@@ -1254,7 +1254,6 @@ export class Game {
 
     if (this.bullets.fire(origin, direction)) {               // [37][38][41]
       this.hud.recoil();
-      this.camera.addShake(0.16);
       this.camera.addRecoil();          // [FPS] coice leve: a mira sobe, você puxa para baixo
       this.audio.tiro();
       if (this.viewmodel) this.viewmodel.darCoice();
@@ -1564,7 +1563,6 @@ export class Game {
     if (this.teleguiado.disparar(origin, direction, this.alvoTravado)) {
       this.audio.missil();
       this.hud.recoil();
-      this.camera.addShake(0.3);
       this.camera.addRecoil();
       if (this.viewmodel) this.viewmodel.darCoice();
     }

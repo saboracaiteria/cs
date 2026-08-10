@@ -86,12 +86,13 @@ export class ViewModel {
     const pos = new THREE.Vector3().lerpVectors(POS_REPOUSO, POS_ADS, a);
 
     const c = this.coice * this.coice;
+    const recVisual = c * (1 - a * 0.7);   // [FIXO] no ADS o coice e minimo: a mira/camera ficam paradas no centro
     this.root.position.set(
       pos.x + bx,
-      pos.y - by + c * 0.03 - (1 - this.transicao) * 0.15,
-      pos.z + c * 0.06,
+      pos.y - by + recVisual * 0.03 - (1 - this.transicao) * 0.15,
+      pos.z + recVisual * 0.06,
     );
-    this.root.rotation.x = c * 0.25 + a * 0.17;
+    this.root.rotation.x = recVisual * 0.25 + a * 0.17;
     this.root.rotation.z = Math.sin(this.t * 3.7) * 0.02 * b * (1 - a);
   }
 }
