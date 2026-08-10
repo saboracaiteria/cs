@@ -790,6 +790,27 @@ export class Match {
     }
 
     // [CODM] em 1ª pessoa: câmera na CABEÇA olhando na direção da mira
+    // ================= [TIRO-FINAL] =================
+    // Tudo do TIRO roda AQUI, DEPOIS da câmera final do frame (FPP/ADS/FOV já
+    // aplicados). Antes o raio era calculado no início do update com a câmera
+    // do frame ANTERIOR (posição do ombro, FOV aberto, sem 1ª pessoa) e a bala
+    // saía FORA do eixo da mira — "a mira nascia à esquerda e puxava a tela
+    // para baixo, perdendo o alvo de vista".
+    this.camera.updateMatrixWorld();
+    this._vNdc.set(0, 0, 0.5);   // [FIXO] tiro sempre no centro exato da tela
+    this._vNdc.unproject(this.camera);
+    this._fireDir = this._vNdc.sub(this.camera.position).normalize();
+
+    // [AIM ASSIST] magnetismo de mira: inimigo perto da linha de tiro e o tiro
+    // desvia para o centro dele (cone ~6,3°) — acertar players/bots fica justo.
+    if (this.avatares && this.avatares.size > 1) {
+      const alvosA = [];
+      for (const [id, rp] of this.avatares) {
+        if (id !== this.meuId && rp.vivo) alvosA.push({ x: rp.x, y: rp.y + 0.95, z: rp.z });
+      }
+      const aA = aimAssist(
+        this.camera.position.x, this.camera.position.y, this.camera.position.z,
+        this._fireDir.x, this._fireDir.y, this._fireDir.z,
         alvosA, 140, 0.20,
       );
       if (aA) this._fireDir.set(aA.x, aA.y, aA.z);
