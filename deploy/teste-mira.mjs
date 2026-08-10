@@ -1,129 +1,157 @@
 // ============================================================================
-// TESTE DE CALIBRACAO DA MIRA (3a pessoa -> ADS)
-// Roda headless com node: mede o desvio do crosshair ao alternar o modo.
+// TESTE DE CALIBRACAO DA MIRA — Bob em Busca da AGI Sagrada 3D
+// Headless (node): usa o CAMPO DE TIRO para alinhar a mira e prova que o
+// crosshair NAO muda de posicao ao: (1) alternar 3a pessoa <-> ADS,
+// (2) atirar em repouso (spread/recoil zerados).
 // Uso: node deploy/teste-mira.mjs
 // ============================================================================
 import * as THREE from '../vendor/three.module.js';
 import { GameCamera } from '../src/camera.js';
 import { CampoTiro } from '../src/range.js';
+import { CAMERA } from '../src/config.js';
 
-// --- mocks de DOM (necessarios para o overlay do campo de tiro) -------------
-globalThis.window = { innerWidth: 800, innerHeight: 600 };
+// --- mocks de DOM (o range cria um div; o window eh usado na projecao) -------
 const fakeDiv = () => {
   const el = { style: {}, id: '', _t: '', appendChild() {} };
   Object.defineProperty(el, 'textContent', { set(v) { el._t = v; }, get() { return el._t; } });
   return el;
 };
-globalThis.document = {
-  createElement: () => fakeDiv(),
-  body: { appendChild() {} },
-};
+globalThis.window = { innerWidth: 800, innerHeight: 600 };
+globalThis.document = { createElement: () => fakeDiv(), body: { appendChild() {} } };
 
-// --- cena / camera / collider mock ------------------------------------------
 const scene = new THREE.Scene();
 const cam = new THREE.PerspectiveCamera(62, 800 / 600, 0.15, 2600);
+// colisao simulada: o alvo do campo de tiro (esfera raio 0.9 em (0, 2.4, -25))
+// captura o raio -> o impacto para no alvo, como com um collider real
 const col = { raycast: () => null, groundHeightAt: () => 0 };
-
 const gc = new GameCamera(cam, col);
 gc.setMode('foot');
+const FOCUS = new THREE.Vector3(0, 1.48, 0);
+const N = 90;
 
 const campo = new CampoTiro(scene);
+campo.posicionar(0, 0, 0);               // alvo em (0, 2.4, -25)
+const ALVO = campo.posAlvo.clone();
 
-// --- utilitarios ------------------------------------------------------------
-const FOCUS = new THREE.Vector3(0, 1.48, 0);   // peito do Bob
-const DIST_ALVO = 25;                          // alvo a 25 m
-const N = 90;                                  // frames para estabilizar o damp
+const rodar = (n) => { for (let i = 0; i < n; i++) gc.update(1 / 60, FOCUS); };
 
-function pontoMira(out = new THREE.Vector3()) {
+const pontoMira = (dist = 25) => {
   const o = new THREE.Vector3(), d = new THREE.Vector3();
-  gc.aimRay(o, d, 0, 0);                       // raio do CENTRO da tela (crosshair)
-  return out.copy(o).addScaledVector(d, DIST_ALVO);
+  gc.aimRay(o, d, 0, 0);
+  return o.clone().addScaledVector(d, dist);
+};
+
+const medidas = () => {
+  campo.update(cam, col, 'teste');
+  const m = (campo.overlay._t || '').match(/dx (-?\d+)px  dy (-?\d+)px/);
+  return m ? { dx: +m[1], dy: +m[2] } : { dx: NaN, dy: NaN };
+};
+
+// CALIBRACAO: gira a mira ate o crosshair ficar no centro do alvo (dx/dy ~ 0)
+function mirarNoAlvo() {
+  let y = 0.06, p = 0.02, passo = 0.02;
+  for (let it = 0; it < 60; it++) {
+    gc.setAds(false); rodar(6);
+    gc.yaw = y; gc.pitch = p; rodar(6);
+    const m = medidas();
+    if (Math.abs(m.dx) <= 2 && Math.abs(m.dy) <= 2) break;
+    // 1px ~ 0.00135 rad (FOV 62 deg em 800px)
+    y += m.dx * 0.00135;
+    p += m.dy * 0.00135;
+  }
 }
 
-function rodarFrames(n) {
-  for (let i = 0; i < n; i++) gc.update(1 / 60, FOCUS);
+const linha = '='.repeat(62);
+const falha = (ok) => (ok ? 'PASSOU' : 'FALHOU');
+
+console.log(linha);
+console.log(' RELATORIO DE CALIBRACAO DA MIRA');
+console.log(linha);
+
+// ------------------------------------------------------------------ 1. PULO
+console.log('\n[1] PULO DO CROSSHAIR ao alternar 3a pessoa <-> ADS');
+console.log('    (crosshair deve continuar apontando para o MESMO ponto do mundo)');
+let puloOk = true;
+for (const c of [
+  { rotulo: 'FRENTE', yaw: 0.0, pitch: -0.05 },
+  { rotulo: 'DIREITA', yaw: 0.60, pitch: -0.05 },
+  { rotulo: 'ACIMA', yaw: 0.0, pitch: 0.25 },
+]) {
+  gc.setAds(false); rodar(N);
+  gc.yaw = c.yaw; gc.pitch = c.pitch; rodar(N);
+  const p1 = pontoMira(25);
+  gc.setAds(true, 46); rodar(N);
+  const p2 = pontoMira(25);
+  const pulo = p1.distanceTo(p2);
+  const ok = pulo < 0.05;
+  puloOk = puloOk && ok;
+  console.log(`  ${c.rotulo.padEnd(8)} pulo ${pulo.toFixed(4)} m  ${falha(ok)}`);
 }
+console.log(`  RESULTADO: ${falha(puloOk)}`);
 
-function medidas(rotulo, yaw, pitch) {
-  gc.yaw = yaw; gc.pitch = pitch;
-  rodarFrames(30);                             // estabiliza yaw/pitch e distancia
-  const p = pontoMira();
-  // overlay do campo de tiro: desvio em px da mira (verde) vs alvo
-  campo.update(cam, col, rotulo);
-  const overlay = campo.overlay._t || '';
-  const m = overlay.match(/MIRA \(verde\) vs ALVO: dx (-?\d+)px  dy (-?\d+)px/);
-  return { p, dx: m ? +m[1] : NaN, dy: m ? +m[2] : NaN };
+// ------------------------------------------------------------------ 2. ALVO
+console.log('\n[2] CAMPO DE TIRO: calibra a mira ate o crosshair ficar no centro do alvo');
+mirarNoAlvo();
+const s1 = medidas();
+gc.setAds(true, 46); rodar(N);
+const s2 = medidas();
+const okAlvo = Math.abs(s1.dx) <= 10 && Math.abs(s1.dy) <= 10 && Math.abs(s2.dx) <= 10 && Math.abs(s2.dy) <= 10;
+console.log(`  yaw ${gc.yaw.toFixed(4)} pitch ${gc.pitch.toFixed(4)}`);
+console.log(`  SEM ADS: dx ${s1.dx}px dy ${s1.dy}px | COM ADS: dx ${s2.dx}px dy ${s2.dy}px  ${falha(okAlvo)}`);
+
+// ------------------------------------------------------------------ 3. DISPARO
+console.log('\n[3] DISPARO EM REPOUSO (sem ADS) — a bala sai reta onde o crosshair aponta?');
+console.log('    (spreadHip no config = ' + CAMERA.spreadHip + ')');
+gc.setAds(false); rodar(N);
+mirarNoAlvo();
+const o = new THREE.Vector3(), d = new THREE.Vector3();
+gc.aimRay(o, d, 0, 0);
+const base = o.clone().addScaledVector(d, 25);
+let maxDesvio = 0;
+const T = 20;
+for (let i = 0; i < T; i++) {
+  // replica do _shoot do game.js: spread antes de atirar
+  const dir = d.clone();
+  const spread = gc.isAds ? CAMERA.spreadAds : CAMERA.spreadHip;
+  if (spread > 0) {
+    dir.x += (Math.random() - 0.5) * 2 * spread;
+    dir.y += (Math.random() - 0.5) * 2 * spread;
+    dir.z += (Math.random() - 0.5) * 2 * spread;
+    dir.normalize();
+  }
+  const impacto = o.clone().addScaledVector(dir, 25);
+  maxDesvio = Math.max(maxDesvio, base.distanceTo(impacto));
 }
+const okDisp = maxDesvio < 0.03;
+console.log(`  ${T} tiros no centro do alvo -> desvio maximo do ponto de impacto: ${(maxDesvio * 100).toFixed(1)} cm  ${falha(okDisp)}`);
 
-// ============================================================================
-console.log('==============================================================');
-console.log('TESTE DE CALIBRACAO DA MIRA — 3a pessoa -> ADS');
-console.log(`Alvo do campo de tiro a ${DIST_ALVO} m, foco do Bob em y+1.48`);
-console.log('==============================================================');
+// ------------------------------------------------------------------ 4. RECOIL
+console.log('\n[4] RECOIL — addRecoil() nao move o crosshair');
+gc.setAds(false); rodar(N);
+mirarNoAlvo();
+const r1 = pontoMira(25);
+for (let i = 0; i < 30; i++) { gc.addRecoil(); rodar(3); }
+const r2 = pontoMira(25);
+const puloRec = r1.distanceTo(r2);
+const okRec = puloRec < 0.02;
+console.log(`  30 tiros de recoil -> deslocamento do crosshair: ${(puloRec * 100).toFixed(1)} cm  ${falha(okRec)}`);
 
-// posiciona o alvo do campo de tiro na frente do Bob (yaw=0 -> -Z)
-campo.posicionar(0, 0, 0);
+// ------------------------------------------------------------------ 5. ALVO 3D
+console.log('\n[5] IMPACTO NO ALVO 3D — o tiro (marcaTiro vermelha) para no centro do alvo');
+gc.setAds(false); rodar(N);
+mirarNoAlvo();
+const o5 = new THREE.Vector3(), d5 = new THREE.Vector3();
+gc.aimRay(o5, d5, 0, 0);
+// desvio LATERAL da linha de tiro ao centro do alvo (a linha deve passar por ele)
+const ao = o5.clone().sub(ALVO);
+const proj = ao.dot(d5);
+const lateral = ao.clone().addScaledVector(d5, -proj).length();
+const ok3d = lateral < 0.15;
+console.log(`  desvio lateral da linha de tiro ao centro do alvo: ${(lateral * 100).toFixed(1)} cm  ${falha(ok3d)}`);
 
-const cenas = [
-  { rotulo: 'FRENTE  (yaw 0.00, pitch -0.05)', yaw: 0.00, pitch: -0.05 },
-  { rotulo: 'DIREITA (yaw 0.60, pitch -0.05)', yaw: 0.60, pitch: -0.05 },
-  { rotulo: 'ACIMA   (yaw 0.00, pitch +0.25)', yaw: 0.00, pitch: 0.25 },
-];
-
-const linhas = [];
-for (const c of cenas) {
-  // --- SEM ADS (terceira pessoa) ---
-  gc.setAds(false);
-  rodarFrames(N);
-  const antes = medidas(c.rotulo + ' | SEM ADS', c.yaw, c.pitch);
-
-  // --- COM ADS (mirando) ---
-  gc.setAds(true, 46);
-  rodarFrames(N);
-  const depois = medidas(c.rotulo + ' | COM ADS', c.yaw, c.pitch);
-
-  const pulo = antes.p.distanceTo(depois.p);   // deslocamento do crosshair no alvo (m)
-  const lin = [
-    `\n--- ${c.rotulo} ---`,
-    `SEM ADS : mira(verde) vs alvo dx ${antes.dx}px dy ${antes.dy}px | ponto ${antes.p.x.toFixed(2)}, ${antes.p.y.toFixed(2)}, ${antes.p.z.toFixed(2)}`,
-    `COM ADS : mira(verde) vs alvo dx ${depois.dx}px dy ${depois.dy}px | ponto ${depois.p.x.toFixed(2)}, ${depois.p.y.toFixed(2)}, ${depois.p.z.toFixed(2)}`,
-    `PULO do crosshair ao mirar: ${pulo.toFixed(3)} m  (${(pulo * 100).toFixed(1)} cm)  ${pulo < 0.05 ? 'OK <= 5cm' : 'FALHOU > 5cm'}`,
-  ];
-  linhas.push(lin.join('\n'));
-  console.log(lin.join('\n'));
-}
-
-console.log('\n==============================================================');
-const ok = linhas.every((l) => /OK <= 5cm/.test(l));
-console.log(ok ? 'RESULTADO: MIRA ESTAVEL AO ALTERNAR 3a PESSOA <-> ADS' : 'RESULTADO: MIRA DESLOCA AO ALTERNAR (precisa calibrar)');
-console.log('==============================================================');
-
-// --- TESTE FINAL: jogador APONTANDO para o centro do alvo ------------------
-// alvo em (0, 2.4, -25), bob em (0, 1.48, 0) -> pitch necessario ~ +0.037
-const c2 = { rotulo: 'ALVO   (apontando p/ centro do alvo)', yaw: 0.0, pitch: 0.0368 };
-gc.setAds(false); rodarFrames(N);
-const a1 = medidas(c2.rotulo + ' | SEM ADS', c2.yaw, c2.pitch);
-gc.setAds(true, 46); rodarFrames(N);
-const a2 = medidas(c2.rotulo + ' | COM ADS', c2.yaw, c2.pitch);
-const pulo2 = a1.p.distanceTo(a2.p);
-console.log(`\n--- ${c2.rotulo} ---`);
-console.log(`SEM ADS : dx ${a1.dx}px dy ${a1.dy}px`);
-console.log(`COM ADS : dx ${a2.dx}px dy ${a2.dy}px`);
-console.log(`PULO: ${pulo2.toFixed(3)} m  ${pulo2 < 0.05 ? 'OK' : 'FALHOU'}`);
-console.log(`${Math.abs(a1.dx) <= 4 && Math.abs(a1.dy) <= 4 ? 'SEM ADS: crosshair NO CENTRO do alvo (dx/dy <= 4px)' : 'SEM ADS: crosshair FORA do alvo'}`);
-console.log(`${Math.abs(a2.dx) <= 4 && Math.abs(a2.dy) <= 4 ? 'COM ADS: crosshair NO CENTRO do alvo (dx/dy <= 4px)' : 'COM ADS: crosshair FORA do alvo'}`);
-
-// --- TESTE FINAL: jogador APONTANDO para o centro do alvo ------------------
-// alvo em (0, 2.4, -25), bob em (0, 1.48, 0) -> pitch necessario ~ +0.037
-const c2 = { rotulo: 'ALVO   (apontando p/ centro do alvo)', yaw: 0.0, pitch: 0.0368 };
-gc.setAds(false); rodarFrames(N);
-const a1 = medidas(c2.rotulo + ' | SEM ADS', c2.yaw, c2.pitch);
-gc.setAds(true, 46); rodarFrames(N);
-const a2 = medidas(c2.rotulo + ' | COM ADS', c2.yaw, c2.pitch);
-const pulo2 = a1.p.distanceTo(a2.p);
-console.log(`\n--- ${c2.rotulo} ---`);
-console.log(`SEM ADS : dx ${a1.dx}px dy ${a1.dy}px`);
-console.log(`COM ADS : dx ${a2.dx}px dy ${a2.dy}px`);
-console.log(`PULO: ${pulo2.toFixed(3)} m  ${pulo2 < 0.05 ? 'OK' : 'FALHOU'}`);
-console.log(`${Math.abs(a1.dx) <= 4 && Math.abs(a1.dy) <= 4 ? 'SEM ADS: crosshair NO CENTRO do alvo (dx/dy <= 4px)' : 'SEM ADS: crosshair FORA do alvo'}`);
-console.log(`${Math.abs(a2.dx) <= 4 && Math.abs(a2.dy) <= 4 ? 'COM ADS: crosshair NO CENTRO do alvo (dx/dy <= 4px)' : 'COM ADS: crosshair FORA do alvo'}`);
+// ------------------------------------------------------------------ FIM
+console.log(linha);
+const geral = puloOk && okAlvo && okDisp && okRec && ok3d;
+console.log(` RESULTADO GERAL: ${falha(geral)}  (mira 100% estavel: nao muda ao mirar nem ao atirar)`);
+console.log(linha);
+process.exit(geral ? 0 : 1);

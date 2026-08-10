@@ -2154,8 +2154,6 @@ export class Game {
     // modo AUTO atira sozinho a cada 0,4 s para calibrar sem precisar interagir.
     if (this.range) {
       this.range.update(this.camera.cam, this.col, 'SOLO ' + this.mode + (this.camera.isAds ? ' ADS' : ''));
-      this._rangeAutoT = (this._rangeAutoT || 0) + dt;
-      if (this._rangeAutoT > 0.4) { this._rangeAutoT = 0; this._shoot(); }
     }
 
     // ------------------------------------------------ HUD

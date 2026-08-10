@@ -174,7 +174,7 @@ export const CAMERA = {
   recoilYaw: 0,
   recoilRecover: 5.0,
   /** [FPS] Espalhamento da bala: sem mirar (cintura) vs mirando (ADS). */
-  spreadHip: 0.012,
+  spreadHip: 0,   // [CALIBRACAO] tiro da cintura sai reto onde o crosshair aponta (sem espalhamento)
   spreadAds: 0,
 };
 

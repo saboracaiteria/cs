@@ -74,7 +74,7 @@ export class CampoTiro {
   _criarOverlay() {
     const d = document.createElement('div');
     d.id = 'range-hud';
-    d.style.cssText = 'position:fixed;top:8px;left:8px;background:rgba(0,0,0,.78);color:#7f7;font:12px/1.6 ui-monospace,monospace;padding:8px 12px;border-radius:8px;z-index:999;white-space:pre;pointer-events:none;border:1px solid #2a4a6a;';
+    d.style.cssText = 'display:none;';   // [CALIBRACAO] overlay de texto escondido (campo de tiro sem poluir a tela)
     document.body.appendChild(d);
     this.overlay = d;
   }
