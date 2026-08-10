@@ -44,6 +44,13 @@ export async function boot() {
     btnFs.addEventListener('click', toggleFs);
   }
 
+  // QUALQUER interação na tela (botão ou toque no jogo) ativa o fullscreen
+  document.addEventListener('pointerup', () => {
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+    }
+  }, true);
+
   let last = performance.now();
   let acc = 0, frames = 0;
   let ativo = true;

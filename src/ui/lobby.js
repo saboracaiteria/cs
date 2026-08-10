@@ -18,6 +18,10 @@ export function criarLobby() {
   const btnRecusar = document.getElementById('invite-recusar');
   const toastEl = document.getElementById('lobby-toast');
   const alertaEl = document.getElementById('lobby-alerta');
+  const cg = document.getElementById('convite-global');
+  const cgMsg = document.getElementById('cg-msg');
+  const cgAceitar = document.getElementById('cg-aceitar');
+  const cgRecusar = document.getElementById('cg-recusar');
 
   if (!tela) return { mostrar() {}, esconder() {}, atualizar() {}, onReady() {}, onStart() {}, onLeave() {}, nick() { return ''; } };
 
@@ -26,6 +30,7 @@ export function criarLobby() {
   let meuId = null;
   let conviteDe = null;   // { id, nick } do convite pendente
   let toastTimer = null;
+  let vistos = new Set();  // ids de jogadores humanos já vistos (p/ notificar quem entra)
   let _cdEnd = 0, _cdTimer = null;
   function _sincCd() {
     const rest = Math.max(0, Math.ceil((_cdEnd - Date.now()) / 1000));
@@ -40,6 +45,8 @@ export function criarLobby() {
     // convite/banner de sessão anterior não podem reaparecer (fantasma)
     conviteDe = null;
     if (inviteEl) inviteEl.classList.add('hidden');
+    if (cg) cg.classList.add('hidden');
+    vistos = new Set();
     limparAlerta();
   }
 
@@ -60,11 +67,19 @@ export function criarLobby() {
 
   /** Banner de convite recebido: "Fulano quer jogar com você". */
   function mostrarConvite(de) {
-    if (!inviteEl) return;
     conviteDe = de || null;
-    if (!conviteDe) { inviteEl.classList.add('hidden'); return; }
-    inviteMsg.textContent = `${de.nick} quer jogar com você!`;
-    inviteEl.classList.remove('hidden');
+    if (!conviteDe) {
+      if (cg) cg.classList.add('hidden');
+      if (inviteEl) inviteEl.classList.add('hidden');
+      return;
+    }
+    if (cg && cgMsg) {
+      cgMsg.textContent = `${de.nick} está te convidando para uma partida!`;
+      cg.classList.remove('hidden');
+    } else if (inviteEl && inviteMsg) {
+      inviteMsg.textContent = `${de.nick} quer jogar com você!`;
+      inviteEl.classList.remove('hidden');
+    }
   }
 
   /** Aviso curto no lobby (convite aceito/recusado, erros). */
@@ -91,6 +106,18 @@ export function criarLobby() {
 
   function atualizar(data) {
     estado = data.state || 'lobby';
+    // notificação de quem ENtrou na sala (só humanos, não eu, não bots)
+    const hums = (data.jogadores || []).filter((j) => !j.bot && j.id !== meuId);
+    if (vistos.size === 0) {
+      hums.forEach((j) => vistos.add(j.id));
+    } else {
+      for (const j of hums) {
+        if (!vistos.has(j.id)) {
+          vistos.add(j.id);
+          aviso(`${j.nick} entrou na sala!`, 3500);
+        }
+      }
+    }
     lista.innerHTML = '';
     for (const j of data.jogadores || []) {
       const li = document.createElement('li');
@@ -164,18 +191,22 @@ export function criarLobby() {
   btnPronto.addEventListener('click', () => { pronto = !pronto; onReadyCb && onReadyCb(); });
   btnIniciar.addEventListener('click', () => onStartCb && onStartCb());
   btnSair.addEventListener('click', () => onLeaveCb && onLeaveCb());
-  btnAceitar && btnAceitar.addEventListener('click', () => {
+  const _aceitar = () => {
     const de = conviteDe;
     if (!de) return;
     onAceitarCb && onAceitarCb(de.id);
     mostrarConvite(null);
-  });
-  btnRecusar && btnRecusar.addEventListener('click', () => {
+  };
+  const _recusar = () => {
     const de = conviteDe;
     if (!de) return;
     onRecusarCb && onRecusarCb(de.id);
     mostrarConvite(null);
-  });
+  };
+  btnAceitar && btnAceitar.addEventListener('click', _aceitar);
+  btnRecusar && btnRecusar.addEventListener('click', _recusar);
+  cgAceitar && cgAceitar.addEventListener('click', _aceitar);
+  cgRecusar && cgRecusar.addEventListener('click', _recusar);
 
   let onReadyCb = null, onStartCb = null, onLeaveCb = null;
   let onInviteCb = null, onAceitarCb = null, onRecusarCb = null;

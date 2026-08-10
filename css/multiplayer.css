@@ -477,23 +477,24 @@ body.toque #net-status{
   pointer-events: none;
 }
 .kf-item {
-  background: var(--panel);
-  border: 1px solid var(--stroke);
-  border-radius: 10px;
-  padding: 6px 12px;
-  font-size: 12px;
-  color: var(--ink);
+  background: rgba(15, 18, 26, .5);
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 8px;
+  padding: 3px 9px;
+  font-size: 10.5px;
+  color: rgba(230, 236, 244, .85);
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(6px);
+  opacity: .8;
   animation: kfIn .2s ease-out;
 }
 .kf-item.kf-vc {
-  border-color: var(--accent);
-  background: rgba(255, 176, 32, .15);
+  border-color: rgba(255, 176, 32, .35);
+  background: rgba(255, 176, 32, .07);
 }
-.kf-por { font-weight: 800; color: #fff; }
+.kf-por { font-weight: 600; color: rgba(255, 255, 255, .9); }
 .kf-morto { opacity: .75; }
 .kf-arma { font-size: 11px; opacity: .8; }
 @keyframes kfIn {
@@ -763,3 +764,34 @@ body.toque #net-status{
 .lobby-alerta.ok{
   background:rgba(18,140,80,.22); border:1px solid rgba(18,200,110,.5); color:#c9f5dd;
 }
+
+
+/* convite global: aparece no lobby E durante a partida */
+#convite-global {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 600;
+  background: rgba(10, 13, 20, .94);
+  border: 1px solid rgba(255, 176, 32, .55);
+  border-radius: 14px;
+  padding: 16px 20px;
+  text-align: center;
+  max-width: min(320px, 90vw);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, .55);
+  animation: kfIn .2s ease-out;
+}
+#cg-msg { display: block; font-size: 14px; color: #fff; margin-bottom: 12px; line-height: 1.4; }
+.cg-botoes { display: flex; gap: 10px; justify-content: center; }
+.cg-botoes button {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+  background: var(--panel);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 13px;
+}
+.cg-botoes button:first-child { background: var(--accent); color: #1a1206; border-color: var(--accent); }

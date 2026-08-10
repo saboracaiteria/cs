@@ -185,10 +185,8 @@ function handle(ws, msg) {
         send(ws, { t: T.INVITE_FIM, id: alvoId, aceitou: false, motivo: 'Jogador já está na sua sala' });
         break;
       }
-      if (alvoRoom.state !== 'lobby') {
-        send(ws, { t: T.INVITE_FIM, id: alvoId, aceitou: false, motivo: 'Jogador já está em partida' });
-        break;
-      }
+      // convida também quem está em partida — a notificação aparece durante o jogo
+      // e o alvo decide se aceita (sai da partida atual e entra na sala de quem chamou)
       alvo.inviteDe = { id: p.id, nick: p.nick, salaId: room.salaId, modo: room.modo };
       send(alvo.client, { t: T.INVITE, de: { id: p.id, nick: p.nick, salaId: room.salaId, modo: room.modo } });
       break;
