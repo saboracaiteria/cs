@@ -786,7 +786,7 @@ export class Match {
       vm.visible = fpp > 0.02;
       if (vm.visible) {
         vm.setAds(fpp > 0.5);
-        vm.setTransicao(fpp); vm.setTransicao(fpp); vm.update(dt, this.inp && this.inp.run ? 6 : 0);
+        vm.setTransicao(fpp); vm.update(dt, this.inp && this.inp.run ? 6 : 0);
       }
     }
     if (this.game && this.game.hud) {
