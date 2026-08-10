@@ -162,9 +162,10 @@ export const CAMERA = {
    * [Ombro] Ficou mais curto que o defaultZoom novo (3.6): mirar ainda
    * aproxima de verdade, e o braço com a pistola domina o canto da tela.
    */
-  adsFov: 54,
+  adsFov: 45,             // [ADS-ZOOM] zoom real: FOV 62 -> 45 no celular (estilo COD Mobile)
   adsFovPc: 31,             // [PC] mira 2x no botão direito (FOV pela metade)
   adsSpeed: 9,
+  adsDolly: 0.5,           // [ADS-ZOOM] dolly: a camera aproxima 50% ao mirar, na LINHA de visada (a mira nao muda)
   /**
    * [FPS] SEM coice de câmera: ao atirar a mira NUNCA sai do lugar
    * (sniper-friendly). O recuo ficou só visual — a arma sobe no

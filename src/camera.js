@@ -60,6 +60,7 @@ export class GameCamera {
 
   /** Primeira pessoa: usada dentro das fases da campanha. */
   get isFPS() { return this.mode === 'fps'; }
+  get isAds() { return this.ads > 0.05; }   // [ADS] estado do zoom (usado pelo HUD p/ classes .center/.ads)
 
   /** [11] Movimento do mouse gira a visão. */
   look(dx, dy) {
@@ -232,6 +233,12 @@ export class GameCamera {
     );
     if (hit) dist = Math.max(CAMERA.minZoom * 0.45, hit.t - 0.45);
 
+    // [ADS-ZOOM] Dolly over-the-shoulder: a camera desliza PARA FRENTE ao
+    // longo da linha de visada (_look e relativo a _pos => o forward NAO
+    // muda). O centro da tela permanece no mesmo ponto do mundo: a mira
+    // fica fixa no alvo enquanto o FOV fecha 62 -> 45. Zoom estilo COD.
+    dist *= 1 - CAMERA.adsDolly * this.ads;
+
     this._pos.copy(this._smoothFocus).addScaledVector(back, dist).addScaledVector(right, ombro);
     // e nunca abaixo do chão
     const floor = this.col.groundHeightAt(this._pos.x, this._pos.z, this._pos.y) + 0.45;
@@ -331,11 +338,9 @@ export class GameCamera {
     // pelo teclado, fora do momento em que o three atualiza a cena
     this.cam.updateMatrixWorld();
     /*
-     * [FPS] A mira fica SEMPRE no ombro (62% da largura, 2/5 do topo),
-     * estilo COD Mobile / GTA: ao mirar (ADS) a câmera apenas APROXIMA o
-     * zoom e o espalhamento cai — a mira não anda de lugar, então o tiro
-     * continua saindo exatamente onde ela está e a visão dos inimigos ao
-     * redor permanece aberta.
+     * [FPS] A mira fica SEMPRE no CENTRO da tela (0.5, 0.5) — hip-fire e
+     * ADS. Ao mirar, a câmera apenas APROXIMA (dolly) + fecha o FOV; a
+     * linha de visada NAO muda, entao o tiro sai exatamente no retículo.
      */
     const ndc = new THREE.Vector3(ndcX, ndcY, 0.5);
     ndc.unproject(this.cam);

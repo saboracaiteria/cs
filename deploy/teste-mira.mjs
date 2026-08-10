@@ -79,11 +79,18 @@ for (const c of [
 ]) {
   gc.setAds(false); rodar(N);
   gc.yaw = c.yaw; gc.pitch = c.pitch; rodar(N);
-  const p1 = pontoMira(25);
+  const p1 = pontoMira(25);                 // ponto do mundo mirado em 3a pessoa
   gc.setAds(true, 46); rodar(N);
-  const p2 = pontoMira(25);
-  const pulo = p1.distanceTo(p2);
-  const ok = pulo < 0.05;
+  // [dolly] com o zoom a camera aproxima ao longo da MESMA reta, entao o
+  // que importa e: o ponto mirado em TPP continua SOBRE a linha de visada
+  // do ADS? (distancia ponto->reta ~ 0)
+  const o2 = new THREE.Vector3(), d2 = new THREE.Vector3();
+  gc.aimRay(o2, d2, 0, 0);
+  const v = p1.clone().sub(o2);
+  const t = v.dot(d2);
+  const prox = o2.clone().addScaledVector(d2, t);
+  const pulo = p1.distanceTo(prox);         // distancia do ponto a reta do ADS
+  const ok = pulo < 0.05 && t > 0;
   puloOk = puloOk && ok;
   console.log(`  ${c.rotulo.padEnd(8)} pulo ${pulo.toFixed(4)} m  ${falha(ok)}`);
 }

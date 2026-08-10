@@ -180,6 +180,7 @@ export class Human {
     this.carrying = false;
     this.armGesture = 0;
     this.aiming = false;    // [27] mirando: braços erguidos à frente com a arma
+    this.aimAmt = 0;          // [ADS-BLEND] fator de transição suave da pose de tiro (0..1)
     this.weapon = null;     // arma presa à mão direita (antebraço)
   }
 
@@ -277,6 +278,7 @@ export class Human {
     this.legR.shin.rotation.x = Math.max(0, -c) * amp * 1.15 + 0.04;
 
     // braços
+    this.aimAmt = damp(this.aimAmt, this.aiming ? 1 : 0, 10, dt);   // [ADS-BLEND] sobe/desce suave
     if (this.carrying) {
       // [50] segurando o pacote com os dois braços à frente
       this.armL.group.rotation.x = -1.25;
@@ -285,21 +287,6 @@ export class Human {
       this.armR.group.rotation.z = -0.22;
       this.armL.fore.rotation.x = -0.55;
       this.armR.fore.rotation.x = -0.55;
-    } else if (this.aiming) {
-      // [27] posição de tiro: braços estendidos à frente segurando a pistola
-      // [FPS] o cano acompanha o foco da mira: câmera subiu, o braço ergue
-      // um pouco mais; desceu, a arma abaixa junto — a arma SEMPRE aponta
-      // para onde a mira está
-      const apAim = clamp(this.lookPitch, -0.7, 0.7);
-      const ayAim = clamp(this.lookYaw, -0.5, 0.5);   // [FPS] virada lateral: cano segue a mira
-      this.armR.group.rotation.x = -1.45 - apAim;
-      this.armR.group.rotation.y = ayAim;
-      this.armR.group.rotation.z = 0.10;
-      this.armR.fore.rotation.x = -0.12;
-      this.armL.group.rotation.x = -1.45 - apAim * 0.85;
-      this.armL.group.rotation.y = ayAim * 0.85;
-      this.armL.group.rotation.z = -0.30;   // a mão esquerda cruza e segura a frente
-      this.armL.fore.rotation.x = -0.12;
     } else if (this.armGesture > 0) {
       // acenando (usado quando o NPC é alvo da missão)
       const w = Math.sin(this.phase * 3.2) * 0.5;
@@ -329,6 +316,23 @@ export class Human {
       this.armR.group.rotation.z = -0.06;
       this.armL.fore.rotation.x = -0.25 - Math.max(0, -s) * amp * 0.4;
       this.armR.fore.rotation.x = -0.25 - Math.max(0, s) * amp * 0.4;
+
+      // [ADS-BLEND] transição suave para a pose de tiro (braços erguidos à
+      // frente com a pistola), misturada com o balanço normal pelo fator
+      // aimAmt (damp 0..1) — sem snap ao apertar/soltar o ATIRAR.
+      if (this.aimAmt > 0.001) {
+        const a = this.aimAmt, k = 1 - a;
+        const apAim = clamp(this.lookPitch, -0.7, 0.7);
+        const ayAim = clamp(this.lookYaw, -0.5, 0.5);
+        this.armR.group.rotation.x = this.armR.group.rotation.x * k + (-1.45 - apAim) * a;
+        this.armR.group.rotation.y = ayAim * a;
+        this.armR.group.rotation.z = this.armR.group.rotation.z * k + 0.10 * a;
+        this.armR.fore.rotation.x = this.armR.fore.rotation.x * k + -0.12 * a;
+        this.armL.group.rotation.x = this.armL.group.rotation.x * k + (-1.45 - apAim * 0.85) * a;
+        this.armL.group.rotation.y = ayAim * 0.85 * a;
+        this.armL.group.rotation.z = this.armL.group.rotation.z * k + -0.30 * a;
+        this.armL.fore.rotation.x = this.armL.fore.rotation.x * k + -0.12 * a;
+      }
     }
 
     // balanço do corpo
