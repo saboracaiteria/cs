@@ -844,8 +844,8 @@ export class Match {
       // quando o zoom fecha: a mira fica onde está e apenas aproxima.
       const halfW = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2) * this.camera.aspect;
       const halfH = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2);
-      const ay = Math.atan(0.24 * halfW);
-      const ap = Math.atan(0.2 * halfH);
+      const ay = 0;   // [FIXO] mira sempre no centro exato
+      const ap = 0;
       const ye = yawE + ay, pe = pitchE + ap;
       const cpe = Math.cos(pe);
       this._camLook.set(
