@@ -684,8 +684,7 @@ export class Match {
     // fica deslocada no ombro: a bala errava tudo que se apontava.
     this.camera.updateMatrixWorld();
     // [CODM] em 1ª pessoa a mira vai para o CENTRO da tela (igual COD Mobile)
-    if (this._fpp > 0.5) this._vNdc.set(0, 0, 0.5);
-    else this._vNdc.set(0.24, 0.2, 0.5);
+    this._vNdc.set(0, 0, 0.5);   // [FIXO] tiro sempre no centro exato da tela
     this._vNdc.unproject(this.camera);
     this._fireDir = this._vNdc.sub(this.camera.position).normalize();
 

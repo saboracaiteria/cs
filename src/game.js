@@ -1221,7 +1221,7 @@ export class Game {
 
     if (!this.bullets.canFire) return;
     const noHeli = this.mode === 'heli';
-    const { origin, direction } = this.camera.aimRay(this._aimOrigin, this._aimDir, noHeli ? 0 : 0.24, noHeli ? 0 : 0.2);
+    const { origin, direction } = this.camera.aimRay(this._aimOrigin, this._aimDir, 0, 0);
 
     // [AIM ASSIST] inimigo perto da linha de mira: o tiro desvia para o centro
     // dele (cone ~5,7°). Não rouba tiro errado longe — só tira o peso de

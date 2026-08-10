@@ -92,9 +92,7 @@ export class GameCamera {
    * O jogo passa isto para `human.lookPitch` e a cabeça obedece.
    */
   get aimPitch() {
-    const halfH = Math.tan(THREE.MathUtils.degToRad(this.cam.fov) / 2);
-    const offset = Math.atan(0.2 * halfH);
-    return this.pitch + this._recoilP + offset;
+    return this.pitch + this._recoilP;
   }
 
   /**
@@ -103,8 +101,7 @@ export class GameCamera {
    * este valor só vira a CABEÇA um tico na direção da mira, como num FPS.
    */
   get aimYaw() {
-    const halfW = Math.tan(THREE.MathUtils.degToRad(this.cam.fov) / 2) * this.cam.aspect;
-    return Math.atan(0.24 * halfW);
+    return 0;
   }
 
   /**
@@ -127,6 +124,7 @@ export class GameCamera {
    * "controlar o recuo" dos FPS.
    */
   addRecoil() {
+    if (this.ads > 0.5) return;   // [FIXO] no ADS a mira fica fixa; o coice fica so na arma
     this._recoilP += CAMERA.recoilPitch * (0.8 + Math.random() * 0.45);
     this._recoilY += (Math.random() - 0.5) * 2 * CAMERA.recoilYaw;
   }
@@ -319,7 +317,7 @@ export class GameCamera {
    * a 62% da largura (NDC x = +0.24) e 2/5 do topo (NDC y = +0.2) — o
    * mesmo deslocamento da mira no celular, estilo COD Mobile.
    */
-  aimRay(origin = new THREE.Vector3(), direction = new THREE.Vector3(), ndcX = 0.24, ndcY = 0.2) {
+  aimRay(origin = new THREE.Vector3(), direction = new THREE.Vector3(), ndcX = 0, ndcY = 0) {
     // unproject depende de matrizes atualizadas; o tiro pode ser disparado
     // pelo teclado, fora do momento em que o three atualiza a cena
     this.cam.updateMatrixWorld();

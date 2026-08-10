@@ -1,9 +1,9 @@
 import * as THREE from '../../vendor/three.module.js';
 import { voxMaterial, VX } from './voxel.js';
 
-const POS_REPOUSO = new THREE.Vector3(0.26, -0.22, -0.52);
+const POS_REPOUSO = new THREE.Vector3(-0.26, -0.22, -0.52);
 
-const POS_ADS = new THREE.Vector3(0.0, -0.10, -0.42);   // [FPS] ADS centralizado: arma sobe para a mira (estilo CODM)
+const POS_ADS = new THREE.Vector3(-0.22, -0.12, -0.44);   // [FIXO] a arma ergue mas fica à ESQUERDA; a mira fica no centro
 
 export class ViewModel {
   constructor(camera, scene) {
