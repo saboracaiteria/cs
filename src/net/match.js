@@ -776,7 +776,10 @@ export class Match {
         foc.z - Math.cos(ye) * cpe * 12,
       );
     } else {
-      this._camLook.copy(foc);
+      // [FIX-PADRAO] enquadramento IGUAL ao solo no TPP/hip-fire: olhar para a
+      // FRENTE (pos+dir*40) - jogador a ESQUERDA da tela, crosshair a direita
+      // do ombro (o copy(foc) centralizava o player e o tiro saia do corpo)
+      this._camLook.copy(this.camera.position).addScaledVector(dir, 40);
     }
     this._camLook.y += lift;
     this.camera.lookAt(this._camLook);
@@ -798,7 +801,7 @@ export class Match {
       } else {
         const dy = Math.abs(this.yaw - this._anchorFppYaw);
         const dp = Math.abs(this.pitch - this._anchorFppPitch);
-        if (dy + dp > 0.06) this._anchorFppAtivo = false;
+        if (dy + dp > 0.015) this._anchorFppAtivo = false;   // [FIX] deadzone 0,015 rad: camera segue o mouse SEM pulo da mira no ADS
       }
       const olhos = new THREE.Vector3(foc.x + dir.x * CAMERA.adsEyeForward, foc.y + CAMERA.adsEyeHeight, foc.z + dir.z * CAMERA.adsEyeForward);
       this.camera.position.lerpVectors(this.camera.position, olhos, fpp);
@@ -848,7 +851,7 @@ export class Match {
       const aA = aimAssist(
         this.camera.position.x, this.camera.position.y, this.camera.position.z,
         this._fireDir.x, this._fireDir.y, this._fireDir.z,
-        alvosA, 140, 0.20,
+        alvosA, 140, 0.05,   // [FIX] magnetismo sutil (cone ~2,9 graus): o tiro NAO desvia para o lado - a bala sai reta onde o red dot aponta
       );
       if (aA) this._fireDir.set(aA.x, aA.y, aA.z);
     }
@@ -902,7 +905,6 @@ export class Match {
         this.game.bullets?.fire(oT, this._vT2.set(dxT, dyT, dzT));
         if (this.game && this.game.range) this.game.range.marcarImpacto(oT, this._vT2, this.game.col, this.camera);
         if (this.game && this.game.audio) this.game.audio.tiro();
-        if (this.game && this.game.viewmodel) this.game.viewmodel.darCoice();
         // [FPS] coice/tremida da camera REMOVIDO nos modos online (DM/BR):
         // o recuo tremia a mira e atrapalhava em rede lenta (lag).
         // O SOLO (game.js) mantem o recuo normal.

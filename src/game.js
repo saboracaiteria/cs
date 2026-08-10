@@ -1264,8 +1264,7 @@ export class Game {
       if (this.range) this.range.marcarImpacto(origin, direction, this.col, this.camera.cam);
       this.hud.recoil();
       // [FIXO] sem coice de camera: a mira fica 100% parada ao atirar (raycast do centro)
-      this.audio.tiro();
-      if (this.viewmodel) this.viewmodel.darCoice();
+      this.audio.tiro();   // [FIX] apenas o SOM do tiro - sem efeitos visuais da arma (coice)
       this._companheiroAtaca();
     }
   }
@@ -1572,8 +1571,7 @@ export class Game {
     if (this.teleguiado.disparar(origin, direction, this.alvoTravado)) {
       this.audio.missil();
       this.hud.recoil();
-      this.camera.addRecoil();
-      if (this.viewmodel) this.viewmodel.darCoice();
+      this.camera.addRecoil();   // [FIX] sem darCoice (efeito visual da arma) - apenas o som do missil
     }
   }
 

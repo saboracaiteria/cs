@@ -270,7 +270,7 @@ export class GameCamera {
         // jogador girou: solta a ancora e a mira volta a seguir o olhar
         const dy = Math.abs(this.yaw - this._anchorYaw);
         const dp = Math.abs(this.pitch - this._anchorPitch);
-        if (dy + dp > 0.06) this._anchorAtivo = false;
+        if (dy + dp > 0.015) this._anchorAtivo = false;   // [FIX] deadzone 0,015 rad: camera segue o mouse SEM pulo da mira no ADS
       }
       // posicao: do ombro (TPP) para os OLHOS (FPP)
       const olhos = new THREE.Vector3(
