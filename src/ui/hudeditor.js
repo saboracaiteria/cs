@@ -60,6 +60,11 @@ export function criarHudEditor() {
     touch.classList.remove('hidden');
     touch.style.display = 'block';
     touch.style.zIndex = '950';
+    // CRÍTICO: o #touch é fullscreen (inset:0). Com pointer-events ativo ele
+    // bloqueia TODOS os cliques na barra do editor (SALVAR/FECHAR/PADRÃO/➕➖)
+    // — desligamos o raycast do container (padrão Unity) e só os botões
+    // (pointer-events:auto) capturam o dedo.
+    touch.style.pointerEvents = 'none';
     const pad = touch.querySelector('#tc-pad');
     if (pad) {
       pad.classList.remove('hidden');
@@ -70,6 +75,11 @@ export function criarHudEditor() {
       b.classList.remove('hidden');
       b.style.display = 'block';
       b.style.pointerEvents = 'auto';
+      // CRÍTICO: sem isso os botões ficam PRESOS na caixa do #tc-pad
+      // (264x200px) porque left/top em % é relativo ao container absolute.
+      // Com position:fixed o % vira relativo à VIEWPORT e o botão voa livre
+      // pela tela inteira, igual ao analógico.
+      b.style.position = 'fixed';
       b.style.zIndex = b.id === 'tc-stick-zone' ? '901' : '960';
       b.classList.add('customizing');
       b.classList.remove('custom-selected');
@@ -84,6 +94,7 @@ export function criarHudEditor() {
     if (prevTouchHidden) touch.classList.add('hidden');
     touch.style.display = '';
     touch.style.zIndex = '';
+    touch.style.pointerEvents = '';
     const pad = touch.querySelector('#tc-pad');
     if (pad) {
       pad.style.display = '';
@@ -93,6 +104,7 @@ export function criarHudEditor() {
       b.classList.remove('customizing', 'custom-selected', 'hud-arrastando');
       b.style.display = '';
       b.style.pointerEvents = '';
+      b.style.position = '';
       b.style.zIndex = '';
     }
   }
@@ -120,6 +132,15 @@ export function criarHudEditor() {
   function fechar() {
     if (!aberto) return;
     aberto = false;
+    // salva automaticamente se houver personalização (padrão DINO4)
+    try {
+      const personalizado = editaveis().some(b =>
+        b.style.left !== '' || b.style.top !== '' ||
+        b.style.right !== '' || b.style.bottom !== '' ||
+        (parseFloat(b.dataset.scale) || 1) !== 1
+      );
+      if (personalizado) salvar();
+    } catch (e) { /* sem console */ }
     esconderTudo();
     if (overlay) {
       overlay.classList.add('hidden');
@@ -127,6 +148,7 @@ export function criarHudEditor() {
     }
     alvo = null;
     selecionado = null;
+    try { console.log('[hud-editor] fechado'); } catch (e2) {}
     if (onFechar) onFechar();
   }
 
@@ -172,9 +194,12 @@ export function criarHudEditor() {
     if (!aberto || !alvo) return;
     const dxPct = ((e.clientX - posIni.x) / window.innerWidth) * 100;
     const dyPct = ((e.clientY - posIni.y) / window.innerHeight) * 100;
-    // clamp: mantém o botão sempre dentro da tela (padrão DINO4)
-    const novoLeft = Math.max(1, Math.min(100 - 8, posIni.left + dxPct));
-    const novoTop = Math.max(1, Math.min(100 - 8, posIni.top + dyPct));
+    // livre até a borda (padrão DINO4): limite = 100% - tamanho do elemento
+    const r = alvo.getBoundingClientRect();
+    const largPct = Math.max(8, (r.width / window.innerWidth) * 100);
+    const altPct = Math.max(8, (r.height / window.innerHeight) * 100);
+    const novoLeft = Math.max(0, Math.min(100 - largPct, posIni.left + dxPct));
+    const novoTop = Math.max(0, Math.min(100 - altPct, posIni.top + dyPct));
     alvo.style.right = 'auto';
     alvo.style.bottom = 'auto';
     alvo.style.left = novoLeft.toFixed(2) + '%';
@@ -225,11 +250,13 @@ export function criarHudEditor() {
   function salvar() {
     const layout = coletar();
     try { localStorage.setItem(CHAVE, JSON.stringify({ botoes: layout })); } catch (e) { /* bloqueado */ }
+    try { console.log('[hud-editor] salvo ' + Object.keys(layout).length + ' botoes'); } catch (e2) {}
     return Object.keys(layout).length;
   }
 
   function padrao() {
     try { localStorage.removeItem(CHAVE); } catch (e) { /* ignore */ }
+    try { console.log('[hud-editor] padrao restaurado'); } catch (e2) {}
     for (const sel of Object.values(MAPA)) {
       for (const el of document.querySelectorAll(sel)) {
         el.style.position = '';
