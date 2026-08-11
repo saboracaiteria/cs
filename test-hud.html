@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TESTE do Editor de HUD</title>
+<link rel="stylesheet" href="./css/style.css?v=t2">
+<style>
+  body{background:#111; color:#fff; font-family:system-ui; overflow:hidden}
+  #test-log{position:fixed; bottom:8px; left:8px; right:8px; z-index:9999; background:#000c; border:1px solid #444; border-radius:8px; padding:8px; font:11px monospace; color:#8f8; max-height:120px; overflow:auto}
+  #test-botoes{position:fixed; top:8px; left:50%; transform:translateX(-50%); z-index:9998; display:flex; gap:6px; flex-wrap:wrap; justify-content:center; width:96%}
+  #test-botoes button{padding:8px 12px; border-radius:8px; border:1px solid #666; background:#222; color:#fff; font-weight:700}
+</style>
+</head>
+<body>
+
+<div id="test-botoes">
+  <button id="t-abrir">ABRIR</button>
+  <button id="t-fechar">FECHAR</button>
+  <button id="t-salvar">SALVAR</button>
+  <button id="t-padrao">PADRÃO</button>
+  <button id="t-carregar">CARREGAR</button>
+  <button id="t-mais">➕</button>
+  <button id="t-menos">➖</button>
+</div>
+
+
+<div id="touch" class="hidden">
+  <div id="tc-stick-zone" data-hud="stick"></div>
+  <div id="tc-look"></div>
+  <div id="tc-pad">
+    <button type="button" class="tc-btn tc-fogo" id="tc-fogo" data-hud="fogo" data-segura="atirar">ATIRAR</button>
+    <button type="button" class="tc-btn tc-pular" id="tc-pular" data-hud="pular" data-segura="pular">PULAR</button>
+    <button type="button" class="tc-btn tc-acao" id="tc-acao" data-hud="acao" data-acao="acao">AÇÃO</button>
+    <button type="button" class="tc-btn tc-sec tc-descer hidden" id="tc-descer" data-hud="descer" data-segura="correr">▼</button>
+    <button type="button" class="tc-btn tc-sec tc-visao hidden" id="tc-visao" data-hud="visao" data-acao="visao">👁</button>
+    <button type="button" class="tc-btn tc-sec tc-missil hidden" id="tc-missil" data-hud="missil" data-acao="missil">🚀</button>
+    <button type="button" class="tc-btn tc-sec tc-girar-esq hidden" id="tc-girar-esq" data-hud="girar-esq" data-segura="girarEsq">◀</button>
+    <button type="button" class="tc-btn tc-sec tc-girar-dir hidden" id="tc-girar-dir" data-hud="girar-dir" data-segura="girarDir">▶</button>
+  </div>
+</div>
+
+
+<div id="hud-editor" class="hidden">
+  <div id="hud-editor-bar">
+    <div id="hud-editor-titulo">EDITAR HUD<small>arraste cada botão para onde quiser</small></div>
+    <div id="hud-editor-acoes">
+      <button type="button" id="hud-editor-menos" class="ghost" title="Diminuir">➖</button>
+      <button type="button" id="hud-editor-mais" class="ghost" title="Aumentar">➕</button>
+      <button type="button" id="hud-editor-salvar">💾 SALVAR</button>
+      <button type="button" id="hud-editor-padrao" class="ghost">↺ PADRÃO</button>
+      <button type="button" id="hud-editor-fechar" class="ghost">FECHAR</button>
+    </div>
+  </div>
+  <div id="hud-editor-aviso"></div>
+</div>
+
+<div id="test-log">aguardando teste...</div>
+
+<script type="module">
+import { criarHudEditor } from './src/ui/hudeditor.js';
+
+const log = (m) => {
+  const el = document.getElementById('test-log');
+  el.textContent = new Date().toISOString().slice(11,19) + ' ' + m + '\n' + el.textContent;
+  console.log('[test-hud]', m);
+  // diagnóstico via título: o preview mostra o título no snapshot
+  document.title = m.slice(0, 70);
+};
+
+try {
+  window.hud = criarHudEditor();
+  log('criarHudEditor() OK');
+} catch (e) {
+  log('ERRO criarHudEditor: ' + e.message);
+}
+
+const estado = (tag) => {
+  const he = document.getElementById('hud-editor');
+  const touch = document.getElementById('touch');
+  const botoes = document.querySelectorAll('#touch .tc-btn');
+  const visiveis = [...botoes].filter(b => !b.classList.contains('hidden') && b.style.display !== 'none').length;
+  const fixed = [...botoes].filter(b => b.style.position === 'fixed' && b.style.left !== '').length;
+  const first = botoes[0];
+  return tag + ' | overlay=' + (he.classList.contains('hidden') ? 'hidden' : 'VISIVEL') +
+    ' | touch=' + (touch.classList.contains('hidden') ? 'hidden' : 'visivel') +
+    ' | botoes visiveis=' + visiveis + '/' + botoes.length +
+    ' | fixed=' + fixed +
+    ' | fogo=' + (first ? (first.style.left || 'css') + ',' + (first.style.top || 'css') : '?') +
+    ' | body=' + document.body.className.replace('hud-edit', 'EDICAO');
+};
+
+document.getElementById('t-abrir').addEventListener('click', () => {
+  try {
+    const f = document.getElementById('tc-fogo');
+    const pad = document.getElementById('tc-pad');
+    const rF = f.getBoundingClientRect();
+    const rP = pad.getBoundingClientRect();
+    log('ANTES abrir: vp=' + window.innerWidth + 'x' + window.innerHeight + ' fogo=' + Math.round(rF.left) + ',' + Math.round(rF.top) + ' pad=' + Math.round(rP.left) + ',' + Math.round(rP.top) + ' scale=' + (getComputedStyle(pad).transform));
+    window.hud.abrir();
+    log(estado('ABRIR()'));
+  } catch (e) { log('ERRO abrir: ' + e.message); }
+});
+
+document.getElementById('t-fechar').addEventListener('click', () => {
+  try { window.hud.fechar(); log(estado('FECHAR()')); } catch (e) { log('ERRO fechar: ' + e.message); }
+});
+
+document.getElementById('t-salvar').addEventListener('click', () => {
+  try {
+    const n = window.hud.salvar();
+    log('SALVAR() -> ' + n + ' botões | ls=' + (localStorage.getItem('cs-hud-layout-v1') || 'vazio'));
+  } catch (e) { log('ERRO salvar: ' + e.message); }
+});
+
+document.getElementById('t-padrao').addEventListener('click', () => {
+  try { window.hud.padrao(); log(estado('PADRAO()')); } catch (e) { log('ERRO padrao: ' + e.message); }
+});
+
+document.getElementById('t-carregar').addEventListener('click', () => {
+  try { window.hud.carregarLayout(); log(estado('CARREGAR()')); } catch (e) { log('ERRO carregar: ' + e.message); }
+});
+
+document.getElementById('t-mais').addEventListener('click', () => {
+  try { window.hud.mais(); log('MAIS()'); } catch (e) { log('ERRO mais: ' + e.message); }
+});
+
+document.getElementById('t-menos').addEventListener('click', () => {
+  try { window.hud.menos(); log('MENOS()'); } catch (e) { log('ERRO menos: ' + e.message); }
+});
+
+window.addEventListener('error', (e) => log('ERRO GLOBAL: ' + e.message));
+log('teste pronto');
+</script>
+</body>
+</html>
