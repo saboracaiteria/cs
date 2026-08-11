@@ -119,9 +119,11 @@ export class DMRoom extends Room {
     this._bcast(T.WINNER, { id: vencedor.id, nick: vencedor.nick, kills: vencedor.kills });
     this._log('fim: ' + vencedor.nick + ' venceu com ' + vencedor.kills + ' kills');
     // fecha a sala após 10s
+    // [REVIEW-30S] sala fica viva 35s apos o fim: os players continuam na cena
+    // (snapshots rodando) para o cliente exibir a revisão da partida por 30s
     setTimeout(() => {
       this.manager.remove(this.salaId);
       this.stop();
-    }, 10_000);
+    }, 35_000);
   }
 }

@@ -156,10 +156,12 @@ export class BRRoom extends Room {
     this.state = 'ended';
     this._bcast(T.WINNER, { id: vencedor.id, nick: vencedor.nick });
     this._log('BR encerrado — vencedor: ' + vencedor.nick);
+    // [REVIEW-30S] sala fica viva 35s apos o fim: os players continuam na cena
+    // (snapshots rodando) para o cliente exibir a revisão da partida por 30s
     setTimeout(() => {
       this.manager.remove(this.salaId);
       this.stop();
-    }, 15_000);
+    }, 35_000);
   }
 
   /** Pegar loot próximo. */

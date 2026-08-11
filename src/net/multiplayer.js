@@ -23,6 +23,10 @@ let lobby = null;
 let gameRef = null;
 let watchdog = null;  // conexão aberta sem WELCOME = cache/versão antiga
 
+// [FIX] sair da partida (pausa ou overlay) encerra a sessão MP completa: fecha o
+// WebSocket e anula match/net — nada de partida fantasma rodando por baixo do solo.
+window.addEventListener('mp-sair', () => sairMultiplayer());
+
 export function iniciarMultiplayer(game, modo, nick) {
   gameRef = game;
   if (!lobby) lobby = criarLobby();
@@ -123,13 +127,13 @@ function onMsg(msg) {
       break;
     }
     case T.WINNER:
-      if (match) match.fimPartida(msg);
+      if (match && match._rodando) match.fimPartida(msg);   // [FIX] match morto não mostra vencedor
       break;
     case T.ERROR:
       lobby.mostrar('⚠ ' + (msg.msg || 'erro'));
       break;
     default:
-      if (match && match.tratar) match.tratar(msg);
+      if (match && match._rodando && match.tratar) match.tratar(msg);   // [FIX] match morto não processa snapshots
   }
 }
 

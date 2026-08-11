@@ -66,6 +66,10 @@ export class Match {
     this._respawnT = 0;         // contagem do respawn no DM (aviso do servidor)
     this._rodando = false;
     this._raf = null;
+    this._revisao = 0;          // [REVIEW-30S] contagem regressiva da revisão pós-partida (0 = off)
+    this._revNick = "";
+    this._revId = null;
+    this._saiu = false;         // [FIX] guard de reentrância do sair()
     this._ult = 0;
     this._pausado = false;      // pausa única (mesma tela/menus do solo)
     this._zona = null;          // {x,z,r} da zona do BR (minimapa)
@@ -547,6 +551,31 @@ export class Match {
 
   _update(dt) {
     if (this._pausado) return;   // pausa: congela o cliente (não envia input)
+
+    if (this._revisao > 0) {
+      // [REVIEW-30S] partida encerrada: jogador fica parado olhando a cena (revisão dos players)
+      this._revisao -= dt;
+      this.inp.mx = 0;
+      this.inp.mz = 0;
+      this.inp.run = false;
+      this.inp.jump = false;
+      this._fire = false;
+      this._dragOn = false;
+      this._fireBtn = false;
+      const rv = document.getElementById('mp-review');
+      if (rv) {
+        const t = rv.querySelector('#rv-tempo');
+        if (t) t.textContent = Math.max(0, Math.ceil(this._revisao)) + 's';
+      }
+      if (this._revisao <= 0) {
+        this._revisao = 0;
+        const rv2 = document.getElementById('mp-review');
+        if (rv2) rv2.classList.add('hidden');
+        this._mostrarFim();
+      }
+    }
+
+
 
     // HUD do solo vivo no MP: FPS e relógio (o laço do single está parado)
     if (this.game && this.game.hud) {
@@ -1078,15 +1107,37 @@ export class Match {
   }
 
   _vencedor(msg) {
+    if (!this._rodando) return;   // [FIX] partida fantasma: o match já saiu — ignora
     // fim de partida: para a contagem de respawn (nada de sobrescrever o texto)
     this._respawnT = 0;
+    this._fire = false;
+    this._dragOn = false;
+    this._fireBtn = false;
+
+    // [REVIEW-30S] fim de partida: a cena continua viva por 30s (servidor mantém a sala
+    // 35s enviando snapshots) — o jogador fica parado olhando os players ao redor,
+    // com um banner no topo mostrando o vencedor e o contador. Só depois mostra o overlay.
+    this._revId = msg.id;
+    this._revNick = msg.nick || 'Alguém';
+    this._revisao = 30;
+    const rv = document.getElementById('mp-review');
+    if (rv) {
+      rv.classList.remove('hidden');
+      const n = rv.querySelector('#rv-nick');
+      if (n) n.textContent = this._revNick;
+      const t = rv.querySelector('#rv-tempo');
+      if (t) t.textContent = Math.ceil(this._revisao) + 's';
+    }
+  }
+
+  _mostrarFim() {
     const ov = document.getElementById('mp-overlay');
     if (!ov) return;
     ov.classList.remove('hidden');
-    const venceu = msg.id === this.meuId;
+    const venceu = this._revId === this.meuId;
     ov.className = 'mp-overlay ' + (venceu ? 'vitoria' : '');
     ov.querySelector('.ov-titulo').textContent = venceu ? 'VITÓRIA! 🏆' : 'FIM DE PARTIDA';
-    ov.querySelector('.ov-sub').textContent = venceu ? 'Você é o último de pé!' : `${msg.nick || 'Alguém'} venceu`;
+    ov.querySelector('.ov-sub').textContent = venceu ? 'Você é o último de pé!' : `${this._revNick || 'Alguém'} venceu`;
     ov.querySelector('.ov-kills').textContent = 'Partida encerrada — obrigado por jogar!';
     const btnSair = ov.querySelector('.mp-btn-sair');
     if (btnSair) btnSair.classList.add('hidden');
@@ -1457,6 +1508,8 @@ export class Match {
   }
   // ------------------------------------------------------------ sair
   sair() {
+    if (this._saiu) return;   // [FIX] idempotente: sairMultiplayer() reentrante não repete a limpeza
+    this._saiu = true;
     if (this.game) this.game._mp = false;
     this._rodando = false;
     if (this._raf) cancelAnimationFrame(this._raf);
@@ -1555,5 +1608,12 @@ export class Match {
     }
     this.camera.rotation.order = 'XYZ';
     this.killfeed.limpar();
+    const rv = document.getElementById('mp-review');
+    if (rv) rv.classList.add('hidden');
+
+    // [FIX] encerra a sessão MP completa: o multiplayer.js fecha o WebSocket e anula
+    // match/net — sem partida fantasma processando snapshots nem mostrando o vencedor
+    // por cima do modo solo.
+    window.dispatchEvent(new Event('mp-sair'));
   }
 }

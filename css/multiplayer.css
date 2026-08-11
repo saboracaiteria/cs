@@ -806,3 +806,36 @@ body.toque #net-status{
   font-size: 13px;
 }
 .cg-botoes button:first-child { background: var(--accent); color: #1a1206; border-color: var(--accent); }
+
+
+/* Revisão pós-partida (30s): a cena continua rodando e o jogador olha ao redor */
+#mp-review {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 120;
+  background: rgba(10, 18, 32, 0.82);
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  padding: 10px 18px;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .45);
+  pointer-events: none;
+}
+#mp-review .rv-titulo {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 1px;
+}
+#mp-review .rv-sub {
+  font-size: 12px;
+  color: rgba(234, 242, 255, .75);
+  margin-top: 2px;
+}
+#mp-review .rv-sub b {
+  color: var(--accent2);
+  font-variant-numeric: tabular-nums;
+}
