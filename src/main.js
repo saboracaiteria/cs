@@ -23,27 +23,6 @@ export async function boot() {
     mpBtn.disabled = false;
     mpBtn.addEventListener('click', () => abrirModoSelect(game));
   }
-  // botão fullscreen global (todos os modos)
-  const btnFs = document.getElementById('btn-fs');
-  if (btnFs) {
-    const atualizarFsIcone = () => {
-      btnFs.textContent = document.fullscreenElement ? '⤢' : '⛶';
-      btnFs.title = document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia';
-    };
-    document.addEventListener('fullscreenchange', atualizarFsIcone);
-    const toggleFs = () => {
-      const ago = performance.now();
-      if (ago - (window.__fsLast || 0) < 500) return; // guarda duplo disparo pointerup+click
-      window.__fsLast = ago;
-      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
-      else document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
-      setTimeout(atualizarFsIcone, 120);
-    };
-    // pointerup: funciona mesmo quando o multiplayer previne o 'click' no toque
-    btnFs.addEventListener('pointerup', toggleFs);
-    btnFs.addEventListener('click', toggleFs);
-  }
-
   // QUALQUER interação na tela (botão ou toque no jogo) ativa o fullscreen
   document.addEventListener('pointerup', () => {
     if (!document.fullscreenElement && document.documentElement.requestFullscreen) {

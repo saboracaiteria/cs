@@ -875,22 +875,22 @@ body.toque #keys-touch{display:block}
    dedo no gatilho gira a câmera e a mira acompanha (o botão fica fixo) */
 .tc-btn[data-segura="atirar"]{touch-action:none}
 .tc-fogo{
-  right:16px; bottom:20px; width:94px; height:94px; font-size:13px;
+  right:16px; bottom:124px; width:94px; height:94px; font-size:13px;
   border-color:rgba(255,77,77,.6); background:rgba(255,77,77,.24); color:#ffdede;
 }
 .tc-fogo.press{background:rgba(255,77,77,.55)}
-.tc-pular{right:118px; bottom:88px; width:70px; height:70px; font-size:11.5px}
+.tc-pular{right:118px; bottom:130px; width:70px; height:70px; font-size:11.5px}
 .tc-acao{
   right:122px; bottom:14px; width:66px; height:66px; font-size:11.5px;
   border-color:rgba(255,176,32,.6); background:rgba(255,176,32,.2); color:#ffe0a8;
 }
 .tc-acao.press{background:rgba(255,176,32,.5)}
 .tc-sec{width:52px; height:52px; font-size:17px; font-weight:700}
-.tc-missil{right:26px; bottom:128px}
+.tc-missil{right:198px; bottom:172px}
 .tc-visao{right:198px; bottom:98px}
 .tc-descer{right:198px; bottom:24px}
-.tc-girar-esq{right:8px; bottom:204px; width:82px; height:82px; font-size:11px}
-.tc-girar-dir{right:102px; bottom:204px; width:82px; height:82px; font-size:11px}
+.tc-girar-esq{right:16px; bottom:20px; width:82px; height:82px; font-size:11px}
+.tc-girar-dir{right:110px; bottom:20px; width:82px; height:82px; font-size:11px}
 
 /* telas curtas (celular deitado): o conjunto encolhe junto */
 @media (max-height:430px){
@@ -937,16 +937,16 @@ body.toque #minimap-wrap{
 body.toque #compass-n{font-size:9px}
 
 body.toque #missile-gauge{
-  right:calc(10px + env(safe-area-inset-right)); top:calc(212px + env(safe-area-inset-top));
+  right:calc(10px + env(safe-area-inset-right)); top:calc(222px + env(safe-area-inset-top));
   bottom:auto; width:104px;
 }
-/* [carro] botao de AÇAO fica logo abaixo do minimapa, 50% menor para caber */
+/* [carro] botao de AÇAO fica logo abaixo do minimapa, alinhado a ele */
 body.toque .tc-acao{
   position:fixed;
-  right:calc(10px + env(safe-area-inset-right));
+  right:calc(40px + env(safe-area-inset-right));
   top:calc(170px + env(safe-area-inset-top));
   bottom:auto;
-  width:33px; height:33px; font-size:8px; z-index:80;
+  width:44px; height:44px; font-size:10px; z-index:80;
 }
 
 /* velocímetro e painel do helicóptero vão para o rodapé central,
@@ -1044,22 +1044,6 @@ body.toque #dlg-text{font-size:clamp(15px,2vw,24px)}
   box-shadow:0 8px 24px rgba(255,176,32,.35);
 }
 #pause-sair{opacity:.85}
-
-/* botão fullscreen global — discreto, topo da tela, todos os modos */
-#btn-fs{
-  pointer-events:auto;
-  pointer-events:auto;
-  position:fixed; top:max(148px, calc(env(safe-area-inset-top) + 148px)); right:max(10px, env(safe-area-inset-right));
-  z-index:9999; width:38px; height:38px; border-radius:12px;
-  background:rgba(10,18,32,.45); border:1px solid rgba(140,170,220,.35);
-  color:rgba(220,235,255,.85); font-size:17px; line-height:1;
-  display:flex; align-items:center; justify-content:center;
-  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
-  cursor:pointer; touch-action:manipulation; user-select:none;
-}
-#btn-fs:active{ background:rgba(30,60,110,.6); }
-
-/* botão fullscreen global — discreto, topo da tela, todos os modos */
 
 /* ===== [perf F2] touch: sem backdrop-filter ===== */
 /* No Android, 13+ blurs recompositados por cima do WebGL custam caro a cada frame.

@@ -1369,6 +1369,8 @@ export class Match {
   _atualizarHeliHud() {
     // botões do toque: no heli o PULAR vira ▲ (subir) e aparece o ▼ (descer)
     const emCarro = this._emCarro;
+    const padEl = document.getElementById('mp-pad');
+    if (padEl) padEl.classList.toggle('em-carro', emCarro);
     const pularEl = document.getElementById('mp-pular');
     if (pularEl) {
       pularEl.textContent = this._emHeli ? '▲' : 'PULAR';

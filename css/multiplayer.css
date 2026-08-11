@@ -713,8 +713,10 @@ body.toque #net-status{
 }
 #mp-pad .tc-btn{ pointer-events:auto; }
 #mp-correr{ background:rgba(20,120,255,.25); border-color:rgba(20,120,255,.55); color:#cfe4ff; }
-#mp-girar-esq{right:8px; bottom:204px; width:82px; height:82px; font-size:11px}
-#mp-girar-dir{right:102px; bottom:204px; width:82px; height:82px; font-size:11px}
+#mp-girar-esq{right:16px; bottom:20px; width:82px; height:82px; font-size:11px}
+#mp-girar-dir{right:110px; bottom:20px; width:82px; height:82px; font-size:11px}
+/* [carro] a AÇAO sobe para o lado do tiro (classe .em-carro no #mp-pad) */
+#mp-pad.em-carro .tc-acao{right:122px; bottom:124px}
 /* ---------------------------------------------------------------- lobby: online + convite */
 .lobby-online{
   margin-top:14px; text-align:left;
