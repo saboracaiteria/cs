@@ -889,8 +889,8 @@ body.toque #keys-touch{display:block}
 .tc-missil{right:26px; bottom:128px}
 .tc-visao{right:198px; bottom:98px}
 .tc-descer{right:198px; bottom:24px}
-.tc-girar-esq{right:calc(20px + env(safe-area-inset-right)); bottom:calc(210px + env(safe-area-inset-bottom)); width:82px; height:82px; font-size:11px}
-.tc-girar-dir{right:calc(114px + env(safe-area-inset-right)); bottom:calc(210px + env(safe-area-inset-bottom)); width:82px; height:82px; font-size:11px}
+.tc-girar-esq{right:8px; bottom:204px; width:82px; height:82px; font-size:11px}
+.tc-girar-dir{right:102px; bottom:204px; width:82px; height:82px; font-size:11px}
 
 /* telas curtas (celular deitado): o conjunto encolhe junto */
 @media (max-height:430px){
@@ -937,8 +937,16 @@ body.toque #minimap-wrap{
 body.toque #compass-n{font-size:9px}
 
 body.toque #missile-gauge{
-  right:calc(10px + env(safe-area-inset-right)); top:calc(172px + env(safe-area-inset-top));
+  right:calc(10px + env(safe-area-inset-right)); top:calc(212px + env(safe-area-inset-top));
   bottom:auto; width:104px;
+}
+/* [carro] botao de AÇAO fica logo abaixo do minimapa, 50% menor para caber */
+body.toque .tc-acao{
+  position:fixed;
+  right:calc(10px + env(safe-area-inset-right));
+  top:calc(170px + env(safe-area-inset-top));
+  bottom:auto;
+  width:33px; height:33px; font-size:8px; z-index:80;
 }
 
 /* velocímetro e painel do helicóptero vão para o rodapé central,

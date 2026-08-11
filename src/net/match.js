@@ -38,6 +38,7 @@ export class Match {
     this.scoreboard = criarScoreboard();
     const _btnPlacar = document.getElementById('mp-placar');
     if (_btnPlacar) _btnPlacar.addEventListener('click', () => this.scoreboard.alternar());
+    this._pausaBtn = document.getElementById('mp-pausa');
     this.brHud = criarBrHud();
     this.netStatus = criarNetStatus();
 
@@ -164,6 +165,7 @@ export class Match {
     if (this.game) this.game._mp = true;
     // botão de pausa na tela (só no toque; no PC é ESC/Pause)
     if (this._pausaBtn) {
+      this._pausaBtn.classList.toggle('hidden', !(this.game && this.game.toque));
       this._pausaBtnHandler = () => this._togglePausa();
       this._pausaBtn.addEventListener('click', this._pausaBtnHandler);
     }
@@ -1366,16 +1368,20 @@ export class Match {
   /** Painel ALT/VEL do helicóptero quando o jogador está pilotando. */
   _atualizarHeliHud() {
     // botões do toque: no heli o PULAR vira ▲ (subir) e aparece o ▼ (descer)
+    const emCarro = this._emCarro;
     const pularEl = document.getElementById('mp-pular');
-    if (pularEl) pularEl.textContent = this._emHeli ? '▲' : 'PULAR';
+    if (pularEl) {
+      pularEl.textContent = this._emHeli ? '▲' : 'PULAR';
+      pularEl.classList.toggle('hidden', emCarro);   // [carro] so acao/tiro/analogico/direcionais
+    }
     const descerEl = document.getElementById('mp-descer');
     if (descerEl) descerEl.classList.toggle('hidden', !this._emHeli);
     const correrEl = document.getElementById('mp-correr');
-    if (correrEl) correrEl.classList.toggle('hidden', this._emHeli);
+    if (correrEl) correrEl.classList.toggle('hidden', this._emHeli || emCarro);
     const giroEsqEl = document.getElementById('mp-girar-esq');
-    if (giroEsqEl) giroEsqEl.classList.toggle('hidden', !this._emHeli && !this._emCarro);
+    if (giroEsqEl) giroEsqEl.classList.toggle('hidden', !this._emHeli && !emCarro);
     const giroDirEl = document.getElementById('mp-girar-dir');
-    if (giroDirEl) giroDirEl.classList.toggle('hidden', !this._emHeli && !this._emCarro);
+    if (giroDirEl) giroDirEl.classList.toggle('hidden', !this._emHeli && !emCarro);
 
     const panel = document.getElementById('heli-panel');
     if (!panel) return;

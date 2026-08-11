@@ -78,16 +78,17 @@ export class TouchControls {
     if (!mostrar) { this._soltarTudo(); return; }
 
     const noHeli = modo === 'heli';
-    const noVeiculo = noHeli || modo === 'car';
+    const noCarro = modo === 'car';
     const voando = noHeli || deus;                 // [43][60]
 
     // voando, o PULAR vira SUBIR e ganha um par para descer
     this._mostrar('tc-descer', voando);
     this._rotular('tc-pular', voando ? '▲' : 'PULAR');
-    this._mostrar('tc-visao', noVeiculo);          // [25] só há visão interna em veículo
-    this._mostrar('tc-missil', !!emFase);          // o teleguiado só existe em fase
-    this._mostrar('tc-girar-esq', modo === 'car');      // [carro] ◀ ▶ direcionam o veículo
-    this._mostrar('tc-girar-dir', modo === 'car');
+    this._mostrar('tc-pular', !noCarro);
+    this._mostrar('tc-visao', noHeli);          // [25] só há visão interna em veículo
+    this._mostrar('tc-missil', !!emFase && !noCarro);          // o teleguiado só existe em fase
+    this._mostrar('tc-girar-esq', noCarro);      // [carro] ◀ ▶ direcionam o veículo
+    this._mostrar('tc-girar-dir', noCarro);
   }
 
   _mostrar(id, on) {
