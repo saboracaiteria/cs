@@ -32,6 +32,7 @@ import { Phone } from './ui/phone.js';
 import { Settings } from './settings.js';
 import { Keybinds } from './keys.js';
 import { KeysScreen } from './ui/keysscreen.js';
+import { criarHudEditor } from './ui/hudeditor.js';
 import { criarPausa } from './ui/pause.js';
 import { TouchControls, ehToque } from './ui/touch.js';
 
@@ -223,6 +224,7 @@ export class Game {
       this.minimap = new Minimap($('minimap'), this.city, $('compass-n'));  // [10]
       this.phone = new Phone(this.peds);                                    // [56]
       this.keys = new KeysScreen(this.binds);        // tela de config de teclas
+      this.hudEditor = criarHudEditor();               // editor de HUD (estilo CODM)
       this.touch = new TouchControls(this.input);    // analógico e botões na tela
 
       this._wireUI();
@@ -548,6 +550,12 @@ export class Game {
     $('open-options').addEventListener('click', () => this._abrirOpcoes(true));
     $('options-close').addEventListener('click', () => this._abrirOpcoes(false));
     $('open-keys').addEventListener('click', () => this.keys.abrir());
+    $('keys-editar-hud').addEventListener('click', () => {
+      this.keys.fechar();
+      this.hudEditor.abrir();
+    });
+    this.hudEditor.onFechar(() => this.keys.abrir());
+    this.hudEditor.carregarLayout();
     // trocou uma tecla: as dicas do HUD mudam junto, na hora
     this.keys.onMudou = () => this._atualizarRotulos();
     this._ligarPausaSolo();
