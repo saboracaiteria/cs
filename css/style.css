@@ -1077,3 +1077,30 @@ body.hud-edit .tc-btn.hud-arrastando, body.hud-edit #tc-stick-zone.hud-arrastand
 }
 body.hud-edit #tc-top, body.hud-edit #tc-rotate, body.hud-edit #tc-look{display:none}
 
+/* modo edição: o analógico (área de toque gigante) vira um CHIP compacto arrastável,
+   com z-index ABAIXO da barra do editor (902) para nunca atrapalhar SALVAR/FECHAR */
+body.hud-edit #tc-stick-zone{
+  width:84px !important; height:84px !important;
+  min-width:84px !important; min-height:84px !important;
+  max-width:84px !important; max-height:84px !important;
+  border-radius:50%;
+  background:rgba(10,15,24,.55);
+  border:2px dashed rgba(255,255,255,.55);
+  z-index:901 !important;
+  cursor:grab; touch-action:none;
+  display:flex !important; align-items:center; justify-content:center;
+  box-sizing:border-box;
+}
+body.hud-edit #tc-stick-zone::after{ content:'🕹️'; font-size:30px; line-height:1; }
+body.hud-edit #tc-stick-zone #tc-base,
+body.hud-edit #tc-stick-zone #tc-knob{ display:none !important; }
+body.hud-edit #tc-stick-zone.custom-selected{
+  border-color:#fbbf24 !important; box-shadow:0 0 25px rgba(251,191,36,.7) !important;
+}
+
+/* seleção (padrão DINO4): botão tocado ganha destaque âmbar p/ a escala */
+body.hud-edit .tc-btn.custom-selected, body.hud-edit #tc-stick-zone.custom-selected{
+  border-color:#fbbf24 !important; border-style:solid !important;
+  box-shadow:0 0 25px rgba(251,191,36,.7) !important; outline-color:#fbbf24 !important;
+}
+

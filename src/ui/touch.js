@@ -59,7 +59,7 @@ export class TouchControls {
     document.body.classList.toggle('toque', this.ativo);
     if (!this.ativo) {
       this._soltarTudo();
-      this.el.classList.add('hidden');
+      if (!document.body.classList.contains('hud-edit')) this.el.classList.add('hidden');
     }
   }
 
@@ -73,6 +73,7 @@ export class TouchControls {
    */
   atualizar({ jogando, modal, modo, emFase, deus }) {
     if (!this.ativo) return;
+    if (document.body.classList.contains('hud-edit')) return; // editor de HUD aberto: congela
     const mostrar = jogando && !modal && !(!!document.getElementById("mp-pad") && !document.getElementById("mp-pad").classList.contains("hidden"));
     this.el.classList.toggle('hidden', !mostrar);
     if (!mostrar) { this._soltarTudo(); return; }
