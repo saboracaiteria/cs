@@ -103,10 +103,6 @@ export class Match {
     // [FPS] vetores temporários reutilizados — sem new Vector3 por frame
     // (alocação/GC derrubava o FPS no MP, que já roda 8 avatares extras)
     this._vNdc = new THREE.Vector3(0.24, 0.2, 0.5);
-    this._anchorFpp = new THREE.Vector3();   // [CODM-FPP] ponto mirado travado na transicao p/ 1a pessoa
-    this._anchorFppAtivo = false;
-    this._anchorFppYaw = 0;
-    this._anchorFppPitch = 0;
     this._vDir = new THREE.Vector3();
     this._vBack = new THREE.Vector3();
     this._vRight = new THREE.Vector3();
@@ -784,36 +780,15 @@ export class Match {
     this._camLook.y += lift;
     this.camera.lookAt(this._camLook);
 
-    // [CODM-FPP] 1a pessoa: câmera para os olhos + alvo travado no centro (igual ao solo)
+    // [CODM-FPP] 1a pessoa: câmera para os olhos (dolly TPP->FPP) olhando SEMPRE na direção do tiro
     if (fpp > 0.001 && !noVeic) {
-      if (!this._anchorFppAtivo) {
-        const o = new THREE.Vector3(), d = new THREE.Vector3();
-        this.camera.updateMatrixWorld();
-        const ndc = this._vNdc.set(0, 0, 0.5).unproject(this.camera);
-        o.copy(this.camera.position);
-        d.copy(ndc).sub(o).normalize();
-        const h = col ? col.raycast(o.x, o.y, o.z, d.x, d.y, d.z, 2000) : null;
-        if (h) this._anchorFpp.set(o.x + d.x * h.t, o.y + d.y * h.t, o.z + d.z * h.t);
-        else this._anchorFpp.set(o.x + d.x * 2000, o.y + d.y * 2000, o.z + d.z * 2000);
-        this._anchorFppAtivo = true;
-        this._anchorFppYaw = this.yaw;
-        this._anchorFppPitch = this.pitch;
-      } else {
-        const dy = Math.abs(this.yaw - this._anchorFppYaw);
-        const dp = Math.abs(this.pitch - this._anchorFppPitch);
-        if (dy + dp > 0.015) this._anchorFppAtivo = false;   // [FIX] deadzone 0,015 rad: camera segue o mouse SEM pulo da mira no ADS
-      }
+      // [FIX-TREMOR] SEM ANCORA DE MIRA: a camera do ADS olha SEMPRE na direcao do tiro (yaw/pitch).
+      // O dolly suave TPP->FPP faz o zoom sem girar nem oscilar o mundo (sem flick nem tremido).
       const olhos = new THREE.Vector3(foc.x + dir.x * CAMERA.adsEyeForward, foc.y + CAMERA.adsEyeHeight, foc.z + dir.z * CAMERA.adsEyeForward);
       this.camera.position.lerpVectors(this.camera.position, olhos, fpp);
-      if (this._anchorFppAtivo) {
-        this.camera.lookAt(this._anchorFpp);
-      } else {
-        this._camLook.copy(this.camera.position).addScaledVector(dir, 40);
-        this._camLook.y += lift;
-        this.camera.lookAt(this._camLook);
-      }
-    } else {
-      this._anchorFppAtivo = false;
+      this._camLook.copy(this.camera.position).addScaledVector(dir, 40);
+      this._camLook.y += lift;
+      this.camera.lookAt(this._camLook);
     }
 
     // [solo] visão INTERNA (cockpit) do heli/carro — tecla V, igual ao single:

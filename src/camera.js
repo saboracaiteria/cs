@@ -34,10 +34,6 @@ export class GameCamera {
     this._recoilP = 0;          // coice acumulado na inclinação (rad)
     this._recoilY = 0;          // coice acumulado na deriva lateral (rad)
     this._zoomScroll = CAMERA.defaultZoom;   // zoom do scroll, restaurado ao soltar a mira
-    this._anchor = new THREE.Vector3();   // [CODM-FPP] ponto 3D mirado: alvo travado no centro na transicao TPP->FPP
-    this._anchorAtivo = false;
-    this._anchorYaw = 0;
-    this._anchorPitch = 0;
   }
 
   setMode(mode) {
@@ -251,44 +247,24 @@ export class GameCamera {
 
     this.cam.position.copy(this._pos);
 
-    // ===== [CODM-FPP] ADS 1a pessoa: blend TPP -> FPP + ancora no alvo =====
-    // O ponto 3D mirado no centro ANTES do zoom (raycast do centro) permanece no
-    // centro durante TODA a transicao: a camera ROTACIONA para ficar travada nele.
+    // ===== [CODM-FPP] ADS 1a pessoa: blend TPP -> FPP =====
+    // [FIX-TREMOR] SEM ancora: a camera do ADS olha SEMPRE na direcao do tiro (yaw/pitch).
+    // O dolly suave p/ o olho faz o zoom sem girar o mundo — sem flick/tremido ao arrastar.
     const adsAmt = this.ads;
     if (adsAmt > 0.001) {
-      if (!this._anchorAtivo) {
-        // ancora W = ponto 3D mirado no centro (raycast a partir da pos TPP)
-        const o = new THREE.Vector3(), d = new THREE.Vector3();
-        this.aimRay(o, d, 0, 0);
-        const h = this.col.raycast(o.x, o.y, o.z, d.x, d.y, d.z, 2000);
-        if (h) this._anchor.copy(o).addScaledVector(d, h.t);
-        else this._anchor.copy(o).addScaledVector(d, 2000);
-        this._anchorAtivo = true;
-        this._anchorYaw = this.yaw;
-        this._anchorPitch = this.pitch;
-      } else {
-        // jogador girou: solta a ancora e a mira volta a seguir o olhar
-        const dy = Math.abs(this.yaw - this._anchorYaw);
-        const dp = Math.abs(this.pitch - this._anchorPitch);
-        if (dy + dp > 0.015) this._anchorAtivo = false;   // [FIX] deadzone 0,015 rad: camera segue o mouse SEM pulo da mira no ADS
-      }
-      // posicao: do ombro (TPP) para os OLHOS (FPP)
+      // [FIX-TREMOR] SEM ANCORA DE MIRA: a camera do ADS olha SEMPRE na direcao do tiro (yaw/pitch).
+      // O dolly suave TPP->FPP (lerp p/ o olho) faz o zoom sem girar nem oscilar o mundo:
+      // nada de flick nem tremido ao segurar/arrastar o botao de fogo (Solo, MP e BR).
       const olhos = new THREE.Vector3(
         this._smoothFocus.x + dir.x * CAMERA.adsEyeForward,
         this._smoothFocus.y + CAMERA.adsEyeHeight,
         this._smoothFocus.z + dir.z * CAMERA.adsEyeForward,
       );
       this.cam.position.lerpVectors(this.cam.position, olhos, adsAmt);
-    } else {
-      this._anchorAtivo = false;
     }
-    if (this._anchorAtivo) {
-      this.cam.lookAt(this._anchor);   // [CODM-FPP] travado no alvo: a mira nao pula
-    } else {
-      this._look.copy(this.cam.position).addScaledVector(dir, 40);   // [CALIBRACAO] centro da tela = linha de tiro (yaw/pitch do jogador)
-      this._look.y += lift + dist * this.frameLift;   // [CALIBRACAO] removido ads*1.5: a mira nao sobe no ADS
-      this.cam.lookAt(this._look);
-    }
+    this._look.copy(this.cam.position).addScaledVector(dir, 40);   // [CALIBRACAO] centro da tela = linha de tiro (yaw/pitch do jogador)
+    this._look.y += lift + dist * this.frameLift;   // [CALIBRACAO] removido ads*1.5: a mira nao sobe no ADS
+    this.cam.lookAt(this._look);
 
     this._applyShake(dt);
   }
