@@ -7,7 +7,7 @@ import { Room } from './room.js';
 import { T, send } from '../protocol.js';
 import { buildWorld } from '../world/world.js';
 import { WEAPONS, rollLoot } from '../weapons.js';
-import { makeRng, rngRange, rngInt, dist2D, findFreeSpot, clamp } from '../util.js';
+import { makeRng, rngRange, rngInt, dist2D, findFreeSpot, findStreetSpot, clamp } from '../util.js';
 import { MODES } from '../config.js';
 
 export class BRRoom extends Room {
@@ -71,12 +71,13 @@ export class BRRoom extends Room {
   }
 
   _spawnPoint(p) {
-    // nascimento: ponto aleatório dentro do raio inicial da zona
+    // [SPAWN-REGRA] Só nasce em rua/praça (espaço livre >= 5m): nunca dentro de
+    // construções nem em becos. findStreetSpot valida e tenta de novo perto.
     const r = this.zone.r * 0.6;
     const a = this.rng() * Math.PI * 2;
     const x = this.zone.x + Math.cos(a) * r * this.rng();
     const z = this.zone.z + Math.sin(a) * r * this.rng();
-    const pt = findFreeSpot(this.world.col, x, z, 0.6, 20);
+    const pt = findStreetSpot(this.world.col, x, z, 5, 24);
     return pt;
   }
 

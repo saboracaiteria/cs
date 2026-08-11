@@ -68,3 +68,35 @@ export function findFreeSpot(col, x, z, r = 0.5, tries = 12) {
   }
   return { x, y: Math.max(col.roofHeightAt(x, z) + 2, col.groundHeightAt(x, z) + 2), z };
 }
+
+/** [SPAWN] Verdadeiro se (x,z) tem espaco livre >= r em TODAS as direcoes
+ *  (rua/praca: sim; beco estreito ou dentro de construcao: nao). */
+export function temEspacoLivre(col, x, z, r = 5, amostras = 12, passo = 1) {
+  if (col.isBlocked(x, z, 0.6) || col.isInWater(x, z)) return false;
+  for (let a = 0; a < amostras; a++) {
+    const ang = (a / amostras) * Math.PI * 2;
+    for (let d = passo; d <= r; d += passo) {
+      if (col.isBlocked(x + Math.cos(ang) * d, z + Math.sin(ang) * d, 0.6)) return false;
+    }
+  }
+  return true;
+}
+
+/** [SPAWN] Ponto de rua/praca (espaco livre) perto de (x,z); fallback: findFreeSpot. */
+export function findStreetSpot(col, x, z, r = 5, tries = 24) {
+  const rng = makeRng((Math.abs(x) * 131 + Math.abs(z) * 17 + 7) >>> 0);
+  for (let i = 0; i < tries; i++) {
+    const a = rng() * Math.PI * 2;
+    const d = rng() * 34;
+    const px = x + Math.cos(a) * d;
+    const pz = z + Math.sin(a) * d;
+    if (temEspacoLivre(col, px, pz, r)) {
+      return { x: px, y: col.groundHeightAt(px, pz), z: pz };
+    }
+  }
+  return findFreeSpot(col, x, z, 0.6);
+}
+
+
+/** [SPAWN] Verdadeiro se (x,z) tem espaco livre >= r em TODAS as direcoes
+ *  (rua/praca: sim; beco estreito ou dentro de construcao: nao). */

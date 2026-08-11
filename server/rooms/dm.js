@@ -6,9 +6,9 @@
 import { Room } from './room.js';
 import { T, send } from '../protocol.js';
 import { buildWorld } from '../world/world.js';
-import { WORLD_EDGE } from '../config.js';
+import { WORLD_EDGE, HALF } from '../config.js';
 import { WEAPONS } from '../weapons.js';
-import { makeRng, rngPick, dist2D, findFreeSpot } from '../util.js';
+import { makeRng, rngRange, rngPick, dist2D, findFreeSpot, temEspacoLivre } from '../util.js';
 
 const TEAM_COLORS = [0x3fbf4f, 0xe8c33a];   // verde, amarelo
 
@@ -21,9 +21,12 @@ export class DMRoom extends Room {
   }
 
     _makeSpawns() {
-    // [borda] TODOS os spawns ficam no PERÍMETRO da cidade (borda do mapa),
-    // nunca perto do centro: 12 pontos espalhados pelas 4 arestas.
+    // [SPAWN-REGRA] Podem nascer em toda a cidade: ruas e praças.
+    // Nunca dentro de construções nem em becos (gaps estreitos entre prédios).
+    // Critério: espaço livre >= 5m em TODAS as direções — rua de 18m e praça passam;
+    // becos (largura < ~5m) e prédios são rejeitados.
     const pts = [];
+    const rng = makeRng(20260725);
     const L = WORLD_EDGE - 12;                 // 244: rua externa da borda
     for (let i = 0; i < 12; i++) {
       const ang = (i / 12) * Math.PI * 2;
@@ -31,11 +34,21 @@ export class DMRoom extends Room {
       const m = Math.max(Math.abs(x), Math.abs(z));
       pts.push([Math.round((x / m) * L), Math.round((z / m) * L)]);
     }
+    // dentro da cidade: grade fina cobre ruas, cruzamentos e praças
+    for (let x = -HALF + 10; x <= HALF - 10; x += 4) {
+      for (let z = -HALF + 10; z <= HALF - 10; z += 4) {
+        if (temEspacoLivre(this.world.col, x, z, 5)) pts.push([x, z]);
+      }
+    }
+    // amostras extras espalhadas (praças grandes / áreas abertas)
+    for (let k = 0; k < 120; k++) {
+      const x = Math.round(rngRange(rng, -HALF + 8, HALF - 8));
+      const z = Math.round(rngRange(rng, -HALF + 8, HALF - 8));
+      if (temEspacoLivre(this.world.col, x, z, 5)) pts.push([x, z]);
+    }
     const out = [];
     for (const [x, z] of pts) {
-      if (!this.world.col.isBlocked(x, z, 0.6)) {
-        out.push({ x, z, y: this.world.col.groundHeightAt(x, z) });
-      }
+      out.push({ x, z, y: this.world.col.groundHeightAt(x, z) });
     }
     return out;
   }
