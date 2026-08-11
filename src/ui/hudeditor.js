@@ -14,7 +14,7 @@
  *  - 💾 SALVAR grava {left,top,right,bottom,scale} em % no localStorage;
  *  - ↺ PADRÃO limpa tudo e volta ao layout do CSS.
  */
-const CHAVE = 'cs-hud-layout-v1';
+const CHAVE = 'cs-hud-layout-v2';
 
 const MAPA = {
   fogo: '.tc-fogo',
@@ -70,6 +70,18 @@ export function criarHudEditor() {
       pad.classList.remove('hidden');
       pad.style.display = 'block';
       pad.style.pointerEvents = 'none'; // só os botões capturam o dedo
+      // CRÍTICO: o CSS dá transform:scale(.84) ao #tc-pad — um ancestral com
+      // transform prende o position:fixed dos filhos (vira relativo ao pad de
+      // 264x200px, a "caixa invisivel"). Fullscreen + transform:none => os
+      // botoes voam pela viewport inteira, como o analogico.
+      pad.style.position = 'fixed';
+      pad.style.inset = '0';
+      pad.style.width = '100%';
+      pad.style.height = '100%';
+      pad.style.right = 'auto';
+      pad.style.bottom = 'auto';
+      pad.style.transform = 'none';
+      pad.style.transformOrigin = '0 0';
     }
     for (const b of editaveis()) {
       b.classList.remove('hidden');
@@ -99,6 +111,14 @@ export function criarHudEditor() {
     if (pad) {
       pad.style.display = '';
       pad.style.pointerEvents = '';
+      pad.style.position = '';
+      pad.style.inset = '';
+      pad.style.width = '';
+      pad.style.height = '';
+      pad.style.right = '';
+      pad.style.bottom = '';
+      pad.style.transform = '';
+      pad.style.transformOrigin = '';
     }
     for (const b of editaveis()) {
       b.classList.remove('customizing', 'custom-selected', 'hud-arrastando');
@@ -278,6 +298,19 @@ export function criarHudEditor() {
     try { dados = JSON.parse(localStorage.getItem(CHAVE) || 'null'); } catch (e) { dados = null; }
     if (!dados) return;
     const layout = dados.botoes || dados; // compatível com formato antigo
+    // com layout salvo o pad vira fullscreen sem transform — os % sao da
+    // viewport (senao o transform:scale(.84) do pad prende os botoes)
+    const pad = touch && touch.querySelector('#tc-pad');
+    if (pad) {
+      pad.style.position = 'fixed';
+      pad.style.inset = '0';
+      pad.style.width = '100%';
+      pad.style.height = '100%';
+      pad.style.right = 'auto';
+      pad.style.bottom = 'auto';
+      pad.style.transform = 'none';
+      pad.style.transformOrigin = '0 0';
+    }
     for (const [chave, pos] of Object.entries(layout)) {
       const sel = MAPA[chave];
       if (!sel || !pos) continue;
