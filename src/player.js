@@ -215,6 +215,7 @@ export class Player {
     if (this.grounded && input.jumping && !this.inWater) {
       this.vy = PLAYER.jumpSpeed;
       this.grounded = false;
+      this.human._jumpT = 0.22;   // [ANIM] impulso do pulo (perna de trás estica)
       if (this.onPulo) this.onPulo();
     }
     this.vy -= PLAYER.gravity * dt;
@@ -287,7 +288,7 @@ export class Player {
     // ------------------------------------------------ malha
     this.human.root.position.copy(this.pos);
     this.human.root.rotation.y = this.yaw;
-    this.human.update(dt, this.grounded ? this.speed : this.speed * 0.35);
+    this.human.update(dt, this.grounded ? this.speed : this.speed * 0.35, { air: this.grounded ? 0 : 1 });
     this.loro.update(dt, this.pos, this.yaw, this.speed);
     this.saci.update(dt, this.pos, this.yaw);
 

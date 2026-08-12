@@ -620,6 +620,7 @@ export class Match {
       rpPred._predicted = true;
       const jEdge = this.inp.jump && !this._jumpEdge;
       this._jumpEdge = !!this.inp.jump;
+      if (jEdge) rpPred.human._jumpT = 0.22;   // [ANIM] impulso do pulo no avatar local
       predictBody(rpPred, {
         moveX: this.inp.mx,
         moveZ: this.inp.mz,
@@ -670,7 +671,8 @@ export class Match {
         this.game.col.roofHeightAt(rp.x, rp.z),
       );
       rp.human.falling = rp.vivo && (rp.y - pisoAt) > 5;
-      rp.update(dt, vel, rp.local || distCam < 28 || (this._animF + id) % 3 === 0);
+      rp.update(dt, vel, rp.local || distCam < 28 || (this._animF + id) % 3 === 0,
+        rp.vivo && (rp.y - pisoAt) > 0.6);   // [ANIM] no ar? (pulo/queda)
       // corpo do próprio jogador visível a pé; dentro do carro ele some
       if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro && !this._emHeli && this._fpp < 0.45;   // [CODM-FPP] corpo some na 1a pessoa
     }
