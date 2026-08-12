@@ -209,6 +209,7 @@ export class Match {
 
   _ligarListeners() {
     this._kd = (e) => {
+      if (e.repeat) return;   // [FIX] auto-repeat do teclado NAO acumula no inp (bug: player nao parava)
       if (e.code === 'Escape' || e.code === 'Pause') { this._togglePausa(); return; }
       const k = e.key.toLowerCase();
       if (k === 'w' || k === 'arrowup') this.inp.mz += 1;
