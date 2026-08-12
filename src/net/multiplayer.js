@@ -74,8 +74,8 @@ export function iniciarMultiplayer(game, modo, nick) {
   }
 
   // [ROUPA] cor da camisa escolhida no seletor do lobby (enviada no HELLO)
-  net.cor = lerCorRoupa();
   net = new ClientNet(url);
+  net.cor = lerCorRoupa();   // [ROUPA] cor da camisa escolhida no seletor (enviada no HELLO)
   net._onMsg = onMsg;
   net._onStatus = (estado) => {
     if (!lobby) return;
