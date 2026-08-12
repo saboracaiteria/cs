@@ -715,6 +715,15 @@ export class Match {
         if (this.game.city) this.game.city.setNight(night);
         if (this.game.cars) this.game.cars.setNight(night);
       }
+      // [iluminacao/animacoes] o resto do mundo tambem fica parado no MP:
+      // replicar os updates que o SOLO faz por frame (lampadas dos postes,
+      // teleferico/marcos, luzes do Brasil, agua e semaforos) — sem isso as
+      // lampadas nem acendiam a noite no multiplayer
+      if (this.game.props) this.game.props.update(dt, night, foc);
+      if (this.game.landmarks) this.game.landmarks.update(dt, night);
+      if (this.game.brasil) this.game.brasil.update(dt, night);
+      if (this.game.terrain) this.game.terrain.update(dt);
+      if (this.game.traffic) this.game.traffic.update(dt, night);
     }
 
     const noCarro = this._emCarro;
