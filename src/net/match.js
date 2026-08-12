@@ -97,6 +97,7 @@ export class Match {
     this._fppAdsAntes = null;    // [CODM] último estado do retículo 1ª pessoa
     this.missisVis = [];   // foguetes dos mísseis de canhão (visuais)
     this._fireBtn = false;   // gatilho do botão ATIRAR do toque (segurar = rajada)
+    this._ads = false;         // [PC] botão DIREITO segurado = MIRA (ADS) sem atirar
     // true em telas de toque (mobile): o PC usa mouse e a câmera não vira no ADS
     this._isTouch = typeof window !== 'undefined' &&
       ('ontouchstart' in window || (navigator.maxTouchPoints || 0) > 0);
@@ -241,10 +242,12 @@ export class Match {
       if (this._pausado) return;   // menu aberto: cliques são do painel
       this._dragX = e.clientX; this._dragY = e.clientY;
       this._dragOn = true;
+      if (e.button === 2) { this._ads = true; return; }   // [PC] DIREITO = apenas MIRA (arma erguida), sem atirar
       this._fire = true;
       try { document.body.requestPointerLock?.(); } catch {}
     };
-    this._pu = () => { this._dragOn = false; this._fire = false; };
+    this._pu = () => { this._dragOn = false; this._fire = false; this._ads = false; };
+    this._cm = (e) => e.preventDefault();   // [PC] clique direito sem menu do navegador
     this._pm = (e) => {
       if (document.pointerLockElement) {
         this.yaw -= e.movementX * 0.0045;   // [FPS] mouse ~2x mais agil
@@ -396,6 +399,7 @@ export class Match {
     window.addEventListener('keyup', this._ku);
     window.addEventListener('pointerdown', this._pd);
     window.addEventListener('pointerup', this._pu);
+    window.addEventListener('contextmenu', this._cm);
     window.addEventListener('pointermove', this._pm);
     window.addEventListener('wheel', this._zw, { passive: true });
     document.addEventListener('touchstart', this._touchStart, { passive: false });
@@ -403,9 +407,9 @@ export class Match {
     document.addEventListener('touchend', this._touchEnd, { passive: false });
     // gatilho nunca fica "preso" ao perder o foco (alt-tab) ou sair do
     // pointer lock — o solo faz o mesmo no input.js (blur + pointerlockchange)
-    this._blur = () => { this._dragOn = false; this._fire = false; this._fireBtn = false; this._limparTeclas(); };
+    this._blur = () => { this._dragOn = false; this._fire = false; this._fireBtn = false; this._ads = false; this._limparTeclas(); };
     this._lockChg = () => {
-      if (!document.pointerLockElement) { this._dragOn = false; this._fire = false; }
+      if (!document.pointerLockElement) { this._dragOn = false; this._fire = false; this._ads = false; }
     };
     window.addEventListener('blur', this._blur);
     document.addEventListener('pointerlockchange', this._lockChg);
@@ -736,7 +740,7 @@ export class Match {
     // [TIRO-FINAL] o bloco do tiro foi movido para DEPOIS da câmera final do frame.
     // ---- [FPS] ADS, coice e tremida replicados do camera.update do SOLO
     // (o GameCamera não roda no MP — a câmera aqui é a THREE pura)
-    const aimando = !!(this._fire || this._fireBtn) && !noHeli && !noCarro;   // [FPS] sem ADS em veiculo
+    const aimando = !!(this._fire || this._fireBtn || this._ads) && !noHeli && !noCarro;   // [FPS] sem ADS em veiculo
     this._adsAmt = damp(this._adsAmt, aimando ? 1 : 0, CAMERA.adsSpeed, dt);
 
     // [CODM] ao atirar a pé: câmera desliza para 1ª pessoa (braço + arma na tela)
@@ -759,7 +763,7 @@ export class Match {
       }
       this.game.hud.setCrosshairVisible(fpp < 0.6);   // [CODM-FPP] retícula 2D some na 1a pessoa
     }
-    const fovA = CAMERA.fov + (CAMERA.adsFov - CAMERA.fov) * this._adsAmt;
+    const fovA = CAMERA.fov + ((this._ads ? CAMERA.adsFovPc : CAMERA.adsFov) - CAMERA.fov) * this._adsAmt;   // [PC] direito = mira 2x; esquerdo/mobile = tiro ADS leve
     if (Math.abs(this.camera.fov - fovA) > 0.01) {
       this.camera.fov = fovA;
       this.camera.updateProjectionMatrix();
@@ -922,7 +926,7 @@ export class Match {
     // [TIRO INVISIVEL] sem tracer — a bala do BulletSystem tambem e invisivel (mesh oculto)
     if (!(this._fire || this._fireBtn)) {
       const rpLoc2 = this.avatares.get(this.meuId);
-      if (rpLoc2) rpLoc2.setAiming(false);
+      if (rpLoc2) rpLoc2.setAiming(aimando);   // [PC] pose da arma: atirar (esquerdo/mobile) ou mirar (direito)
     }
     // balas e partículas do SOLO rodando no MP: sem isto o projétil não
     // avança nem cria faísca ao bater (e explosão nenhuma anima)
@@ -1597,6 +1601,7 @@ export class Match {
     window.removeEventListener('keyup', this._ku);
     window.removeEventListener('pointerdown', this._pd);
     window.removeEventListener('pointerup', this._pu);
+    window.removeEventListener('contextmenu', this._cm);
     window.removeEventListener('pointermove', this._pm);
     window.removeEventListener('wheel', this._zw);
     document.removeEventListener('touchstart', this._touchStart);
