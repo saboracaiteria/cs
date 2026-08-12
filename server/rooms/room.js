@@ -167,6 +167,7 @@ export class Room {
     this._stepHelis(dt);
     this._stepMissis(dt);
     this._regenVida(dt);
+    this._botLimiteMapa();
     this._broadcastSnapshot();
   }
 
@@ -193,6 +194,24 @@ export class Room {
   // ------------------------------ hooks que DM/BR sobrescrevem
   _setupWorld() {}
   _step(dt) {}
+
+  // [BOT-MAPA] garantia fisica: nenhum bot fica fora do mapa dos predios (+-222)
+  _botLimiteMapa() {
+    if (this.bots.size === 0) return;
+    const LIM = 222;
+    for (const b of this.bots.values()) {
+      if (!b.body) continue;
+      const p = b.body.pos;
+      if (Math.abs(p.x) > LIM || Math.abs(p.z) > LIM) {
+        const ang = Math.atan2(-p.x, -p.z);
+        const rad = LIM * 0.8;
+        p.x = Math.cos(ang) * rad;
+        p.z = Math.sin(ang) * rad;
+        if (b.body.vel) { b.body.vel.x = 0; b.body.vel.z = 0; }
+        if (b.inHeli != null) p.y = Math.min(p.y, 55);
+      }
+    }
+  }
   _spawnPoint(p) { return findFreeSpot(this.world.col, 0, 0); }
   _onEnd() {}
 

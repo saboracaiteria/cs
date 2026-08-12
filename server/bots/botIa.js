@@ -148,6 +148,13 @@ export function makeBot(nick, dificuldade = 'media') {
         if (!c || this._carroT <= 0) {
           room._veiculo(this, 0);
           this.pilotarCarro = false;
+        } else if (foraMapa) {
+          // [BOT-MAPA] carro saiu da cidade: dirige de volta ao centro
+          const toZ = Math.atan2(-c.x, -c.z);
+          const diff = angleDelta(c.yaw, toZ);
+          inp.moveX = clamp(-diff * 2.5, -1, 1);
+          inp.moveZ = 1;
+          inp.yaw = toZ;
         } else if (best) {
           const dxC = best.body.pos.x - c.x;
           const dzC = best.body.pos.z - c.z;
