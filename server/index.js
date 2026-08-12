@@ -116,12 +116,14 @@ function handle(ws, msg) {
       const nick = sanitizeNick(msg.nick) || 'Jogador';
       const modo = msg.modo === 'br' ? 'br' : 'dm';
       const cor = Number.isInteger(msg.cor) ? (msg.cor | 0) : 0;   // [ROUPA] cor da camisa
+      // [DIA-NOITE] config de tempo do host (ciclo | dia | noite) — define o clima da sala
+      const cycle = ['ciclo', 'dia', 'noite'].includes(msg.cycle) ? msg.cycle : 'ciclo';
       if (msg.v !== NET.version) {
         send(ws, { t: T.ERROR, msg: 'Versão incompatível. Atualize o jogo.' });
         ws.close(4001, 'versao');
         return;
       }
-      const room = manager.join(ws, nick, modo, cor);
+      const room = manager.join(ws, nick, modo, cor, cycle);
       // bots preenchem as vagas — mas SEMPRE deixa 1 vaga livre: se outro
       // humano entrar, ele cai na MESMA sala (era o motivo de ninguém se
       // achar: os bots enchiam tudo e canJoin() ficava falso)

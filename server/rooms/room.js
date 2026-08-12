@@ -15,7 +15,7 @@ import { makeRng, findFreeSpot, dist2D } from '../util.js';
 let uid = 1000;
 
 export class Room {
-  constructor(salaId, manager, modo) {
+  constructor(salaId, manager, modo, cycleModeIni) {
     this.salaId = salaId;
     this.manager = manager;
     this.modo = modo;
@@ -36,8 +36,16 @@ export class Room {
     this._inputLog = new Map(); // anti-flood: id -> {count, t0}
     // [DIA-NOITE] o SERVIDOR (host) controla a hora do dia — todos os
     // clientes replicam o mesmo céu via snap (o relógio local fica parado)
+    // [DIA-NOITE] o clima da sala é definido pelo HOST (quem criou): ciclo,
+    // sempre dia ou sempre noite — vindo no HELLO e replicado a todos via snap.
+    // Quem entra depois na sala existente NÃO muda (só vale na criação).
     this.hour = 8.5;            // começa de manhã (DAY.startHour do cliente)
     this.cycleMode = 'ciclo';   // 'ciclo' | 'dia' | 'noite'
+    if (cycleModeIni === 'ciclo' || cycleModeIni === 'dia' || cycleModeIni === 'noite') {
+      this.cycleMode = cycleModeIni;
+      if (cycleModeIni === 'dia') this.hour = 12;      // fixedDayHour
+      else if (cycleModeIni === 'noite') this.hour = 22;  // fixedNightHour
+    }
     this._hourPerSec = 24 / 135.5;   // DAY.duration do cliente (seg por dia)
   }
 

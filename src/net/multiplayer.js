@@ -7,6 +7,7 @@ import { Match } from '../net/match.js';
 import { criarLobby } from '../ui/lobby.js';
 import { NET_VERSION, T } from '../net/protocol.js';
 import { NET } from '../config.js';
+import { Settings } from '../settings.js';   // [DIA-NOITE] ler a config de tempo salva do jogador
 
 /** URL do servidor: sobrescreva com window.__MP_SERVER__ no index.html. */
 export function serverUrl() {
@@ -28,6 +29,12 @@ let watchdog = null;  // conexão aberta sem WELCOME = cache/versão antiga
 window.addEventListener('mp-sair', () => sairMultiplayer());
 
 // [ROUPA] lê a cor ativa do seletor (#mp-roupa) — 0xe8453c se não houver
+// [DIA-NOITE] config de tempo do jogador (ciclo | dia | noite) — salva nas opções [13].
+// Quem CRIA a sala (host) define o clima da partida; os demais seguem via snap.
+function lerCycle() {
+  try { return new Settings().get('cycleMode') || 'ciclo'; } catch { return 'ciclo'; }
+}
+
 function lerCorRoupa() {
   const ativa = document.querySelector('#mp-roupa .mp-cor.ativa');
   const v = ativa ? ativa.getAttribute('data-cor') : '0xe8453c';
@@ -103,7 +110,7 @@ export function iniciarMultiplayer(game, modo, nick) {
       lobby.alerta('🔄 Servidor acordando… (Render free: 1º acesso pode demorar até 1 min)', 'aviso');
     }
   };
-  net._onReplay = () => net.enviar({ t: T.HELLO, v: NET_VERSION, nick, modo, cor: net.cor });
+  net._onReplay = () => net.enviar({ t: T.HELLO, v: NET_VERSION, nick, modo, cor: net.cor, cycle: lerCycle() });
   net.conectar();   // o onopen do ClientNet já reenvia o HELLO (_onReplay)
 }
 

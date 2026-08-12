@@ -14,12 +14,12 @@ export class RoomManager {
     this.rooms = new Map();   // salaId -> Room
   }
 
-  create(modo) {
+  create(modo, cycle) {
     const cfg = MODES[modo];
     if (!cfg) throw new Error('modo inválido: ' + modo);
     const salaId = makeCode();
     const Room = modo === 'br' ? this._brRoom : this._dmRoom;
-    const room = new Room(salaId, this);
+    const room = new Room(salaId, this, cycle);
     this.rooms.set(salaId, room);
     return room;
   }
@@ -48,11 +48,11 @@ export class RoomManager {
    * jogador vê os outros online (na lista global) e os CHAMA pelo convite:
    * quem aceita é movido para a sala de quem chamou.
    */
-  join(client, nick, modo, cor) {
+  join(client, nick, modo, cor, cycle) {
     // [fix] procura sala existente com vaga ANTES de criar nova:
     // sem isto, cada player criava a PRÓPRIA sala (19 bots cada) = servidor
     // com CPU dobrado (jogo travado) e cada um via bots/carros diferentes
-    const room = this.find(modo) || this.create(modo);
+    const room = this.find(modo) || this.create(modo, cycle);
     room.addClient(client, nick, cor);
     return room;
   }

@@ -11,8 +11,8 @@ import { makeRng, rngRange, rngInt, dist2D, findFreeSpot, findStreetSpot, clamp 
 import { MODES } from '../config.js';
 
 export class BRRoom extends Room {
-  constructor(salaId, manager) {
-    super(salaId, manager, 'br');
+  constructor(salaId, manager, cycle) {
+    super(salaId, manager, 'br', cycle);
     this.world = buildWorld();
     this.rng = makeRng(Date.now() & 0xffffffff);
     this.zone = { x: 0, z: 0, r: 210, proxX: 0, proxZ: 0, proxR: 150, tempo: 45 };

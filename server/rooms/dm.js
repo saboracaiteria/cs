@@ -13,8 +13,8 @@ import { makeRng, rngRange, rngPick, dist2D, findFreeSpot, temEspacoLivre } from
 const TEAM_COLORS = [0x3fbf4f, 0xe8c33a];   // verde, amarelo
 
 export class DMRoom extends Room {
-  constructor(salaId, manager) {
-    super(salaId, manager, 'dm');
+  constructor(salaId, manager, cycle) {
+    super(salaId, manager, 'dm', cycle);
     this.world = buildWorld();
     this.spawns = this._makeSpawns();
     this.respawnQueue = new Map();   // id -> tempo restante
