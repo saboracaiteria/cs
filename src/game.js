@@ -728,7 +728,7 @@ export class Game {
       retomar: () => this.retomar(),
       opcoes: () => this._abrirOpcoes(true),
       controles: () => this.keys.abrir(),
-      sair: () => { this.pausa.esconder(); this.toTitle(); },
+      sair: () => { this.pausa.esconder(); this.hasGame = false; this.toTitle(); },
     });
   }
 

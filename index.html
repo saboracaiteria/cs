@@ -339,20 +339,20 @@
     <h2>CONTROLES</h2>
     <p id="keys-note" class="muted">Clique numa tecla e aperte a nova.</p>
 
-    <div id="keys-list"></div>
-
     <div id="keys-touch">
       <div class="keys-group">NO CELULAR</div>
       <div class="keys-row"><span class="keys-name">Andar e correr</span><span class="keys-tag">analógico (empurre até o fim para correr)</span></div>
       <div class="keys-row"><span class="keys-name">Olhar em volta · zoom</span><span class="keys-tag">arrastar na tela · dois dedos</span></div>
       <div class="keys-row"><span class="keys-name">Atirar · pular · agir</span><span class="keys-tag">botões à direita</span></div>
       <div class="keys-row"><span class="keys-name">Menu · Plano · celular</span><span class="keys-tag">☰ 📋 📱 no alto da tela</span></div>
-      <div class="keys-row"><span class="keys-name">Posição dos botões</span><span class="keys-tag">🖱️ EDITAR HUD — arraste e salve seu layout</span></div>
-
+      <div class="keys-row"><span class="keys-name">Posição dos botões</span><span class="keys-tag">arraste e salve seu layout</span></div>
     </div>
 
+    <button id="keys-editar-hud" type="button">🖱️ EDITAR HUD</button>
+
+    <div id="keys-list"></div>
+
     <div class="menu-actions">
-      <button id="keys-editar-hud" type="button">🖱️ EDITAR HUD</button>
       <button id="keys-close" class="ghost">FECHAR</button>
       <button id="keys-reset" type="button">restaurar teclas padrão</button>
     </div>
@@ -503,10 +503,6 @@
     <div class="br-linha">LOOT <b id="br-loot">0</b></div>
   </div>
   <div id="scoreboard" class="hidden"><div class="sb-head">PLACAR</div><div id="sb-rows"></div></div>
-  <div id="mp-review" class="hidden">
-    <div class="rv-titulo">🏆 <span id="rv-nick">—</span> venceu!</div>
-    <div class="rv-sub">REVISÃO DA PARTIDA — <b id="rv-tempo">30s</b></div>
-  </div>
 </div>
 
 <!-- overlay de morte/vitória do MP (o CSS existe; o HTML tinha sido perdido num merge) -->

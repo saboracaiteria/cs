@@ -68,7 +68,6 @@ export class Match {
     this._respawnT = 0;         // contagem do respawn no DM (aviso do servidor)
     this._rodando = false;
     this._raf = null;
-    this._revisao = 0;          // [REVIEW-30S] contagem regressiva da revisão pós-partida (0 = off)
     this._revNick = "";
     this._revId = null;
     this._saiu = false;         // [FIX] guard de reentrância do sair()
@@ -566,28 +565,6 @@ export class Match {
   _update(dt) {
     if (this._pausado) return;   // pausa: congela o cliente (não envia input)
 
-    if (this._revisao > 0) {
-      // [REVIEW-30S] partida encerrada: jogador fica parado olhando a cena (revisão dos players)
-      this._revisao -= dt;
-      this.inp.mx = 0;
-      this.inp.mz = 0;
-      this.inp.run = false;
-      this.inp.jump = false;
-      this._fire = false;
-      this._dragOn = false;
-      this._fireBtn = false;
-      const rv = document.getElementById('mp-review');
-      if (rv) {
-        const t = rv.querySelector('#rv-tempo');
-        if (t) t.textContent = Math.max(0, Math.ceil(this._revisao)) + 's';
-      }
-      if (this._revisao <= 0) {
-        this._revisao = 0;
-        const rv2 = document.getElementById('mp-review');
-        if (rv2) rv2.classList.add('hidden');
-        this._mostrarFim();
-      }
-    }
 
 
 
@@ -1205,15 +1182,7 @@ export class Match {
     // com um banner no topo mostrando o vencedor e o contador. Só depois mostra o overlay.
     this._revId = msg.id;
     this._revNick = msg.nick || 'Alguém';
-    this._revisao = 30;
-    const rv = document.getElementById('mp-review');
-    if (rv) {
-      rv.classList.remove('hidden');
-      const n = rv.querySelector('#rv-nick');
-      if (n) n.textContent = this._revNick;
-      const t = rv.querySelector('#rv-tempo');
-      if (t) t.textContent = Math.ceil(this._revisao) + 's';
-    }
+    this._mostrarFim();
   }
 
   _mostrarFim() {
@@ -1708,8 +1677,6 @@ export class Match {
     }
     this.camera.rotation.order = 'XYZ';
     this.killfeed.limpar();
-    const rv = document.getElementById('mp-review');
-    if (rv) rv.classList.add('hidden');
 
     // [FIX] encerra a sessão MP completa: o multiplayer.js fecha o WebSocket e anula
     // match/net — sem partida fantasma processando snapshots nem mostrando o vencedor

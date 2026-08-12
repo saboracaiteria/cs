@@ -771,6 +771,17 @@ kbd{
 /* ---------------------- lista de teclas ---------------------- */
 #keys-note{margin-bottom:6px}
 #keys-note.alerta{color:var(--bad); opacity:1}
+
+/* [MOBILE] edição de HUD vem ACIMA das teclas do PC — quem joga no celular
+   vê logo o que lhe interessa (posicionar os botões), sem rolar a lista */
+#keys-editar-hud{
+  display:block; width:100%; margin:14px 0 4px;
+  background:linear-gradient(180deg,var(--accent),#c8821f); color:#0a0f18;
+  border:0; border-radius:8px; padding:11px; font-family:var(--font);
+  font-size:12px; font-weight:800; letter-spacing:1.2px; cursor:pointer;
+  box-shadow:0 3px 0 #8a5a12;
+}
+#keys-editar-hud:hover{filter:brightness(1.08)}
 #keys-list, #keys-touch{text-align:left}
 .keys-group{
   font-size:9px; letter-spacing:2px; opacity:.45; font-weight:800;
