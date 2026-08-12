@@ -860,3 +860,19 @@
   color: var(--accent2);
   font-variant-numeric: tabular-nums;
 }
+
+
+/* ===== [PC] MP: HUD do topo distribuido — nunca um sobre o outro ===== */
+body:not(.toque).mp-ativo #clockbox{display:none}
+body:not(.toque).mp-ativo #net-status{
+  left:14px; right:auto; transform:none;
+  top:max(10px, env(safe-area-inset-top));
+}
+body:not(.toque).mp-ativo #mp-tempo{
+  left:50%; right:auto; transform:translateX(-50%);
+  top:max(8px, env(safe-area-inset-top));
+}
+body:not(.toque).mp-ativo #perfbox{
+  left:auto; right:14px; transform:none;
+  top:max(10px, env(safe-area-inset-top));
+}

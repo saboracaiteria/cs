@@ -152,6 +152,7 @@ export class Match {
 
     const hudMp = document.getElementById('mp-hud');
     if (hudMp) hudMp.classList.remove('hidden');
+    document.body.classList.add('mp-ativo');
     const ns = document.getElementById('net-status');
     if (ns) ns.classList.remove('hidden');
     this.netStatus.setEstado('conectando');
@@ -1668,6 +1669,7 @@ export class Match {
     this._setHint(null);
     const hudMp = document.getElementById('mp-hud');
     if (hudMp) hudMp.classList.add('hidden');
+    document.body.classList.remove('mp-ativo');
     const joy = document.getElementById('mp-joy');
     if (joy) joy.classList.add('hidden');
     const look = document.getElementById('mp-look');
