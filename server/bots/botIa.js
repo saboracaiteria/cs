@@ -120,6 +120,11 @@ export function makeBot(nick, dificuldade = 'media') {
       // caminho) e que ainda não está saturado de atiradores
       let best = null, bestD = this.visao;
       const col = room.world.col;
+      // [BOT-MAPA] bot saiu do mapa dos predios (+-224): destino = centro ate voltar
+      const foraMapa = Math.abs(this.body.pos.x) > 215 || Math.abs(this.body.pos.z) > 215;
+      if (foraMapa && this.inCar == null && this.inHeli == null) {
+        this.wanderX = 0; this.wanderZ = 0; this.wanderT = 999;
+      }
       for (const o of room._all()) {
         if (o === this || o.hp <= 0 || !o.body) continue;
         const dd = dist2D(this.body.pos.x, this.body.pos.z, o.body.pos.x, o.body.pos.z);
@@ -193,6 +198,12 @@ export function makeBot(nick, dificuldade = 'media') {
             }
           } else if (modo === 'br' && !inZone) {
             const toZ = Math.atan2(room.zone.x - this.body.pos.x, room.zone.z - this.body.pos.z);
+            inp.moveZ = 0.6;
+            inp.yaw = toZ;
+            inp.heliDesiredYaw = toZ;
+          } else if (foraMapa) {
+            // [BOT-MAPA] heli saiu da cidade: voa de volta para o centro
+            const toZ = Math.atan2(-this.body.pos.x, -this.body.pos.z);
             inp.moveZ = 0.6;
             inp.yaw = toZ;
             inp.heliDesiredYaw = toZ;
@@ -340,8 +351,9 @@ export function makeBot(nick, dificuldade = 'media') {
           this.wanderT = 2 + Math.random() * 3;
           // [BOT-STUCK] destino sempre em RUA LIVRE — nunca gera ponto dentro de prédio
           const w = findStreetSpot(col, this.body.pos.x, this.body.pos.z, 2, 14);
-          this.wanderX = w.x;
-          this.wanderZ = w.z;
+          // [BOT-MAPA] destino nunca fora dos predios
+          this.wanderX = clamp(w.x, -200, 200);
+          this.wanderZ = clamp(w.z, -200, 200);
         }
         const toW = Math.atan2(this.wanderX - this.body.pos.x, this.wanderZ - this.body.pos.z);
         inp.yaw = toW;
