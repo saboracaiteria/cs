@@ -179,6 +179,8 @@ export class Human {
     this.phase = rngRange(rng, 0, Math.PI * 2);
     this._air = 0;      // [ANIM-REVISADA] 0 = chão, 1 = no ar (pulo/queda)
     this._jumpT = 0;     // [ANIM-REVISADA] impulso do pulo (segundos restantes)
+    this._jumpSide = 1;  // [ANIM] perna de impulso: 1 = direita atras, -1 = esquerda (alterna)
+    this._jumpPrev = 0;  // [ANIM] borda de subida do pulo (detecta novo pulo)
     this.carrying = false;
     this.armGesture = 0;
     this.aiming = false;    // [27] mirando: braços erguidos à frente com a arma
@@ -300,10 +302,19 @@ export class Human {
     // A perna de trás estica (acabou de EMPURRAR o solo) e a da frente fica
     // com o joelho levemente dobrado — o gesto natural de saltar.
     const imp = this._jumpT > 0 ? Math.min(1, this._jumpT / 0.18) : 0;
-    const aCL = -0.35 * imp + -0.95 * (1 - imp);
-    const aCR = 0.9 * imp + 0.5 * (1 - imp);
-    const aJL = 0.7;
-    const aJR = 0.12 * imp + 1.0 * (1 - imp);
+    // [ANIM] perna de impulso ALTERNA a cada pulo (nao usa sempre a direita);
+    // a perna de tras vai pouco para tras (sem abrir as pernas)
+    if (this._jumpT > 0 && !this._jumpPrev) this._jumpSide = (this._jumpSide === 1 ? -1 : 1);
+    this._jumpPrev = this._jumpT > 0 ? 1 : 0;
+    const pR = this._jumpSide > 0;   // true: R e a perna de tras (empurra o solo)
+    const af = -0.35 * imp + -0.85 * (1 - imp);   // coxa da FRENTE: levanta com joelho dobrado
+    const at = 0.6 * imp + 0.22 * (1 - imp);      // coxa de TRAS: pouco atras (nao abre)
+    const jf = 0.7;                               // joelho da frente (pe apontando p/ baixo)
+    const jt = 0.12 * imp + 0.85 * (1 - imp);     // joelho de tras: estica no empurrao, dobra no ar
+    const aCL = pR ? af : at;
+    const aCR = pR ? at : af;
+    const aJL = pR ? jf : jt;
+    const aJR = pR ? jt : jf;
 
     // ===== blend chão ↔ ar (pernas) =====
     const k = ar, kk = 1 - k;
