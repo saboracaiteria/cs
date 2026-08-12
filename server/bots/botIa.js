@@ -59,6 +59,9 @@ export const NOMES = [
   'Formiga', 'Taturana', 'Mandioquinha', 'Canjica', 'Baião', 'Cuscuz',
 ];
 
+/** Paleta de roupas dos bots (espelha a do jogador). */
+const BOT_CORES = [0xe8453c, 0x2f9e5f, 0x3a6fd8, 0xe0a323, 0x9c4fd8, 0xd84f8f, 0x23b0c9, 0x8a6f4f, 0x5a6b8a, 0xc9c23a];
+
 export function makeBot(nick, dificuldade = 'media') {
   const DIF = {
     facil: { precisao: 0.25, reacao: 0.6, danoMult: 1.0, visao: 30 },
@@ -69,6 +72,7 @@ export function makeBot(nick, dificuldade = 'media') {
   return {
     nick,
     dificuldade,
+    cor: BOT_CORES[Math.floor(Math.random() * BOT_CORES.length)],
     precisao: d.precisao,
     reacao: d.reacao,
     danoMult: d.danoMult,

@@ -27,6 +27,20 @@ let watchdog = null;  // conexão aberta sem WELCOME = cache/versão antiga
 // WebSocket e anula match/net — nada de partida fantasma rodando por baixo do solo.
 window.addEventListener('mp-sair', () => sairMultiplayer());
 
+// [ROUPA] lê a cor ativa do seletor (#mp-roupa) — 0xe8453c se não houver
+function lerCorRoupa() {
+  const ativa = document.querySelector('#mp-roupa .mp-cor.ativa');
+  const v = ativa ? ativa.getAttribute('data-cor') : '0xe8453c';
+  return parseInt(v, 16) || 0xe8453c;
+}
+// [ROUPA] clique nas bolinhas do seletor (uma ativa por vez)
+document.querySelectorAll('#mp-roupa .mp-cor').forEach((b) => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#mp-roupa .mp-cor').forEach((x) => x.classList.remove('ativa'));
+    b.classList.add('ativa');
+  });
+});
+
 export function iniciarMultiplayer(game, modo, nick) {
   gameRef = game;
   if (!lobby) lobby = criarLobby();
@@ -59,6 +73,8 @@ export function iniciarMultiplayer(game, modo, nick) {
     }
   }
 
+  // [ROUPA] cor da camisa escolhida no seletor do lobby (enviada no HELLO)
+  net.cor = lerCorRoupa();
   net = new ClientNet(url);
   net._onMsg = onMsg;
   net._onStatus = (estado) => {
@@ -87,7 +103,7 @@ export function iniciarMultiplayer(game, modo, nick) {
       lobby.alerta('🔄 Servidor acordando… (Render free: 1º acesso pode demorar até 1 min)', 'aviso');
     }
   };
-  net._onReplay = () => net.enviar({ t: T.HELLO, v: NET_VERSION, nick, modo });
+  net._onReplay = () => net.enviar({ t: T.HELLO, v: NET_VERSION, nick, modo, cor: net.cor });
   net.conectar();   // o onopen do ClientNet já reenvia o HELLO (_onReplay)
 }
 
@@ -99,6 +115,7 @@ function onMsg(msg) {
       net.salaId = msg.salaId;
       net.modo = msg.modo;
       net.cfg = msg.cfg;
+      net.host = !!msg.host;   // [DIA-NOITE] quem controla o tempo da partida
       lobby.setMeuId(msg.id);
       // mostra o código da sala atual (só informativo)
       lobby.setSala(msg.salaId);

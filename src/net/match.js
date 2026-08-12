@@ -220,7 +220,7 @@ export class Match {
       if (k === 'tab') { e.preventDefault(); this.scoreboard.alternar(); }
       if (k === 'e') this._toggleCar = true;
       if (k === 'v') this._alternarVisao();
-      if (k === 'n' && this.game) this.game.cycleDayNight();
+      if (k === 'n') this._pedirCycle();   // [DIA-NOITE] só o host controla
       if (k === 'q') { this._heliYaw = 1; this._carSteer = 1; }
       if (k === 'r') { this._heliYaw = -1; this._carSteer = -1; }
       this._norm();
@@ -506,11 +506,23 @@ export class Match {
     }
   }
 
+  /** [DIA-NOITE] tecla N: só o HOST controla o tempo da partida */
+  _pedirCycle() {
+    if (this.net && this.net.host) {
+      this.net.enviar({ t: T.CYCLE });
+      if (this.game && this.game.hud) this.game.hud.toast('🌗 HOST — alternando dia/noite', 'time');
+    } else if (this.game && this.game.hud) {
+      this.game.hud.toast('⏰ Só o host controla o dia/noite', 'aviso');
+    }
+  }
+
   _snap(msg) {
     this.snapBuf.push(msg);
-    // registra nicks e garante avatares
+    this._snapHour = msg.hour;         // [DIA-NOITE] hora controlada pelo host
+    this._snapCycle = msg.cycleMode;
+    // registra nicks e garante avatares (cor da roupa sincronizada)
     for (const p of msg.players || []) {
-      if (p.nick) this.nicks.set(p.id, { nick: p.nick, bot: p.bot });
+      if (p.nick) this.nicks.set(p.id, { nick: p.nick, bot: p.bot, cor: p.cor });
       this._garantirAvatar(p.id);
     }
     // HUD do jogador local
@@ -707,8 +719,23 @@ export class Match {
     // [noite] o loop do SOLO fica parado durante o MP — o céu não avançava;
     // aqui replicamos o update do céu + luzes da cidade (igual ao solo)
     if (this.game && this.game.sky) {
-      this.game.sky.setPaused(false);
-      this.game.sky.update(dt, foc);
+      // [DIA-NOITE] céu controlado pelo HOST (servidor): a hora vem no snap
+      const sky = this.game.sky;
+      if (this._snapHour != null) {
+        sky.setPaused(true);   // relógio local parado — segue o host
+        if (this._snapCycle && sky.cycleMode !== this._snapCycle) {
+          sky.cycleMode = this._snapCycle;
+          if (this._snapCycle === 'dia') sky.setHour(12);
+          else if (this._snapCycle === 'noite') sky.setHour(22);
+        }
+        let d = this._snapHour - sky.hour;
+        while (d > 12) d -= 24;
+        while (d < -12) d += 24;
+        if (Math.abs(d) > 0.05) sky.setHour(sky.hour + d * Math.min(1, 3 * dt));
+      } else {
+        sky.setPaused(false);
+      }
+      sky.update(dt, foc);
       const night = this.game.sky.nightFactor;
       if (night !== this._ultNoite) {
         this._ultNoite = night;

@@ -16,6 +16,8 @@ export const T = {
   LEAVE: 'leave',          // { t }
   CHAT: 'chat',            // { t, msg }
   RESPAWN_NOW: 'respawnNow', // { t } morto pediu para renascer na hora (DM)
+  CYCLE: 'cycle',          // { t } host alterna o ciclo dia/noite da partida
+  CYCLE: 'cycle',          // { t } host alterna o ciclo dia/noite da partida
 
   // servidor -> cliente
   WELCOME: 'welcome',      // { t, id, salaId, modo, cfg }

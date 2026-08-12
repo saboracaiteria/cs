@@ -34,6 +34,11 @@ export class Room {
     this._lastTick = Date.now();
 
     this._inputLog = new Map(); // anti-flood: id -> {count, t0}
+    // [DIA-NOITE] o SERVIDOR (host) controla a hora do dia — todos os
+    // clientes replicam o mesmo céu via snap (o relógio local fica parado)
+    this.hour = 8.5;            // começa de manhã (DAY.startHour do cliente)
+    this.cycleMode = 'ciclo';   // 'ciclo' | 'dia' | 'noite'
+    this._hourPerSec = 24 / 135.5;   // DAY.duration do cliente (seg por dia)
   }
 
   canJoin() {
@@ -46,9 +51,9 @@ export class Room {
   get totalSlots() { return this.players.size + this.bots.size; }
 
   /** Jogador humano entra (vindo do WebSocket). */
-  addClient(client, nick) {
+  addClient(client, nick, cor) {
     const id = uid++;
-    const p = lobbyPlayer(id, nick, { host: this.players.size === 0 && this.bots.size === 0 });
+    const p = lobbyPlayer(id, nick, { host: this.players.size === 0 && this.bots.size === 0, cor });
     // humano tem prioridade: se a sala está cheia de bots, um bot cede a vaga
     if (this.players.size + this.bots.size >= this.cfg.maxPlayers && this.bots.size > 0) {
       const [bid, bot] = this.bots.entries().next().value;
@@ -67,7 +72,7 @@ export class Room {
     client._room = this;
     client._playerId = id;
     this.players.set(id, p);
-    this._sendTo(p, T.WELCOME, { id, salaId: this.salaId, modo: this.modo, cfg: this.publicCfg() });
+    this._sendTo(p, T.WELCOME, { id, salaId: this.salaId, modo: this.modo, cfg: this.publicCfg(), host: p.host, cor: p.cor });
     this._bcastLobby();
     this._log('entrou: ' + nick + ' (id ' + id + ')');
     return p;
@@ -161,6 +166,7 @@ export class Room {
     if (this.state !== 'playing') return;
 
     this.elapsed += dt;
+    if (this.cycleMode === 'ciclo') this.hour = (this.hour + dt * this._hourPerSec) % 24;
     this._step(dt);
     this._stepBodies(dt);
     this._stepCars(dt);
@@ -169,6 +175,16 @@ export class Room {
     this._regenVida(dt);
     this._botLimiteMapa();
     this._broadcastSnapshot();
+  }
+
+  /** [DIA-NOITE] host alterna: ciclo -> dia -> noite -> ciclo */
+  cycleBy() {
+    const ordem = ['ciclo', 'dia', 'noite'];
+    const i = (ordem.indexOf(this.cycleMode) + 1) % ordem.length;
+    this.cycleMode = ordem[i];
+    if (this.cycleMode === 'dia') this.hour = 12;         // fixedDayHour
+    else if (this.cycleMode === 'noite') this.hour = 22;  // fixedNightHour
+    this._log('host alternou o tempo para: ' + this.cycleMode);
   }
 
   _beginGame() {
@@ -688,6 +704,7 @@ export class Room {
       id: p.id,
       nick: p.nick,
       bot: !!this.bots.get(p.id),
+      cor: p.cor ?? 0xe8453c,
       x: p.body ? Math.round(p.body.pos.x*100)/100 : 0,
       y: p.body ? Math.round(p.body.pos.y*100)/100 : 0,
       z: p.body ? Math.round(p.body.pos.z*100)/100 : 0,
@@ -706,6 +723,8 @@ export class Room {
     }));
     const snap = { t: T.SNAPSHOT, seq: this.seq, players };
     snap.restante = Math.max(0, Math.ceil((this.cfg.timeLimit || 0) - this.elapsed));
+    snap.hour = Math.round(this.hour * 100) / 100;
+    snap.cycleMode = this.cycleMode;
     this._snapExtra(snap);
     snap.cars = this.cars.map((c) => ({
       id: c.id,

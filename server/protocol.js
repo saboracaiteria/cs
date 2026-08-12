@@ -16,6 +16,7 @@ export const T = {
   LEAVE: 'leave',          // { t }
   CHAT: 'chat',            // { t, msg }
   RESPAWN_NOW: 'respawnNow', // { t } morto pediu para renascer na hora (DM)
+  CYCLE: 'cycle',          // { t } host alterna o ciclo dia/noite da partida
 
   // servidor -> cliente
   WELCOME: 'welcome',      // { t, id, salaId, modo, cfg }
@@ -54,6 +55,9 @@ export function send(ws, obj) {
 }
 
 /** Cria um jogador do lobby (estado de espera). */
+/** Paleta de roupas compartilhada (espelha PALETA do cliente). */
+const CORES_ROUPA = [0xe8453c, 0x2f9e5f, 0x3a6fd8, 0xe0a323, 0x9c4fd8, 0xd84f8f, 0x23b0c9, 0x8a6f4f, 0x5a6b8a, 0xc9c23a];
+
 export function lobbyPlayer(id, nick, opts = {}) {
   return {
     id,
@@ -62,5 +66,6 @@ export function lobbyPlayer(id, nick, opts = {}) {
     host: !!opts.host,
     bot: !!opts.bot,
     ping: 0,
+    cor: opts.cor ?? CORES_ROUPA[Math.abs(id) % CORES_ROUPA.length],
   };
 }

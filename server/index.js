@@ -115,12 +115,13 @@ function handle(ws, msg) {
       if (ws._room || ws._playerId != null) break;
       const nick = sanitizeNick(msg.nick) || 'Jogador';
       const modo = msg.modo === 'br' ? 'br' : 'dm';
+      const cor = Number.isInteger(msg.cor) ? (msg.cor | 0) : 0;   // [ROUPA] cor da camisa
       if (msg.v !== NET.version) {
         send(ws, { t: T.ERROR, msg: 'Versão incompatível. Atualize o jogo.' });
         ws.close(4001, 'versao');
         return;
       }
-      const room = manager.join(ws, nick, modo);
+      const room = manager.join(ws, nick, modo, cor);
       // bots preenchem as vagas — mas SEMPRE deixa 1 vaga livre: se outro
       // humano entrar, ele cai na MESMA sala (era o motivo de ninguém se
       // achar: os bots enchiam tudo e canJoin() ficava falso)
@@ -161,6 +162,13 @@ function handle(ws, msg) {
       const room = ws._room;
       const p = room && ws._playerId != null ? room.players.get(ws._playerId) : null;
       if (p && room._respawnAgora) room._respawnAgora(p);
+      break;
+    }
+    case T.CYCLE: {
+      // [DIA-NOITE] só o HOST controla o tempo da partida
+      const room = ws._room;
+      const p = room && ws._playerId != null ? room.players.get(ws._playerId) : null;
+      if (p && p.host && room.cycleBy) room.cycleBy();
       break;
     }
     case T.START: {
