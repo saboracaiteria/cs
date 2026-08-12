@@ -441,6 +441,8 @@ export class Match {
         if (msg.alvo === this.meuId) {
           this._hp = msg.hp;
           this._atualizarHud();
+        } else if (msg.por === this.meuId) {
+          this._hitmarker();   // [HITMARKER] sinal de acerto ao atingir player/bot
         }
         break;
       case T.RESPAWN:
@@ -1042,16 +1044,31 @@ export class Match {
 
   // ------------------------------------------------------------ HUD
   _atualizarHud() {
-    // a vida agora aparece nos corações do HUD do solo (0-100 -> 6 ❤)
-    if (this.game && this.game.hud) {
-      const cor = Math.max(0, Math.min(6, Math.ceil(this._hp / (100 / 6))));
-      this.game.hud.setHearts(cor);
+    // barra de vida amarela do MP (0-100) — os corações do solo ficam ocultos
+    const hp = Math.max(0, Math.min(100, Math.round(this._hp)));
+    const fill = document.getElementById('mp-hp-fill');
+    if (fill) {
+      fill.style.width = hp + '%';
+      fill.classList.toggle('crit', hp <= 30);   // perto de morrer pisca
     }
+    const val = document.getElementById('mp-hp-val');
+    if (val) val.textContent = String(hp);
+  }
+
+  /** Sinal de acerto: X branco piscando no centro da tela. */
+  _hitmarker() {
+    const hm = document.getElementById('hitmarker');
+    if (!hm) return;
+    hm.classList.remove('show');
+    void hm.offsetWidth;   // reinicia a animação mesmo com acertos em sequência
+    hm.classList.add('show');
   }
 
   _morreu(por) {
     if (this._morto) return;
     this._morto = true;
+    this._hp = 0;
+    this._atualizarHud();   // [REGEN] a barra zera na hora da morte
     // morto cai do helicóptero (o servidor já removeu o jogador do aparelho)
     this._emHeli = false;
     this._meuHeliId = null;
@@ -1098,6 +1115,8 @@ export class Match {
   _revive() {
     this._morto = false;
     this._respawnT = 0;
+    this._hp = 100;
+    this._atualizarHud();   // [REGEN] a barra volta cheia no respawn
     // câmera cola no novo spawn: sem o reset o foco amortecido "voava" do
     // ponto da morte até o respawn (atravessando prédios por ~0,5s)
     this._camFirst = true;
@@ -1487,7 +1506,9 @@ export class Match {
       if (el) el.classList.add('hidden');
     }
     const barra = document.getElementById('mp-vida');
-    if (barra) barra.classList.add('hidden');
+    if (barra) barra.classList.remove('hidden');
+    const hearts = document.getElementById('hearts');
+    if (hearts) hearts.style.display = 'none';   // corações do solo ocultos no MP
     const armaEl = document.getElementById('mp-arma');
     if (armaEl) armaEl.classList.add('hidden');
     if (this.game && this.game.hud) {
@@ -1502,6 +1523,10 @@ export class Match {
     if (obj) obj.classList.remove('hidden');
     const sr = document.querySelector('#topleft .stat-row');
     if (sr) sr.style.display = '';
+    const barra = document.getElementById('mp-vida');
+    if (barra) barra.classList.add('hidden');
+    const hearts = document.getElementById('hearts');
+    if (hearts) hearts.style.display = '';
   }
 
   /** [Android] botão voltar da barra de navegação = pausa (sentinela no history). */

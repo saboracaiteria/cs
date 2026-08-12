@@ -3,7 +3,7 @@
  * DM e BR herdam daqui e só acrescentam as regras do modo.
  */
 
-import { NET, MODES, CAR, NUM_CARS, HELI, NUM_HELIS, MISSIL } from '../config.js';
+import { NET, MODES, CAR, NUM_CARS, HELI, NUM_HELIS, MISSIL, PLAYER } from '../config.js';
 import { T, send, lobbyPlayer } from '../protocol.js';
 import { stepBody } from '../physics.js';
 import { createCars, updateCars } from '../cars.js';
@@ -166,6 +166,7 @@ export class Room {
     this._stepCars(dt);
     this._stepHelis(dt);
     this._stepMissis(dt);
+    this._regenVida(dt);
     this._broadcastSnapshot();
   }
 
@@ -218,6 +219,7 @@ export class Room {
       onGround: true,
     };
     p.hp = 100;
+    p.semDano = 0;
     p.invuln = 3;
     p.arma = 'pistola';
     p.inCar = null;
@@ -438,10 +440,24 @@ export class Room {
     });
   }
 
+  /** Regeneração automática (estilo solo): sem levar dano por `regenDelay`
+   *  segundos, o humano recupera `regenTime` de vida por segundo até 100.
+   *  Bots não regeneram (id negativo). O hp novo sai no snapshot. */
+  _regenVida(dt) {
+    for (const p of this.players.values()) {
+      if (!p.body || p.hp <= 0 || p.hp >= 100) { p.semDano = 0; continue; }
+      p.semDano = (p.semDano || 0) + dt;
+      if (p.semDano >= PLAYER.regenDelay) {
+        p.hp = Math.min(100, p.hp + PLAYER.regenTime * dt);
+      }
+    }
+  }
+
   _damage(alvo, por, dmg, arma = 'arma') {
     if (!alvo || alvo.hp <= 0) return;
     if (alvo.invuln > 0 && por) return;   // spawn protegido
     alvo.hp = Math.max(0, alvo.hp - dmg);
+    alvo.semDano = 0;   // [REGEN] qualquer dano zera o relógio da regeneração
     this._bcast(T.DAMAGE, {
       alvo: alvo.id, por: por ? por.id : null, dmg, hp: alvo.hp,
       direcao: alvo.body ? { x: alvo.body.pos.x, z: alvo.body.pos.z } : { x: 0, z: 0 },

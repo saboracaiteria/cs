@@ -506,7 +506,7 @@ body.toque #net-status{
 #mp-vida {
   position: absolute;
   left: max(22px, env(safe-area-inset-left));
-  bottom: max(22px, env(safe-area-inset-bottom));
+  top: max(18px, env(safe-area-inset-top));
   display: flex;
   align-items: center;
   gap: 12px;
@@ -527,9 +527,17 @@ body.toque #net-status{
 #mp-hp-fill {
   height: 100%;
   width: 100%;
-  background: linear-gradient(90deg, #ff4d4d, #ff8a3d);
+  background: linear-gradient(90deg, #ffd700, #ffb300);
   border-radius: 6px;
+  box-shadow: 0 0 10px rgba(255, 200, 0, .45);
   transition: width .2s cubic-bezier(.16,1,.3,1);
+}
+#mp-hp-fill.crit {
+  animation: mp-hp-pisca .55s ease-in-out infinite;
+}
+@keyframes mp-hp-pisca {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .3; }
 }
 #mp-hp-val {
   font-size: 15px;
