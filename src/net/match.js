@@ -62,6 +62,7 @@ export class Match {
     this._seq = 0;
 
     this._hp = 100;
+    this._dmgDir = null;   // ultimo dano sofrido: {x,z,t} posicao do atirador
     this._arma = 'pistola';
     this._morto = false;
     this._respawnT = 0;         // contagem do respawn no DM (aviso do servidor)
@@ -442,6 +443,7 @@ export class Match {
         if (msg.alvo === this.meuId) {
           this._hp = msg.hp;
           this._atualizarHud();
+          if (msg.direcao) this._dmgDir = { x: msg.direcao.x, z: msg.direcao.z, t: performance.now() };
         } else if (msg.por === this.meuId) {
           this._hitmarker();   // [HITMARKER] sinal de acerto ao atingir player/bot
         }
@@ -1026,9 +1028,10 @@ export class Match {
       if (this.modo === 'br' && this._zona) marks.zone = this._zona;
       for (const [id, rp] of this.avatares) {
         if (id === this.meuId || !rp || !rp.root) continue;
-        marks.players.push({ x: rp.root.position.x, z: rp.root.position.z });
+        marks.players.push({ x: rp.root.position.x, z: rp.root.position.z, yaw: rp.yaw });
       }
       this.game.minimap.draw(dt, { x: eu.x, z: eu.z, yaw: this.yaw + Math.PI + CAMERA.bodyTurn }, marks, null);
+      this._atualizarIndicadorDano(eu);
     }
     // rodas dos carros
     // foguetes dos mísseis de canhão em voo (visuais — o dano é do servidor)
@@ -1090,6 +1093,26 @@ export class Match {
     hm.classList.remove('show');
     void hm.offsetWidth;   // reinicia a animação mesmo com acertos em sequência
     hm.classList.add('show');
+  }
+
+  _atualizarIndicadorDano(eu) {
+    const el = document.getElementById('dmg-ind');
+    if (!el) return;
+    if (!this._dmgDir || !eu) { el.style.opacity = '0'; return; }
+    const idade = (performance.now() - this._dmgDir.t) / 1000;
+    if (idade > 2) { el.style.opacity = '0'; return; }
+    // vetor DE ONDE veio o dano: jogador -> atirador (msg.direcao = posicao do atirador)
+    let dx = eu.x - this._dmgDir.x, dz = eu.z - this._dmgDir.z;
+    const l = Math.hypot(dx, dz) || 1;
+    dx /= l; dz /= l;
+    // projeta no espaco da tela (mesma base do minimapa: yaw da camera)
+    const yawV = this.yaw + Math.PI + CAMERA.bodyTurn;
+    const c = Math.cos(yawV), s = Math.sin(yawV);
+    const sx = -dx * c + dz * s;
+    const sy = -dx * s - dz * c;
+    const ang = Math.atan2(sx, -sy);
+    el.style.transform = 'translate(-50%,-50%) rotate(' + ang + 'rad)';
+    el.style.opacity = String(Math.max(0.2, 1 - idade / 2));
   }
 
   _morreu(por) {

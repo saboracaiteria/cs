@@ -113,11 +113,45 @@ export class Minimap {
 
     // ---- outros jogadores (multiplayer) — pontos vermelhos
     if (marks.players && marks.players.length) {
-      ctx.fillStyle = 'rgba(255,77,77,.95)';
+      // [MINIMAPA] inimigos com tom forte: blip maior, vermelho vivo com glow
+      // pulsante e triangulo apontando a direcao do olhar (yaw) do inimigo.
+      const plPulse = 0.8 + Math.sin(this.pulse) * 0.2;
+      const rBlip = 7.5 * plPulse;
       for (const pl of marks.players) {
         const dx = pl.x - px, dz = pl.z - pz;
         if (dx * dx + dz * dz > RANGE * RANGE) continue;
-        ctx.fillRect(TX(pl.x, pl.z) - 2.5, TY(pl.x, pl.z) - 2.5, 5, 5);
+        const sx = TX(pl.x, pl.z), sy = TY(pl.x, pl.z);
+
+        // halo vermelho pulsante (ajuda a enxergar de relance)
+        ctx.save();
+        ctx.shadowColor = '#ff2a2a';
+        ctx.shadowBlur = 16 * plPulse;
+        ctx.beginPath();
+        ctx.arc(sx, sy, rBlip, 0, Math.PI * 2);
+        ctx.fillStyle = '#ff2a2a';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(0,0,0,.6)';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+
+        // triangulo ambar: direcao para onde o inimigo esta olhando
+        if (pl.yaw != null) {
+          const ddx = -Math.sin(pl.yaw), ddz = -Math.cos(pl.yaw);
+          const sx2 = -ddx * c + ddz * s;
+          const sy2 = -ddx * s - ddz * c;
+          const ang = Math.atan2(sx2, -sy2);
+          ctx.translate(sx, sy);
+          ctx.rotate(ang);
+          ctx.beginPath();
+          ctx.moveTo(0, -11.5);
+          ctx.lineTo(4.5, -3.5);
+          ctx.lineTo(-4.5, -3.5);
+          ctx.closePath();
+          ctx.fillStyle = '#ffd24d';
+          ctx.fill();
+        }
+        ctx.restore();
       }
     }
 

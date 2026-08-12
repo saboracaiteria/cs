@@ -461,9 +461,10 @@ export class Room {
     if (alvo.invuln > 0 && por) return;   // spawn protegido
     alvo.hp = Math.max(0, alvo.hp - dmg);
     alvo.semDano = 0;   // [REGEN] qualquer dano zera o relógio da regeneração
+    if (this.bots.has(alvo.id) && typeof alvo.levouDano === 'function') alvo.levouDano(dmg, por);   // [BOT-COVER] IA sabe quem a acertou
     this._bcast(T.DAMAGE, {
       alvo: alvo.id, por: por ? por.id : null, dmg, hp: alvo.hp,
-      direcao: alvo.body ? { x: alvo.body.pos.x, z: alvo.body.pos.z } : { x: 0, z: 0 },
+      direcao: por && por.body ? { x: por.body.pos.x, z: por.body.pos.z } : null,
     });
     if (alvo.hp <= 0) this._kill(alvo, por, arma);
   }

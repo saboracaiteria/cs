@@ -64,6 +64,20 @@ button{font-family:var(--font)}
 }
 #hitmarker.show{animation:hm .28s ease-out}
 @keyframes hm{0%{opacity:1;transform:scale(.7)}100%{opacity:0;transform:scale(1.5)}}
+#dmg-ind{
+  position:absolute; left:50%; top:50%; width:46px; height:46px;
+  transform:translate(-50%,-50%) rotate(0deg); opacity:0;
+  pointer-events:none; z-index:14;
+  filter:drop-shadow(0 0 6px rgba(255,64,64,.95));
+  transition:opacity .12s ease;
+}
+#dmg-ind{
+  position:absolute; left:50%; top:50%; width:46px; height:46px;
+  transform:translate(-50%,-50%) rotate(0deg); opacity:0;
+  pointer-events:none; z-index:14;
+  filter:drop-shadow(0 0 6px rgba(255,64,64,.95));
+  transition:opacity .12s ease;
+}
 
 /* topo esquerdo */
 #topleft{position:absolute; left:22px; top:18px; display:flex; flex-direction:column; gap:10px}
