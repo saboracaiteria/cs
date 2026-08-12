@@ -224,7 +224,7 @@ export class Game {
       this.minimap = new Minimap($('minimap'), this.city, $('compass-n'));  // [10]
       this.phone = new Phone(this.peds);                                    // [56]
       this.keys = new KeysScreen(this.binds);        // tela de config de teclas
-      this.hudEditor = criarHudEditor();               // editor de HUD (estilo CODM)
+      this.hudEditor = criarHudEditor(() => !!this._mp);               // editor de HUD (estilo CODM)
       this.touch = new TouchControls(this.input);    // analógico e botões na tela
 
       this._wireUI();

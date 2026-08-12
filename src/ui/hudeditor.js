@@ -17,20 +17,21 @@
 const CHAVE = 'cs-hud-layout-v2';
 
 const MAPA = {
-  fogo: '.tc-fogo',
-  pular: '.tc-pular',
-  acao: '.tc-acao',
-  descer: '.tc-descer',
-  visao: '.tc-visao',
-  missil: '.tc-missil',
-  'girar-esq': '.tc-girar-esq',
-  'girar-dir': '.tc-girar-dir',
-  stick: '#tc-stick-zone',
+  fogo: '#tc-fogo, #mp-atirar',
+  pular: '#tc-pular, #mp-pular',
+  acao: '#tc-acao, #mp-acao',
+  descer: '#tc-descer, #mp-descer',
+  visao: '#tc-visao',
+  missil: '#tc-missil',
+  'girar-esq': '#tc-girar-esq, #mp-girar-esq',
+  'girar-dir': '#tc-girar-dir, #mp-girar-dir',
+  correr: '#mp-correr',
+  stick: '#tc-stick-zone, #mp-joy',
 };
 
 const $ = (id) => document.getElementById(id);
 
-export function criarHudEditor() {
+export function criarHudEditor(emMpFn) {
   const overlay = $('hud-editor');
   const avisoEl = $('hud-editor-aviso');
   const btnSalvar = $('hud-editor-salvar');
@@ -39,6 +40,9 @@ export function criarHudEditor() {
   const btnMenos = $('hud-editor-menos');
   const btnMais = $('hud-editor-mais');
   const touch = $('touch');
+  const mpPad = $('mp-pad');
+  const mpJoy = $('mp-joy');
+  const emMp = () => !!(emMpFn && emMpFn());
 
   let aberto = false;
   let onAbrir = null;
@@ -48,32 +52,43 @@ export function criarHudEditor() {
   let posIni = { x: 0, y: 0, left: 0, top: 0 };
   let prevToque = false;
   let prevTouchHidden = true;
+  let prevMpJoyHidden = true;
+  let prevMpPadHidden = true;
 
   function editaveis() {
-    return touch ? Array.from(touch.querySelectorAll('.tc-btn, #tc-stick-zone')) : [];
+    const mp = emMp();
+    const base = [];
+    if (mp) {
+      if (mpPad) base.push(...mpPad.querySelectorAll('.tc-btn'));
+      if (mpJoy) base.push(mpJoy);
+    } else {
+      if (touch) base.push(...touch.querySelectorAll('.tc-btn, #tc-stick-zone'));
+    }
+    return base;
   }
 
   /** Mostra o touch e todos os botões (remove a classe hidden !important). */
   function mostrarTodos() {
     document.body.classList.add('toque', 'hud-edit');
-    if (!touch) return;
-    touch.classList.remove('hidden');
-    touch.style.display = 'block';
-    touch.style.zIndex = '950';
-    // CRÍTICO: o #touch é fullscreen (inset:0). Com pointer-events ativo ele
-    // bloqueia TODOS os cliques na barra do editor (SALVAR/FECHAR/PADRÃO/➕➖)
-    // — desligamos o raycast do container (padrão Unity) e só os botões
-    // (pointer-events:auto) capturam o dedo.
-    touch.style.pointerEvents = 'none';
-    const pad = touch.querySelector('#tc-pad');
+    const mp = emMp();
+    if (touch) {
+      if (mp) { touch.classList.add('hidden'); touch.style.display = 'none'; }
+      else { touch.classList.remove('hidden'); touch.style.display = 'block'; }
+      touch.style.zIndex = '950';
+      touch.style.pointerEvents = 'none';
+    }
+    for (const cont of [mpJoy, mpPad]) {
+      if (!cont) continue;
+      if (!mp) { cont.classList.add('hidden'); cont.style.display = 'none'; }
+      else { cont.classList.remove('hidden'); cont.style.display = 'block'; }
+      cont.style.zIndex = '950';
+      cont.style.pointerEvents = 'none';
+    }
+    const pad = (mp ? mpPad : (touch && touch.querySelector('#tc-pad')));
     if (pad) {
       pad.classList.remove('hidden');
       pad.style.display = 'block';
-      pad.style.pointerEvents = 'none'; // só os botões capturam o dedo
-      // CRÍTICO: o CSS dá transform:scale(.84) ao #tc-pad — um ancestral com
-      // transform prende o position:fixed dos filhos (vira relativo ao pad de
-      // 264x200px, a "caixa invisivel"). Fullscreen + transform:none => os
-      // botoes voam pela viewport inteira, como o analogico.
+      pad.style.pointerEvents = 'none';
       pad.style.position = 'fixed';
       pad.style.inset = '0';
       pad.style.width = '100%';
@@ -87,27 +102,36 @@ export function criarHudEditor() {
       b.classList.remove('hidden');
       b.style.display = 'block';
       b.style.pointerEvents = 'auto';
-      // CRÍTICO: sem isso os botões ficam PRESOS na caixa do #tc-pad
-      // (264x200px) porque left/top em % é relativo ao container absolute.
-      // Com position:fixed o % vira relativo à VIEWPORT e o botão voa livre
-      // pela tela inteira, igual ao analógico.
       b.style.position = 'fixed';
-      b.style.zIndex = b.id === 'tc-stick-zone' ? '901' : '960';
+      b.style.zIndex = (b.id === 'tc-stick-zone' || b.id === 'mp-joy') ? '901' : '960';
       b.classList.add('customizing');
       b.classList.remove('custom-selected');
     }
   }
 
-  /** Restaura o estado do touch após o editor. */
+
   function esconderTudo() {
     document.body.classList.remove('hud-edit');
     if (!prevToque) document.body.classList.remove('toque');
-    if (!touch) return;
-    if (prevTouchHidden) touch.classList.add('hidden');
-    touch.style.display = '';
-    touch.style.zIndex = '';
-    touch.style.pointerEvents = '';
-    const pad = touch.querySelector('#tc-pad');
+    if (touch) {
+      if (prevTouchHidden) touch.classList.add('hidden');
+      touch.style.display = '';
+      touch.style.zIndex = '';
+      touch.style.pointerEvents = '';
+    }
+    if (mpJoy) {
+      if (prevMpJoyHidden) mpJoy.classList.add('hidden'); else mpJoy.classList.remove('hidden');
+      mpJoy.style.display = '';
+      mpJoy.style.zIndex = '';
+      mpJoy.style.pointerEvents = '';
+    }
+    if (mpPad) {
+      if (prevMpPadHidden) mpPad.classList.add('hidden'); else mpPad.classList.remove('hidden');
+      mpPad.style.display = '';
+      mpPad.style.zIndex = '';
+      mpPad.style.pointerEvents = '';
+    }
+    const pad = emMp() ? mpPad : (touch && touch.querySelector('#tc-pad'));
     const personalizado = editaveis().some(b =>
       b.style.left !== '' || b.style.top !== '' ||
       b.style.right !== '' || b.style.bottom !== '');
@@ -124,9 +148,6 @@ export function criarHudEditor() {
         pad.style.transform = '';
         pad.style.transformOrigin = '';
       } else {
-        // layout personalizado: o pad CONTINUA fullscreen sem transform para os
-        // % dos botoes valerem da viewport no jogo (senao o transform:scale(.84)
-        // do pad prende os botoes de novo e eles voltam a ficar colados na caixa)
         pad.classList.remove('hidden');
         pad.style.display = 'block';
         pad.style.pointerEvents = 'none';
@@ -144,15 +165,11 @@ export function criarHudEditor() {
       b.classList.remove('customizing', 'custom-selected', 'hud-arrastando');
       b.style.display = '';
       b.style.pointerEvents = '';
-      if (!personalizado) {
-        b.style.position = '';
-      } else {
-        // mantem fixed: os % continuam relativos a viewport no jogo
-        b.style.position = 'fixed';
-      }
+      b.style.position = personalizado ? 'fixed' : '';
       b.style.zIndex = '';
     }
   }
+
 
   function abrir() {
     if (aberto) return;
@@ -160,6 +177,8 @@ export function criarHudEditor() {
     if (onAbrir) onAbrir(); // fecha a tela de CONTROLES (se estiver aberta)
     prevToque = document.body.classList.contains('toque');
     prevTouchHidden = !!(touch && touch.classList.contains('hidden'));
+    prevMpJoyHidden = !!(mpJoy && mpJoy.classList.contains('hidden'));
+    prevMpPadHidden = !!(mpPad && mpPad.classList.contains('hidden'));
     mostrarTodos();
     if (overlay) {
       overlay.classList.remove('hidden');
@@ -223,7 +242,7 @@ export function criarHudEditor() {
   document.addEventListener('pointerdown', (e) => {
     if (!aberto) return;
     if (e.target.closest && e.target.closest('#hud-editor-bar, #hud-editor-aviso')) return;
-    const b = e.target.closest ? e.target.closest('.tc-btn, #tc-stick-zone') : null;
+    const b = e.target.closest ? e.target.closest('.tc-btn, #tc-stick-zone, #mp-joy') : null;
     if (!b) return;
     e.preventDefault();
     e.stopPropagation();
@@ -325,8 +344,8 @@ export function criarHudEditor() {
     const layout = dados.botoes || dados; // compatível com formato antigo
     // com layout salvo o pad vira fullscreen sem transform — os % sao da
     // viewport (senao o transform:scale(.84) do pad prende os botoes)
-    const pad = touch && touch.querySelector('#tc-pad');
-    if (pad) {
+    for (const pad of [touch && touch.querySelector('#tc-pad'), mpPad]) {
+      if (!pad) continue;
       pad.style.position = 'fixed';
       pad.style.inset = '0';
       pad.style.width = '100%';

@@ -573,16 +573,7 @@ export class Room {
       if (dot > 0.95 && dq < dist) dist = Math.max(dq - 1.2, 0.8);
     }
     const mx = ox + dx * dist, my = oy + dy * dist, mz = oz + dz * dist;
-    let alvoId = null;
-    let melhor = 35;
-    for (const q of this._all()) {
-      if (q.id === p.id || !q.body || q.hp <= 0) continue;
-      const vx = q.body.pos.x - mx, vy = q.body.pos.y + 1 - my, vz = q.body.pos.z - mz;
-      const proj = vx * dx + vy * dy + vz * dz;
-      if (proj < 0) continue; // atrás do disparo
-      const perp = Math.hypot(vx - dx * proj, vy - dy * proj, vz - dz * proj);
-      if (perp < melhor) { melhor = perp; alvoId = q.id; }
-    }
+    const alvoId = null; // [MISSIL RETO] sem perseguicao de jogador - igual ao solo
     const id = (this._missilUid = (this._missilUid || 0) + 1);
     const alvoP = aim.ponto ? { x: aim.ponto.x, y: aim.ponto.y, z: aim.ponto.z } : null;
     this.missis.push({ id, alvoId, alvoP, x: mx, y: my, z: mz, dx, dy, dz, por: p, t: MISSIL.vida });

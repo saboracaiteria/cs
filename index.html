@@ -505,19 +505,19 @@
   <button type="button" class="mp-btn mp-btn-sair hidden">SAIR DA PARTIDA</button>
 </div>
 
-<div id="mp-joy" class="hidden"><div class="knob"></div></div>
+<div id="mp-joy" class="hidden" data-hud="stick"><div class="knob"></div></div>
 <div id="mp-look" class="hidden"></div>
 <!-- botões de ação do toque: ATIRAR/PULAR/AÇÃO/CORRER (mesmo padrão do modo solo) -->
 <div id="mp-pad" class="hidden">
-  <button type="button" class="tc-btn tc-fogo" id="mp-atirar" data-segura="atirar">ATIRAR</button>
-  <button type="button" class="tc-btn tc-pular" id="mp-pular">PULAR</button>
-  <button type="button" class="tc-btn tc-acao" id="mp-acao">AÇÃO</button>
-  <button type="button" class="tc-btn tc-sec tc-descer" id="mp-correr" title="Correr">⚡</button>
+  <button type="button" class="tc-btn tc-fogo" id="mp-atirar" data-segura="atirar" data-hud="fogo">ATIRAR</button>
+  <button type="button" class="tc-btn tc-pular" id="mp-pular" data-hud="pular">PULAR</button>
+  <button type="button" class="tc-btn tc-acao" id="mp-acao" data-hud="acao">AÇÃO</button>
+  <button type="button" class="tc-btn tc-sec tc-descer" id="mp-correr" title="Correr" data-hud="correr">⚡</button>
   <!-- [heli] no ar, o PULAR vira ▲ (subir) e aparece este ▼ (descer) -->
-  <button type="button" class="tc-btn tc-sec tc-descer hidden" id="mp-descer" title="Descer">▼</button>
+  <button type="button" class="tc-btn tc-sec tc-descer hidden" id="mp-descer" title="Descer" data-hud="descer">▼</button>
   <!-- [heli] ◀ ▶ giram o aparelho no ar (visíveis só pilotando) -->
-  <button type="button" class="tc-btn tc-sec tc-girar-esq hidden" id="mp-girar-esq" title="Girar esquerda">◀</button>
-  <button type="button" class="tc-btn tc-sec tc-girar-dir hidden" id="mp-girar-dir" title="Girar direita">▶</button>
+  <button type="button" class="tc-btn tc-sec tc-girar-esq hidden" id="mp-girar-esq" title="Girar esquerda" data-hud="girar-esq">◀</button>
+  <button type="button" class="tc-btn tc-sec tc-girar-dir hidden" id="mp-girar-dir" title="Girar direita" data-hud="girar-dir">▶</button>
 </div>
 <!-- ==================== FIM MULTIJOGADOR ==================== -->
 <div id="fatal" class="hidden"></div>
