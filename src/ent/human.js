@@ -293,7 +293,7 @@ export class Human {
     // inclinado parece patinação. Suavizado (damp) p/ ligar/desligar.
     const leanAlvo = (opts.run && moving) ? 1 : 0;
     this._lean = damp(this._lean ?? 0, leanAlvo, 8, dt);
-    const lean = this._lean * 0.15;
+    const lean = this._lean * 0.03;   // [ANIM] inclinação mínima — só correndo
     const bob = moving ? Math.abs(Math.cos(this.phase)) * 0.05 * amp : 0;
 
     // ===== pose NO AR: impulso do pulo =====
@@ -343,12 +343,14 @@ export class Human {
     } else {
       // chão: braços contrabalançam com cotovelo pendular;
       // no ar: braços de equilíbrio erguidos
-      this.armL.group.rotation.x = bL * kk + -2.2 * k;
-      this.armR.group.rotation.x = bR * kk + -2.2 * k;
-      this.armL.group.rotation.z = 0.06 * kk + 0.35 * k;
-      this.armR.group.rotation.z = -0.06 * kk + -0.35 * k;
-      this.armL.fore.rotation.x = fL * kk + -0.35 * k;
-      this.armR.fore.rotation.x = fR * kk + -0.35 * k;
+      // [ANIM] no ar os braços NÃO sobem: ficam na pose de tiro (arma à frente),
+      // pois o player pode pular e atirar ao mesmo tempo
+      this.armL.group.rotation.x = bL * kk + -1.45 * k;
+      this.armR.group.rotation.x = bR * kk + -1.45 * k;
+      this.armL.group.rotation.z = 0.06 * kk + -0.30 * k;
+      this.armR.group.rotation.z = -0.06 * kk + 0.10 * k;
+      this.armL.fore.rotation.x = fL * kk + -0.12 * k;
+      this.armR.fore.rotation.x = fR * kk + -0.12 * k;
 
       if (this.aimAmt > 0.001) {
         const a = this.aimAmt, k2 = 1 - a;
