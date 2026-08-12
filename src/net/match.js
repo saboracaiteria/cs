@@ -679,7 +679,7 @@ export class Match {
     // de helicoptero a camera enquadra o aparelho (não o corpo do piloto)
     if (this._emHeli && this._meuHeliId != null) {
       const hl = this.helisMp.get(this._meuHeliId);
-      if (hl) foc.set(hl.x, hl.y + 1.9, hl.z);
+      if (hl) foc.set(hl.x, hl.y + 1.2, hl.z);   // [MIRA HELI] foco vertical igual ao solo (game.js:2086 p.y+1.2)
       else if (rpLoc) foc.set(rpLoc.x, rpLoc.y + 1.62, rpLoc.z);
     } else if (rpLoc) foc.set(rpLoc.x, rpLoc.y + 1.62, rpLoc.z);
     // [Bug2-fix] foco na altura dos olhos (+1.62) em vez dos ombros (+1.48):
@@ -714,7 +714,7 @@ export class Match {
     // [Bug1-fix] ao entrar em 1ª pessoa (_fpp 0→1) o offset lateral anula
     // suavemente — câmera desliza para o centro sem o salto diagonal que
     // fazia o alvo escapar da mira ao pressionar o botão de disparo.
-    const ombroBase = noVeic ? 0 : CAMERA.shoulderX;
+    const ombroBase = noHeli ? CAMERA.heliShoulderX : (noCarro ? 0 : CAMERA.shoulderX);   // [MIRA HELI] heli = heliShoulderX (igual solo camera.js:224)
     const ombro = ombroBase;   // [CALIBRACAO MP] ombro FIXO igual ao solo: a camera nao entra no personagem ao atirar
     // direção da MIRA: raio que passa pela ponta dela (NDC 0.24/0.2 — o MESMO
     // aimRay do solo). yaw/pitch puro aponta para o CENTRO da tela, e a mira
@@ -808,7 +808,7 @@ export class Match {
       // do ombro (o copy(foc) centralizava o player e o tiro saia do corpo)
       this._camLook.copy(this.camera.position).addScaledVector(dir, 40);
     }
-    this._camLook.y += lift;
+    this._camLook.y += lift + (noHeli ? dist * CAMERA.heliFrameLift : 0);   // [MIRA HELI] frameLift igual ao solo (camera.js:266)
     this.camera.lookAt(this._camLook);
 
     // [CODM-FPP] 1a pessoa: câmera para os olhos (dolly TPP->FPP) olhando SEMPRE na direção do tiro
@@ -1381,9 +1381,9 @@ export class Match {
     const correrEl = document.getElementById('mp-correr');
     if (correrEl) correrEl.classList.toggle('hidden', this._emHeli || emCarro);
     const giroEsqEl = document.getElementById('mp-girar-esq');
-    if (giroEsqEl) giroEsqEl.classList.toggle('hidden', !this._emHeli && !emCarro);
+    if (giroEsqEl) giroEsqEl.classList.toggle('hidden', !emCarro);   // [MIRA HELI] direcionais somem no heli (igual solo touch.js:91)
     const giroDirEl = document.getElementById('mp-girar-dir');
-    if (giroDirEl) giroDirEl.classList.toggle('hidden', !this._emHeli && !emCarro);
+    if (giroDirEl) giroDirEl.classList.toggle('hidden', !emCarro);
 
     const panel = document.getElementById('heli-panel');
     if (!panel) return;
