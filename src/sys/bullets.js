@@ -22,6 +22,10 @@ export class BulletSystem {
     this.mesh = new THREE.InstancedMesh(geo, mat, MAX_BULLETS);
     this.mesh.frustumCulled = false;
     scene.add(this.mesh);
+    // [TIRO INVISIVEL] bala invisivel (solo e MP): so a marca de acerto fica visivel
+    this.mesh.visible = false;
+    // [TIRO INVISIVEL] bala invisivel (solo e MP): so a marca de acerto fica visivel
+    this.mesh.visible = false;
 
     this._off = new THREE.Matrix4().makeScale(0.0001, 0.0001, 0.0001);
     this.bullets = [];

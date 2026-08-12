@@ -50,6 +50,11 @@ export function makeBot(nick, dificuldade = 'media') {
     wanderT: 0,
     wanderX: 0,
     wanderZ: 0,
+    // [BOT-HELI] 30% dos bots embarcam num helicoptero livre e perseguem
+    // os players pelo ar disparando MISSELS (BR e DM)
+    pilotarHeli: Math.random() < 0.3,
+    _heliT: 0,
+    _missilT: 0,
     think(dt, room) {
       if (!this.body || this.hp <= 0) return;
       const modo = room.modo;
@@ -85,7 +90,72 @@ export function makeBot(nick, dificuldade = 'media') {
       }
       this.target = best;
 
-      const inp = { moveX: 0, moveZ: 0, yaw: this.body.yaw, pitch: 0, run: false, jump: false };
+      const inp = { moveX: 0, moveZ: 0, yaw: this.body.yaw, pitch: 0, run: false, jump: false, up: false, down: false, heliYaw: 0, heliDesiredYaw: null };
+
+      // ---- [BOT-HELI] piloto de helicoptero: embarca num aparelho livre e
+      // persegue os players pelo ar disparando MISSELS (BR e DM) ----
+      if (this.pilotarHeli) {
+        if (this.inHeli != null) {
+          // --- pilotando: sobe, persegue o alvo a ~60 m e atira missile ---
+          const gH = room.world.col.groundHeightAt(this.body.pos.x, this.body.pos.z, 999);
+          const alvoY = gH + 26;
+          inp.up = this.body.pos.y < alvoY - 3;
+          inp.down = this.body.pos.y > alvoY + 3;
+          if (best) {
+            const dxH = best.body.pos.x - this.body.pos.x;
+            const dzH = best.body.pos.z - this.body.pos.z;
+            const distH = Math.hypot(dxH, dzH);
+            const dyH = (best.body.pos.y + 1.2) - this.body.pos.y;
+            const yawH = Math.atan2(-dxH, -dzH);
+            const pitchH = Math.atan2(dyH, distH);
+            inp.moveZ = distH > 70 ? 0.55 : distH < 35 ? -0.45 : 0;
+            inp.yaw = yawH;
+            inp.heliDesiredYaw = yawH;
+            this._missilT -= dt;
+            if (this._missilT <= 0 && Math.abs(angleDelta(this.body.yaw, yawH)) < 0.4) {
+              this._missilT = 2.5 + Math.random() * 1.5;
+              room.onShoot(this, { yaw: yawH, pitch: pitchH });   // missile (inHeli)
+            }
+          } else if (modo === 'br' && !inZone) {
+            const toZ = Math.atan2(room.zone.x - this.body.pos.x, room.zone.z - this.body.pos.z);
+            inp.moveZ = 0.6;
+            inp.yaw = toZ;
+            inp.heliDesiredYaw = toZ;
+          } else {
+            inp.moveZ = 0;   // sem alvo: fica pairando (anti-idle desce e o bot retoma)
+          }
+          this._heliT -= dt;
+          if (this._heliT <= 0) {
+            room._veiculoHeli(this, 0);   // tempo de voo acabou: vira bot de chao
+            this.pilotarHeli = false;
+          }
+          this._lastInput = inp;
+          room._applyInput(this, inp);
+          return;
+        }
+        // --- no chao: caminha ate o helicoptero livre mais proximo e embarca ---
+        let hNear = null, hD = Infinity;
+        for (const h of room.helis || []) {
+          if (h.playerId != null) continue;
+          const dd = dist2D(this.body.pos.x, this.body.pos.z, h.x, h.z);
+          if (dd < hD) { hD = dd; hNear = h; }
+        }
+        if (hNear) {
+          if (hD < 7) {
+            room._veiculoHeli(this, hNear.id);
+            this._heliT = 55 + Math.random() * 40;   // voa de ~1 a ~1,5 min
+            this._missilT = 1 + Math.random() * 2;
+          } else {
+            const toH = Math.atan2(hNear.x - this.body.pos.x, hNear.z - this.body.pos.z);
+            inp.yaw = toH;
+            inp.moveZ = 0.6;
+            inp.run = true;
+            this._lastInput = inp;
+            room._applyInput(this, inp);
+            return;
+          }
+        }
+      }
 
       if (modo === 'br' && !inZone && this.wanderT > 0) {
         // foge para o centro da zona

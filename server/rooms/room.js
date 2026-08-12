@@ -249,11 +249,13 @@ export class Room {
     };
     p.body.moveX = inp.moveX;
     p.body.moveZ = inp.moveZ;
+    // [BOT-HELI] bots também recebem o _inp (o _stepHelis lê up/down/heliYaw
+    // do piloto para montar os controles do aparelho)
+    p.body._inp = inp;
     if (p.client) {
       // humano: guarda o último input e a INTEGRAÇÃO roda no tick a 30 Hz.
       // Integrar aqui (a 20 Hz, a cadência do input) fazia o jogador andar
       // a 2/3 da velocidade do solo — e dos bots, que integram no tick.
-      p.body._inp = inp;
       return;
     }
     const r = stepBody(this.world, p.body, inp, 1 / NET.tickRate);
@@ -432,7 +434,8 @@ export class Room {
         if (!p.body || p.hp <= 0) continue;
         const d = Math.hypot(p.body.pos.x - m.x, (p.body.pos.y + 1) - m.y, p.body.pos.z - m.z);
         if (d < MISSIL.raio) {
-          const dmg = Math.round(MISSIL.dano * (1 - d / MISSIL.raio));
+          let dmg = Math.round(MISSIL.dano * (1 - d / MISSIL.raio));
+          if (m.por && this.bots.get(m.por.id)) dmg = Math.round(dmg * 0.5);   // [BOT-HELI] missile de bot da metade
           if (dmg > 0) this._damage(p, m.por, dmg, 'missil');
         }
       }
@@ -545,7 +548,7 @@ export class Room {
     // antigo danoMult da dificuldade deixava o bot forte demais.
     const atiradorBot = !!this.bots.get(p.id);
     const mult = best.cabeca && W.headshotMult ? W.headshotMult : 1;
-    const dmg = (atiradorBot ? W.damage * 0.18 : W.damage) * mult;
+    const dmg = (atiradorBot ? W.damage * 0.12 : W.damage) * mult;   // [BOT-DANO] bots dao 33% menos
     if (best.carro) this._carDano(best.carro, dmg);
     else this._damage(best.alvo, p, dmg, p.arma);
   }

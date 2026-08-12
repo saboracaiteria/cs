@@ -74,6 +74,7 @@ export class Match {
     this._ult = 0;
     this._pausado = false;      // pausa única (mesma tela/menus do solo)
     this._zona = null;          // {x,z,r} da zona do BR (minimapa)
+    this._anelZona = null;      // anel 3D no chao marcando o limite da zona
     this._clockAcc = 0;
     this._dist = CAMERA.defaultZoom;   // zoom da câmera (faltava init: NaN)
 
@@ -503,7 +504,10 @@ export class Match {
     this.scoreboard.atualizar((msg.players || []).map((p) => ({ ...p, local: p.id === this.meuId })));
     // BR
     if (this.modo === 'br') {
-      if (msg.zone) this._zona = { x: msg.zone.x, z: msg.zone.z, r: msg.zone.r };
+      if (msg.zone) {
+        this._zona = { x: msg.zone.x, z: msg.zone.z, r: msg.zone.r };
+        this._atualizarAnelZona(msg.zone);
+      }
       const pos = this.snapBuf.ultimo() && eu ? { x: eu.x, z: eu.z } : null;
       this.brHud.atualizar(msg, this.meuId, pos);
     }
@@ -898,18 +902,7 @@ export class Match {
         } else {
           fimT.copy(oT).addScaledVector(this._fireDir, 160);
         }
-        if (!this._tracer) {
-          const gT = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-          this._tracer = new THREE.Line(gT, new THREE.LineBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0.85 }));
-          this._tracer.frustumCulled = false;
-          this.game.gfx.scene.add(this._tracer);
-        }
-        const posT = this._tracer.geometry.attributes.position;
-        posT.setXYZ(0, oT.x, oT.y, oT.z);
-        posT.setXYZ(1, fimT.x, fimT.y, fimT.z);
-        posT.needsUpdate = true;
-        this._tracer.visible = true;
-        this._tracerVida = 0.08;
+        // [TIRO INVISIVEL] sem tracer/raio: so a marca de acerto (marcarImpacto abaixo)
         this.game.bullets?.fire(oT, this._vT2.set(dxT, dyT, dzT));
         if (this.game && this.game.range) this.game.range.marcarImpacto(oT, this._vT2, this.game.col, this.camera);
         if (this.game && this.game.audio) this.game.audio.tiro();
@@ -918,10 +911,7 @@ export class Match {
         // O SOLO (game.js) mantem o recuo normal.
       }
     }
-    if (this._tracer) {
-      if (this._tracerVida > 0) this._tracerVida -= dt;
-      else this._tracer.visible = false;
-    }
+    // [TIRO INVISIVEL] sem tracer — a bala do BulletSystem tambem e invisivel (mesh oculto)
     if (!(this._fire || this._fireBtn)) {
       const rpLoc2 = this.avatares.get(this.meuId);
       if (rpLoc2) rpLoc2.setAiming(false);
@@ -1053,6 +1043,32 @@ export class Match {
     }
     const val = document.getElementById('mp-hp-val');
     if (val) val.textContent = String(hp);
+  }
+
+  /** [BR] Anel 3D no chao mostrando o limite da zona que encolhe. */
+  _atualizarAnelZona(z) {
+    if (!this.game || !this.game.gfx || !this.game.col) return;
+    if (!this._anelZona) {
+      const N = 72;
+      const pts = new Float32Array(N * 3);
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pts, 3));
+      const mat = new THREE.LineBasicMaterial({ color: 0xff5a3c, transparent: true, opacity: 0.95 });
+      this._anelZona = new THREE.LineLoop(geo, mat);
+      this._anelZona.frustumCulled = false;
+      this.game.gfx.scene.add(this._anelZona);
+      this._anelPts = pts;
+      this._anelN = N;
+    }
+    const N = this._anelN, pts = this._anelPts;
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * Math.PI * 2;
+      const px = z.x + Math.cos(a) * z.r;
+      const pz = z.z + Math.sin(a) * z.r;
+      const y = this.game.col.groundHeightAt(px, pz, 999) + 0.8;
+      pts[i * 3] = px; pts[i * 3 + 1] = y; pts[i * 3 + 2] = pz;
+    }
+    this._anelZona.geometry.attributes.position.needsUpdate = true;
   }
 
   /** Sinal de acerto: X branco piscando no centro da tela. */
@@ -1571,6 +1587,7 @@ export class Match {
     const heliPanel = document.getElementById('heli-panel');
     if (heliPanel) heliPanel.classList.add('hidden');
     if (this._tracer) { this.game.gfx.scene.remove(this._tracer); this._tracer.geometry.dispose(); this._tracer.material.dispose(); this._tracer = null; }
+    if (this._anelZona) { this.game.gfx.scene.remove(this._anelZona); this._anelZona.geometry.dispose(); this._anelZona.material.dispose(); this._anelZona = null; }
     // devolve as balas do single: alvos do trânsito e callbacks originais
     if (this.game && this.game.bullets) {
       const bul = this.game.bullets;
