@@ -2060,7 +2060,7 @@ export class Game {
        * segurar ATIRAR continua com o zoom leve de COD Mobile. Soltou,
        * tudo volta ao normal sozinho.
        */
-      const aimando = !blocked && (this.input.mouseRightDown || this.input.toque.atirar || this.input.segurando('atirar'));
+      const aimando = !blocked && (this.input.mouseDown || this.input.mouseRightDown || this.input.toque.atirar || this.input.segurando('atirar'));
       this.player.setAiming(aimando);
       this.camera.setAds(aimando, this.input.mouseRightDown ? CAMERA.adsFovPc : CAMERA.adsFov);   // [PC] direito = mira 2x; esquerdo/mobile = tiro ADS leve
     } else if (this.mode === 'cable') {
