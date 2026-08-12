@@ -59,7 +59,7 @@ export class DMRoom extends Room {
     const ocupado = (sp) => {
       for (const q of this._all()) {
         if (q === p || !q.body || q.hp <= 0) continue;
-        if (dist2D(q.body.x, q.body.z, sp.x, sp.z) < 40) return true;
+        if (dist2D(q.body.pos.x, q.body.pos.z, sp.x, sp.z) < 40) return true;
       }
       return false;
     };

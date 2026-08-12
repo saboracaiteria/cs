@@ -125,7 +125,7 @@ export const MODES = {
     maxPlayers: 8,
     minPlayers: 2,       // bots completam até minPlayers quando ligado
     killLimit: 25,
-    timeLimit: 600,      // segundos
+    timeLimit: 300,      // segundos (5 min — vence quem tiver mais kills)
     respawnTime: 2,      // segundos até renascer (botão antecipa na hora)
     spawnProtect: 3,     // segundos imune após nascer
     teamCount: 2,        // verde x amarelo
@@ -141,6 +141,7 @@ export const MODES = {
     zoneSteps: 6,        // quantas vezes a zona encolhe
     zoneStepTime: 45,    // segundos entre encolhimentos
     zoneDpsBase: 2,      // dano/s fora da zona (cresce a cada passo)
+    timeLimit: 300,      // 5 min — no fim, vence quem tiver mais kills
     planeSpeed: 60,      // velocidade do avião
     planeHeight: 70,
     fallSpeed: 12,       // queda livre

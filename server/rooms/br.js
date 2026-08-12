@@ -22,6 +22,7 @@ export class BRRoom extends Room {
     this.lootId = 1;
     this.supplyDrops = [];     // caixas raras
     this._lootSpawned = false;
+    this.respawnQueue = new Map();   // [BOT-RESPAWN] bots mortos voltam em 8-12s
   }
 
   canJoin() {
@@ -82,6 +83,17 @@ export class BRRoom extends Room {
   }
 
   _step(dt) {
+
+    // [BOT-RESPAWN] bots mortos renascem (cidade nunca esvazia)
+    for (const [id, t] of [...this.respawnQueue]) {
+      const novo = t - dt;
+      if (novo <= 0) {
+        this.respawnQueue.delete(id);
+        const b = this.bots.get(id);
+        if (b) this._spawn(b);
+      } else this.respawnQueue.set(id, novo);
+    }
+
     // zona
     this._stepZone(dt);
     // dano da zona: todo mundo no chão toma (sem avião, sem exceção)
@@ -108,6 +120,12 @@ export class BRRoom extends Room {
     const vivos = this._alive();
     if (vivos.length === 1 && this.totalSlots > 1) {
       this._endGame(vivos[0]);
+    }
+
+    // [FIM POR TEMPO] 5 min: vence quem tiver mais kills
+    if (this.elapsed >= this.cfg.timeLimit) {
+      const best = [...this._all()].sort((a, b) => b.kills - a.kills)[0];
+      if (best) this._endGame(best);
     }
   }
 
@@ -142,6 +160,10 @@ export class BRRoom extends Room {
   }
 
   _onKill(morto, por) {
+
+    // [BOT-RESPAWN] bot morreu: volta em 8-12s
+    if (this.bots.get(morto.id)) this.respawnQueue.set(morto.id, 8 + Math.random() * 4);
+
     // morto no BR: solta o loot que carregava (itens caem no chão)
     const drop = [
       { id: this.lootId++, x: morto.body.pos.x, y: morto.body.pos.y + 0.4, z: morto.body.pos.z, tipo: 'arma', arma: morto.arma || 'pistola' },
@@ -155,7 +177,7 @@ export class BRRoom extends Room {
 
   _endGame(vencedor) {
     this.state = 'ended';
-    this._bcast(T.WINNER, { id: vencedor.id, nick: vencedor.nick });
+    this._bcast(T.WINNER, { id: vencedor.id, nick: vencedor.nick, kills: vencedor.kills || 0 });
     this._log('BR encerrado — vencedor: ' + vencedor.nick);
     // [REVIEW-30S] sala fica viva 35s apos o fim: os players continuam na cena
     // (snapshots rodando) para o cliente exibir a revisão da partida por 30s

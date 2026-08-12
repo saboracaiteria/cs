@@ -79,8 +79,8 @@ export function makeBot(nick, dificuldade = 'media') {
     wanderZ: 0,
     // [BOT-HELI] 30% dos bots embarcam num helicoptero livre e perseguem
     // os players pelo ar disparando MISSELS (BR e DM)
-    pilotarHeli: Math.random() < 0.3,
-    pilotarCarro: Math.random() < 0.4,   // [BOT-CARRO] bots tambem dirigem carros
+    pilotarHeli: Math.random() < 0.35,
+    pilotarCarro: Math.random() < 0.5,   // [BOT-CARRO] bots tambem dirigem carros
     _heliT: 0,
     _missilT: 0,
     _carroT: 0,

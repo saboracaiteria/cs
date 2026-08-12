@@ -21,11 +21,11 @@ export const HELI_COLORS = [0x1f4f8f, 0xb3302f, 0x2e7d32, 0xe8b800, 0x7a5cc7];
 
 // Cor de identificacao — cada heli do mapa tem uma cor distinta.
 export const HELI_SPOTS = [
-  { x: -64, z: 64 },        // heliporto principal (bloco 2,4 do centro)
-  { x: -500, z: -400 },     // base do Corcovado, sul do Cristo
-  { x: -110, z: -432 },     // Pelourinho (Salvador)
-  { x: 330, z: 260 },       // arredores da Urca / estação do bondinho
-  { x: 62, z: 400 },        // sobre o vão da ponte Hercílio Luz (Floripa)
+  { x: -64, z: 64 },        // heliporto central (dentro da cidade)
+  { x: -160, z: 160 },      // noroeste — cruzamento de ruas largas
+  { x: 160, z: 160 },       // nordeste
+  { x: -160, z: -160 },     // sudoeste
+  { x: 160, z: -160 },      // sudeste
 ];
 
 export function createHelis(world, count = HELI_SPOTS.length) {

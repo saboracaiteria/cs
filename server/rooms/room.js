@@ -686,6 +686,7 @@ export class Room {
       fire: (p._fireVis && Date.now() - p._fireVis < 350) ? 1 : 0,
     }));
     const snap = { t: T.SNAPSHOT, seq: this.seq, players };
+    snap.restante = Math.max(0, Math.ceil((this.cfg.timeLimit || 0) - this.elapsed));
     this._snapExtra(snap);
     snap.cars = this.cars.map((c) => ({
       id: c.id,

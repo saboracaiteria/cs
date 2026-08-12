@@ -502,6 +502,8 @@ export class Match {
       this._arma = eu.arma || this._arma;
       this._atualizarHud();
     }
+    // timer da partida (5 min)
+    if (msg.restante != null) this._atualizarTempoPartida(msg.restante);
     // scoreboard
     this.scoreboard.atualizar((msg.players || []).map((p) => ({ ...p, local: p.id === this.meuId })));
     // BR
@@ -1087,6 +1089,16 @@ export class Match {
   }
 
   /** Sinal de acerto: X branco piscando no centro da tela. */
+  _atualizarTempoPartida(restante) {
+    const el = document.getElementById('mp-tempo');
+    if (!el) return;
+    el.classList.remove('hidden');
+    const min = Math.floor(restante / 60);
+    const seg = restante % 60;
+    el.textContent = min + ':' + String(seg).padStart(2, '0');
+    el.classList.toggle('urgente', restante <= 60);
+  }
+
   _hitmarker() {
     const hm = document.getElementById('hitmarker');
     if (!hm) return;
