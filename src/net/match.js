@@ -49,6 +49,7 @@ export class Match {
 
     // input local
     this.inp = { mx: 0, mz: 0, run: false, jump: false, fire: false, ads: false, up: false, down: false };
+    this._kSet = new Set();   // teclas pressionadas (base do movimento)
     this.yaw = Math.PI;
     this.pitch = -0.22;
     // câmera de ombro (terceira pessoa), igual à do single
@@ -211,10 +212,8 @@ export class Match {
       if (e.repeat) return;   // [FIX] auto-repeat do teclado NAO acumula no inp (bug: player nao parava)
       if (e.code === 'Escape' || e.code === 'Pause') { this._togglePausa(); return; }
       const k = e.key.toLowerCase();
-      if (k === 'w' || k === 'arrowup') this.inp.mz += 1;
-      if (k === 's' || k === 'arrowdown') this.inp.mz -= 1;
-      if (k === 'a' || k === 'arrowleft') this.inp.mx -= 1;
-      if (k === 'd' || k === 'arrowright') this.inp.mx += 1;
+      this._kSet.add(k);
+      this._recalcInp();
       if (k === 'shift') { this.inp.run = true; this.inp.down = true; }
       if (k === ' ') { this.inp.jump = true; this.inp.up = true; e.preventDefault(); }
       if (k === 'tab') { e.preventDefault(); this.scoreboard.alternar(); }
@@ -227,10 +226,8 @@ export class Match {
     };
     this._ku = (e) => {
       const k = e.key.toLowerCase();
-      if (k === 'w' || k === 'arrowup') this.inp.mz -= 1;
-      if (k === 's' || k === 'arrowdown') this.inp.mz += 1;
-      if (k === 'a' || k === 'arrowleft') this.inp.mx += 1;
-      if (k === 'd' || k === 'arrowright') this.inp.mx -= 1;
+      this._kSet.delete(k);
+      this._recalcInp();
       if (k === 'shift') { this.inp.run = false; this.inp.down = false; }
       if (k === ' ') { this.inp.jump = false; this.inp.up = false; }
       if (k === 'q' || k === 'r') { this._heliYaw = 0; this._carSteer = 0; }
@@ -250,13 +247,13 @@ export class Match {
     this._pu = () => { this._dragOn = false; this._fire = false; };
     this._pm = (e) => {
       if (document.pointerLockElement) {
-        this.yaw -= e.movementX * 0.0024;
-        this.pitch -= e.movementY * 0.0024;
+        this.yaw -= e.movementX * 0.0045;   // [FPS] mouse ~2x mais agil
+        this.pitch -= e.movementY * 0.0045;
       } else if (this._dragOn) {
         const dx = e.clientX - this._dragX, dy = e.clientY - this._dragY;
         this._dragX = e.clientX; this._dragY = e.clientY;
-        this.yaw -= dx * 0.004;
-        this.pitch -= dy * 0.004;
+        this.yaw -= dx * 0.007;   // [FPS] arrasto ~1.75x mais agil
+        this.pitch -= dy * 0.007;
       }
       this._clampAim();
     };
@@ -406,7 +403,7 @@ export class Match {
     document.addEventListener('touchend', this._touchEnd, { passive: false });
     // gatilho nunca fica "preso" ao perder o foco (alt-tab) ou sair do
     // pointer lock — o solo faz o mesmo no input.js (blur + pointerlockchange)
-    this._blur = () => { this._dragOn = false; this._fire = false; this._fireBtn = false; };
+    this._blur = () => { this._dragOn = false; this._fire = false; this._fireBtn = false; this._limparTeclas(); };
     this._lockChg = () => {
       if (!document.pointerLockElement) { this._dragOn = false; this._fire = false; }
     };
@@ -417,6 +414,22 @@ export class Match {
   _norm() {
     const d = Math.hypot(this.inp.mx, this.inp.mz);
     if (d > 1) { this.inp.mx /= d; this.inp.mz /= d; }
+  }
+
+  // [FIX] recalcula mx/mz a partir do Set de teclas: keyup engolido (perda de
+  // foco / ALT+TAB / pointer lock) nunca deixa o player andando sozinho
+  _recalcInp() {
+    const s = this._kSet;
+    this.inp.mx = (s.has('d') || s.has('arrowright') ? 1 : 0) - (s.has('a') || s.has('arrowleft') ? 1 : 0);
+    this.inp.mz = (s.has('w') || s.has('arrowup') ? 1 : 0) - (s.has('s') || s.has('arrowdown') ? 1 : 0);
+    this._norm();
+  }
+
+  _limparTeclas() {
+    if (this._kSet) this._kSet.clear();
+    this.inp.mx = 0; this.inp.mz = 0;
+    this.inp.run = false; this.inp.down = false;
+    this.inp.jump = false; this.inp.up = false;
   }
 
   _clampAim() {

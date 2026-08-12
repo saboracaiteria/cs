@@ -141,7 +141,7 @@ export const CAMERA = {
    */
   pitchMaxInterior: 1.05,
   pitchMinInterior: -0.9,
-  sensitivity: 0.0022,         // [11] mouse
+  sensitivity: 0.0045,         // [11] mouse (~2x mais agil, estilo FPS)
   height: 1.55,
   lag: 12,
   /**

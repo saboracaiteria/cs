@@ -137,8 +137,8 @@ export class Room {
       return;
     }
     this.state = 'countdown';
-    this.countdownT = 7;   // contagem regressiva de 7s (pedido), 1s a 1s na tela
-    this.cdEnd = Date.now() + 7000;   // timestamp ABSOLUTO: o cliente decrementa local
+    this.countdownT = 3;   // contagem regressiva de 3s (mais agil), 1s a 1s na tela
+    this.cdEnd = Date.now() + 3000;   // timestamp ABSOLUTO: o cliente decrementa local
     this._bcastLobby();
     this._log('contagem para iniciar...');
   }
