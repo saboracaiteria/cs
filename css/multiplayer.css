@@ -404,27 +404,27 @@
 /* Status de Conexão (Ping & Estado) */
 #net-status {
   position: fixed;
-  /* canto sup. direito, abaixo do ☰ de pausa (44px) e acima do killfeed:
-     não fica em cima de corações/relógio/BR-hud como ficava em left:220px */
-  top: calc(max(18px, env(safe-area-inset-top)) + 54px);
-  right: max(20px, env(safe-area-inset-right));
-  left: auto;
+  /* centro do topo, discreto (não fica sobre o minimapa) */
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  right: auto;
   z-index: 96;
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: var(--panel);
-  border: 1px solid var(--stroke);
+  gap: 5px;
+  background: rgba(10, 14, 20, .42);
+  border: 1px solid rgba(255, 255, 255, .08);
   border-radius: 20px;
-  padding: 6px 14px;
-  font-size: 12px;
-  color: rgba(234, 242, 255, .7);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  padding: 3px 10px;
+  font-size: 10px;
+  color: rgba(234, 242, 255, .5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 #net-status .dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--bad);
   box-shadow: 0 0 8px var(--bad);
@@ -446,23 +446,9 @@
 #ns-ping.ns-meio { color: var(--accent); }
 #ns-ping.ns-ruim { color: var(--bad); }
 
-/* celular: o #net-status caía em cima do minimapa (ambos no topo direito);
-   move para o canto superior esquerdo, alinhado ao topo do radar (o #objective
-   só começa em top:112px, então não colide) */
-body.toque #net-status{
-  top: calc(max(18px, env(safe-area-inset-top)) + 54px);
-  left: max(10px, env(safe-area-inset-left));
-  right: auto;
-}
+/* celular: o #net-status fica no centro do topo (regra base acima) */
 
-/* celular: o #net-status caía em cima do minimapa (ambos no topo direito);
-   move para o canto superior esquerdo, alinhado ao topo do radar (o #objective
-   só começa em top:112px, então não colide) */
-body.toque #net-status{
-  top: calc(max(18px, env(safe-area-inset-top)) + 54px);
-  left: max(10px, env(safe-area-inset-left));
-  right: auto;
-}
+/* celular: o #net-status fica no centro do topo (regra base acima) */
 
 /* Killfeed */
 #killfeed {
@@ -505,15 +491,16 @@ body.toque #net-status{
 /* Vida e Arma no MP */
 #mp-vida {
   position: absolute;
-  left: max(22px, env(safe-area-inset-left));
-  top: max(18px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: max(10px, env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
   gap: 12px;
   background: var(--panel);
   border: 1px solid var(--stroke);
   border-radius: 14px;
-  padding: 10px 16px;
+  padding: 8px 14px;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }

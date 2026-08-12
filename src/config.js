@@ -312,7 +312,7 @@ export const GAME = {
   killTimeBonus: 5,            // [32]
   bulletSpeed: 145,            // [38]
   bulletLife: 3.0,
-  bulletBounces: 3,            // [41] ricochete
+  bulletBounces: 0,            // [41] ricochete OFF (bala morre no 1º impacto - mais leve)
   fireCooldown: 0.16,          // [27]
   pickupRange: 3.4,            // [5][6]
   airPickupRange: 26,          // [51] pega/entrega voando alto

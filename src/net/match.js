@@ -640,8 +640,8 @@ export class Match {
       if (!rp.vivo && !rp._explodiu) {
         rp._explodiu = true;
         if (this.game && this.game.fx) {
-          this.game.fx.explode(new THREE.Vector3(rp.x, rp.y + 0.9, rp.z), 0.7);
-          if (this.game.audio) this.game.audio.explosao(0.7);
+          this.game.fx.explode(new THREE.Vector3(rp.x, rp.y + 0.9, rp.z), 0.32);   // [FPS] explosão dos bots ~55% menor
+          if (this.game.audio) this.game.audio.explosao(0.4);
         }
       } else if (rp.vivo) {
         rp._explodiu = false;
