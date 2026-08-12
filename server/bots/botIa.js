@@ -181,7 +181,13 @@ export function makeBot(nick, dificuldade = 'media') {
           const alvoY = gH + 26;
           inp.up = this.body.pos.y < alvoY - 3;
           inp.down = this.body.pos.y > alvoY + 3;
-          if (best) {
+          if (foraMapa) {
+            // [BOT-MAPA] heli fora da cidade: volta ao centro ANTES de continuar a luta
+            const toZ = Math.atan2(-this.body.pos.x, -this.body.pos.z);
+            inp.moveZ = 0.6;
+            inp.yaw = toZ;
+            inp.heliDesiredYaw = toZ;
+          } else if (best) {
             const dxH = best.body.pos.x - this.body.pos.x;
             const dzH = best.body.pos.z - this.body.pos.z;
             const distH = Math.hypot(dxH, dzH);
@@ -198,12 +204,6 @@ export function makeBot(nick, dificuldade = 'media') {
             }
           } else if (modo === 'br' && !inZone) {
             const toZ = Math.atan2(room.zone.x - this.body.pos.x, room.zone.z - this.body.pos.z);
-            inp.moveZ = 0.6;
-            inp.yaw = toZ;
-            inp.heliDesiredYaw = toZ;
-          } else if (foraMapa) {
-            // [BOT-MAPA] heli saiu da cidade: voa de volta para o centro
-            const toZ = Math.atan2(-this.body.pos.x, -this.body.pos.z);
             inp.moveZ = 0.6;
             inp.yaw = toZ;
             inp.heliDesiredYaw = toZ;
