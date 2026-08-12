@@ -416,9 +416,9 @@ export const NIGHT = {
   bloomStrengthBoost: 0.26,   // soma à força do bloom
   bloomThresholdDrop: 0.28,   // subtrai do limiar do bloom
   windowGlow: 0.85,           // emissivo das janelas acesas [20]
-  lampLens: 2.2,              // emissivo da lente do poste [22]
-  lampGlow: 0.65,             // opacidade do halo do poste
-  lampPower: 40,              // intensidade da PointLight do poste
+  lampLens: 1.5,              // emissivo da lente do poste [22]
+  lampGlow: 0.5,              // opacidade do halo do poste
+  lampPower: 50,              // intensidade da PointLight do poste
   trafficLens: 0.7,           // acréscimo no emissivo do semáforo [4]
 };
 
@@ -464,7 +464,7 @@ export const PRESETS = [
     // realmente se vê, e deixa o passe de sombra pequeno
     shadows: true, shadowMapSize: 1024, shadowRadius: 45,
     bloom: true, smaa: false, bloomScale: 0.4,
-    dynamicLights: 2,
+    dynamicLights: 3,
     fogFar: 1900,
     envUpdate: 6,
   },
@@ -473,7 +473,7 @@ export const PRESETS = [
     renderScale: 1.0,
     shadows: true, shadowMapSize: 2048, shadowRadius: 85,
     bloom: true, smaa: true, bloomScale: 0.55,
-    dynamicLights: 5,
+    dynamicLights: 6,
     fogFar: 2300,
     envUpdate: 3,
   },

@@ -334,37 +334,41 @@ export class Props {
     }
     if (!enabled || this._activeLights === 0) return;
 
-    // reposicionar as luzes é caro à toa a 60fps: 5x por segundo basta
-    this._selTimer -= dt;
-    if (this._selTimer > 0) return;
-    this._selTimer = 0.2;
-
-    // seleção das N mais próximas sem alocar nem ordenar a lista toda
+    // seleção das N mais próximas sem alocar nem ordenar a lista toda (5x/s)
     const N = this._activeLights;
     const bestLamp = this._bestLamp, bestD2 = this._bestD2;
-    for (let i = 0; i < N; i++) { bestLamp[i] = null; bestD2[i] = Infinity; }
-
-    for (const lamp of this.lamps) {
-      const d2 = dist2Sq(lamp.x, lamp.z, focus.x, focus.z);
-      if (d2 >= 85 * 85 || d2 >= bestD2[N - 1]) continue;
-      let k = N - 1;
-      while (k > 0 && bestD2[k - 1] > d2) {
-        bestD2[k] = bestD2[k - 1];
-        bestLamp[k] = bestLamp[k - 1];
-        k--;
+    this._selTimer -= dt;
+    if (this._selTimer <= 0) {
+      this._selTimer = 0.2;
+      for (let i = 0; i < N; i++) { bestLamp[i] = null; bestD2[i] = Infinity; }
+      for (const lamp of this.lamps) {
+        const d2 = dist2Sq(lamp.x, lamp.z, focus.x, focus.z);
+        if (d2 >= 85 * 85 || d2 >= bestD2[N - 1]) continue;
+        let k = N - 1;
+        while (k > 0 && bestD2[k - 1] > d2) {
+          bestD2[k] = bestD2[k - 1];
+          bestLamp[k] = bestLamp[k - 1];
+          k--;
+        }
+        bestD2[k] = d2;
+        bestLamp[k] = lamp;
       }
-      bestD2[k] = d2;
-      bestLamp[k] = lamp;
     }
 
+    // todo frame: interpola suave até os postes-alvo — a luz DESLIZA e a
+    // intensidade sobe/desce gradualmente (anti-pisca: antes teleportava de
+    // poste a cada 0.2s e a intensidade cortava de 50 -> 0 instantâneo)
+    const fade = 1 - Math.exp(-6 * dt);
     for (let i = 0; i < N; i++) {
       const l = this.lampLights[i];
       const lamp = bestLamp[i];
       if (lamp) {
-        l.position.set(lamp.x, lamp.y, lamp.z);
-        l.intensity = on * NIGHT.lampPower;
+        l.position.x += (lamp.x - l.position.x) * fade;
+        l.position.z += (lamp.z - l.position.z) * fade;
+        l.position.y = lamp.y;
+        l.intensity += (on * NIGHT.lampPower - l.intensity) * fade;
       } else {
-        l.intensity = 0;      // apagada, mas continua visível (sem recompilar)
+        l.intensity += (0 - l.intensity) * fade;   // apaga suave (sem recompilar)
       }
     }
   }
