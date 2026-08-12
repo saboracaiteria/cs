@@ -4,7 +4,7 @@
  * fugir da zona no BR, pegar loot.
  */
 
-import { dist2D, angleDelta, clamp } from '../util.js';
+import { dist2D, angleDelta, clamp, findStreetSpot } from '../util.js';
 
 /** Máx. de bots atirando no MESMO alvo ao mesmo tempo. Sem este limite todos
  *  os bots focavam o jogador junto e ele morria em segundos. */
@@ -338,8 +338,10 @@ export function makeBot(nick, dificuldade = 'media') {
         this.wanderT -= dt;
         if (this.wanderT <= 0) {
           this.wanderT = 2 + Math.random() * 3;
-          this.wanderX = this.body.pos.x + (Math.random() - 0.5) * 40;
-          this.wanderZ = this.body.pos.z + (Math.random() - 0.5) * 40;
+          // [BOT-STUCK] destino sempre em RUA LIVRE — nunca gera ponto dentro de prédio
+          const w = findStreetSpot(col, this.body.pos.x, this.body.pos.z, 2, 14);
+          this.wanderX = w.x;
+          this.wanderZ = w.z;
         }
         const toW = Math.atan2(this.wanderX - this.body.pos.x, this.wanderZ - this.body.pos.z);
         inp.yaw = toW;
@@ -372,7 +374,13 @@ export function makeBot(nick, dificuldade = 'media') {
       } else this._travaT = 0;
       this._travaX = this.body.pos.x;
       this._travaZ = this.body.pos.z;
-      if (this._travaT > 0.55) { inp.jump = true; this._travaT = 0; }
+      if (this._travaT > 0.45) {
+        // [BOT-STUCK] travou contra parede: pula, gira ~70° e troca de destino (rua livre)
+        inp.jump = true;
+        this.body.yaw += (Math.random() < 0.5 ? 1 : -1) * (1.1 + Math.random() * 0.9);
+        this.wanderT = 0;
+        this._travaT = 0;
+      }
 
       this._lastInput = inp;
       room._applyInput(this, inp);

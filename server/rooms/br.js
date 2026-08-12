@@ -162,7 +162,7 @@ export class BRRoom extends Room {
   _onKill(morto, por) {
 
     // [BOT-RESPAWN] bot morreu: volta em 8-12s
-    if (this.bots.get(morto.id)) this.respawnQueue.set(morto.id, 8 + Math.random() * 4);
+    if (this.bots.get(morto.id)) this.respawnQueue.set(morto.id, 4 + Math.random() * 3);   // [BOT-RESPAWN] 4-7s — partida nunca esvazia
 
     // morto no BR: solta o loot que carregava (itens caem no chão)
     const drop = [
