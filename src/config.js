@@ -412,13 +412,13 @@ export const QUALITY = {
  * resultado era janela e poste virando bolha branca. Agora cada um puxa pouco.
  */
 export const NIGHT = {
-  exposureBoost: 0.24,        // soma à exposição do dia (noite jogável)
+  exposureBoost: 0.38,        // soma à exposição do dia (noite jogável) [22]
   bloomStrengthBoost: 0.26,   // soma à força do bloom
   bloomThresholdDrop: 0.28,   // subtrai do limiar do bloom
   windowGlow: 0.85,           // emissivo das janelas acesas [20]
-  lampLens: 1.7,              // emissivo da lente do poste [22]
-  lampGlow: 0.45,             // opacidade do halo do poste
-  lampPower: 22,              // intensidade da PointLight do poste
+  lampLens: 2.2,              // emissivo da lente do poste [22]
+  lampGlow: 0.65,             // opacidade do halo do poste
+  lampPower: 40,              // intensidade da PointLight do poste
   trafficLens: 0.7,           // acréscimo no emissivo do semáforo [4]
 };
 

@@ -309,7 +309,7 @@ export class Props {
   /** [13][22] Acende a iluminação pública e move as luzes reais para perto do jogador. */
   update(dt, nightFactor, focus) {
     this.nightAmount = nightFactor;
-    const on = Math.pow(Math.max(0, (nightFactor - 0.25) / 0.75), 0.8);
+    const on = Math.pow(Math.min(1, Math.max(0, (nightFactor - 0.1) / 0.45)), 0.8);
 
     this.lampLensMat.emissiveIntensity = on * NIGHT.lampLens;
     this.glowMat.opacity = on * NIGHT.lampGlow;
@@ -346,7 +346,7 @@ export class Props {
 
     for (const lamp of this.lamps) {
       const d2 = dist2Sq(lamp.x, lamp.z, focus.x, focus.z);
-      if (d2 >= 60 * 60 || d2 >= bestD2[N - 1]) continue;
+      if (d2 >= 85 * 85 || d2 >= bestD2[N - 1]) continue;
       let k = N - 1;
       while (k > 0 && bestD2[k - 1] > d2) {
         bestD2[k] = bestD2[k - 1];
