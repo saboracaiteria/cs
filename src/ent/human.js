@@ -289,15 +289,21 @@ export class Human {
     let bL = -s * amp * 0.85 - 0.06, bR = s * amp * 0.85 - 0.06;
     let fL = -0.25 - Math.max(0, -s) * amp * 0.5;
     let fR = -0.25 - Math.max(0, s) * amp * 0.5;
-    const lean = moving ? clamp((speed - 5) / 6.5, 0, 0.2) : 0;   // tronco inclina na corrida
+    // [ANIM] tronco inclina SÓ na corrida de verdade (shift) — caminhar
+    // inclinado parece patinação. Suavizado (damp) p/ ligar/desligar.
+    const leanAlvo = (opts.run && moving) ? 1 : 0;
+    this._lean = damp(this._lean ?? 0, leanAlvo, 8, dt);
+    const lean = this._lean * 0.15;
     const bob = moving ? Math.abs(Math.cos(this.phase)) * 0.05 * amp : 0;
 
     // ===== pose NO AR: impulso do pulo =====
     // A perna de trás estica (acabou de EMPURRAR o solo) e a da frente fica
     // com o joelho levemente dobrado — o gesto natural de saltar.
     const imp = this._jumpT > 0 ? Math.min(1, this._jumpT / 0.18) : 0;
-    const aCL = -0.30, aCR = 0.72 + imp * 0.22;
-    const aJL = 0.62, aJR = 0.12 * (1 - imp);
+    const aCL = -0.35 * imp + -0.95 * (1 - imp);
+    const aCR = 0.9 * imp + 0.5 * (1 - imp);
+    const aJL = 0.7;
+    const aJR = 0.12 * imp + 1.0 * (1 - imp);
 
     // ===== blend chão ↔ ar (pernas) =====
     const k = ar, kk = 1 - k;

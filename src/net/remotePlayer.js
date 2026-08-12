@@ -72,7 +72,8 @@ export class RemotePlayer {
   }
 
   /** Animação por quadro. `animar=false` (LOD) ainda segue a posição. */
-  update(dt, speed = 0, animar = true, air = 0) {
+  update(dt, speed = 0, animar = true, air = 0, run = false) {
+    this._run = run;   // [ANIM] correndo de verdade (tronco inclina só correndo)
     // suaviza X/Z: o servidor manda a 30 Hz em degraus e a rede entrega com
     // jitter (o snapshot interpolado para e pula) — o damp mantém o corpo
     // em movimento contínuo até o alvo; teleporte (respawn/carro) vai direto
@@ -121,7 +122,7 @@ export class RemotePlayer {
     if (!this.local) this.human.aiming = this.firing && this.vivo;
     this.human.lookYaw = 0;
     this.human.lookPitch = this.pitch;
-    this.human.update(dt, speed, { air });
+    this.human.update(dt, speed, { air, run: this._run });
     if (!this.local) this.root.visible = this.vivo;
     this.loro.visible = this.vivo && !this._loroSkip;
     if (this.vivo && !this._loroSkip) {

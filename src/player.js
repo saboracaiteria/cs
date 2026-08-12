@@ -288,7 +288,7 @@ export class Player {
     // ------------------------------------------------ malha
     this.human.root.position.copy(this.pos);
     this.human.root.rotation.y = this.yaw;
-    this.human.update(dt, this.grounded ? this.speed : this.speed * 0.35, { air: this.grounded ? 0 : 1 });
+    this.human.update(dt, this.grounded ? this.speed : this.speed * 0.35, { air: this.grounded ? 0 : 1, run: !!input.running });
     this.loro.update(dt, this.pos, this.yaw, this.speed);
     this.saci.update(dt, this.pos, this.yaw);
 

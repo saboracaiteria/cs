@@ -672,7 +672,8 @@ export class Match {
       );
       rp.human.falling = rp.vivo && (rp.y - pisoAt) > 5;
       rp.update(dt, vel, rp.local || distCam < 28 || (this._animF + id) % 3 === 0,
-        rp.vivo && (rp.y - pisoAt) > 0.6);   // [ANIM] no ar? (pulo/queda)
+        rp.vivo && (rp.y - pisoAt) > 0.6,   // [ANIM] no ar? (pulo/queda)
+        !!(d.run));   // [ANIM] correndo de verdade (tronco inclina só correndo)
       // corpo do próprio jogador visível a pé; dentro do carro ele some
       if (rp.local) rp.human.root.visible = rp.vivo && !this._emCarro && !this._emHeli && this._fpp < 0.45;   // [CODM-FPP] corpo some na 1a pessoa
     }
