@@ -1332,10 +1332,13 @@ export class Game {
    */
   _fireMissile() {
     if (!this.missiles.canFire) return;
-    const { origin, direction } = this.camera.aimRay(this._aimOrigin, this._aimDir, 0.24, 0.2);
+    // [MIRA HELI = MP] raio do CENTRO exato da tela (NDC 0,0) — o multiplayer
+    // usa unproject(0,0,0.5); antes (0.24,0.2) fazia o míssil sair deslocado
+    // do retículo (direita e acima) e errar onde a mira apontava
+    const { origin, direction } = this.camera.aimRay(this._aimOrigin, this._aimDir, 0, 0);
 
-    // [AIM ASSIST] igual ao FPS: o míssil desvia para o inimigo mais próximo
-    // da linha de mira (cone ~5,7°) — o heli acerta onde o alvo está.
+    // [AIM ASSIST] igual ao MP: magnetismo sutil (cone ~2,9°, alcance 140 m)
+    // — o tiro sai reto onde o retículo aponta, sem desviar para o lado.
     const alvosM = [];
     const foesM = this.player.inimigos;
     if (foesM && foesM.length) {
@@ -1367,7 +1370,7 @@ export class Game {
       }
     }
     if (alvosM.length) {
-      const aM = aimAssist(origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, alvosM, 300, 0.28);
+      const aM = aimAssist(origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, alvosM, 140, 0.05);
       if (aM) direction.set(aM.x, aM.y, aM.z);
     }
     // [MIRA] O projetil nasce a partir da CAMERA, na linha do reticulo do player —

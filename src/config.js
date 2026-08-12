@@ -330,9 +330,9 @@ export const GAME = {
  * 40 m/s é difícil, e a graça é o estrago, não a precisão.
  */
 export const MISSILE = {
-  speed: 55,                   // velocidade de saída do trilho
-  accel: 70,                   // aceleração do motor
-  maxSpeed: 165,
+  speed: 55,                   // m/s CONSTANTE — idêntico ao MP (MISSIL.speed do servidor)
+  accel: 0,                    // sem aceleração: voa reto a 55 m/s o voo todo
+  maxSpeed: 55,                // (era 165) igual ao servidor: míssil do MP não acelera
   turn: 4.0,                // [missil] guia para o ponto exato da mira (raio de giro seguro a 165 m/s)
   life: 5.0,
   cooldown: 0.5,               // míssil do heli mais rápido [27]
