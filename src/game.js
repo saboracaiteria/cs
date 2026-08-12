@@ -2143,8 +2143,10 @@ export class Game {
     // do eixo da mira (o alvo "escapava" ao apertar o disparo).
     if (!this.phone.open && !emCena) {
       // o clique que captura o ponteiro não deve virar tiro
-      const clicked = this.input.consumeClick();
-      if (clicked && this.input.locked) this._shoot();        // [27]
+      this.input.consumeClick();
+      // [27][PC-auto] botão esquerdo SEGURADO = tiro contínuo (cadência da arma),
+      // igual ao botão ATIRAR no mobile — o canFire limita a velocidade.
+      if (this.input.mouseDown && this.input.locked) this._shoot();
       /*
        * No toque, o botão de atirar é SEGURADO, não tocado uma vez por
        * disparo: metralhar a dedadas não é jogo, é tendinite. A cadência
