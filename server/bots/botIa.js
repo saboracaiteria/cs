@@ -155,6 +155,13 @@ export function makeBot(nick, dificuldade = 'media') {
           inp.moveX = clamp(-diff * 2.5, -1, 1);
           inp.moveZ = 1;
           inp.yaw = toZ;
+        } else if (modo === 'br' && room.zone && dist2D(c.x, c.z, room.zone.x, room.zone.z) > room.zone.r) {
+          // [ZONA-FOCO] carro fora da zona: dirige de volta para a zona
+          const toZ = Math.atan2(room.zone.x - c.x, room.zone.z - c.z);
+          const diff = angleDelta(c.yaw, toZ);
+          inp.moveX = clamp(-diff * 2.5, -1, 1);
+          inp.moveZ = 1;
+          inp.yaw = toZ;
         } else if (best) {
           const dxC = best.body.pos.x - c.x;
           const dzC = best.body.pos.z - c.z;
@@ -172,9 +179,20 @@ export function makeBot(nick, dificuldade = 'media') {
           }
         } else {
           // sem alvo: anda pela cidade ate acabar o tempo de direcao
-          inp.moveZ = 0.55;
-          if (Math.random() < 0.02) this._carroYawW = (Math.random() - 0.5) * 0.7;
-          inp.moveX = clamp(this._carroYawW, -1, 1);
+          // [ZONA-FOCO] carro sem alvo: circula perto do centro da zona
+          this._carroWT = (this._carroWT || 0) - dt;
+          if (this._carroWT <= 0) {
+            this._carroWT = 6 + Math.random() * 4;
+            const angC = Math.random() * Math.PI * 2;
+            const dC = (modo === 'br' && room.zone ? room.zone.r : 90) * 0.55;
+            this._carroWX = clamp((modo === 'br' && room.zone ? room.zone.x : c.x) + Math.cos(angC) * dC, -200, 200);
+            this._carroWZ = clamp((modo === 'br' && room.zone ? room.zone.z : c.z) + Math.sin(angC) * dC, -200, 200);
+          }
+          const toZ = Math.atan2(this._carroWX - c.x, this._carroWZ - c.z);
+          const diff = angleDelta(c.yaw, toZ);
+          inp.moveX = clamp(-diff * 2.5, -1, 1);
+          inp.moveZ = 1;
+          inp.yaw = toZ;
         }
         this._lastInput = inp;
         room._applyInput(this, inp);
@@ -215,7 +233,20 @@ export function makeBot(nick, dificuldade = 'media') {
             inp.yaw = toZ;
             inp.heliDesiredYaw = toZ;
           } else {
-            inp.moveZ = 0;   // sem alvo: fica pairando (anti-idle desce e o bot retoma)
+            // [ZONA-FOCO] sem alvo: heli circula perto do centro da zona
+            this._heliWanderT = (this._heliWanderT || 0) - dt;
+            if (this._heliWanderT <= 0) {
+              this._heliWanderT = 5 + Math.random() * 4;
+              const angH = Math.random() * Math.PI * 2;
+              const dH2 = (modo === 'br' && room.zone ? room.zone.r : 80) * 0.55;
+              this._heliWX = clamp((modo === 'br' && room.zone ? room.zone.x : 0) + Math.cos(angH) * dH2, -200, 200);
+              this._heliWZ = clamp((modo === 'br' && room.zone ? room.zone.z : 0) + Math.sin(angH) * dH2, -200, 200);
+            }
+            const toZ = Math.atan2(this._heliWX - this.body.pos.x, this._heliWZ - this.body.pos.z);
+            const dZ = Math.hypot(this._heliWX - this.body.pos.x, this._heliWZ - this.body.pos.z);
+            inp.moveZ = dZ > 40 ? 0.55 : dZ < 15 ? -0.4 : 0;
+            inp.yaw = toZ;
+            inp.heliDesiredYaw = toZ;
           }
           this._heliT -= dt;
           if (this._heliT <= 0) {
@@ -332,6 +363,14 @@ export function makeBot(nick, dificuldade = 'media') {
       } else {
 
         // [BOT-CARRO] sem alvo: prefere pegar um carro livre e rodar pela cidade
+        // [ZONA-FOCO] BR: sem alvo e na borda da zona (>72% do raio) — volta ao centro da zona
+        if (modo === 'br' && room.zone && dist2D(this.body.pos.x, this.body.pos.z, room.zone.x, room.zone.z) > room.zone.r * 0.72) {
+          const toZ = Math.atan2(room.zone.x - this.body.pos.x, room.zone.z - this.body.pos.z);
+          inp.yaw = toZ;
+          inp.moveZ = 0.5;
+          inp.run = true;
+          this.wanderT = 0.2;
+        } else {
         let cNear = null, cD = Infinity;
         if (this.pilotarCarro) {
           for (const cc of room.cars || []) {
@@ -357,7 +396,17 @@ export function makeBot(nick, dificuldade = 'media') {
         if (this.wanderT <= 0) {
           this.wanderT = 2 + Math.random() * 3;
           // [BOT-STUCK] destino sempre em RUA LIVRE — nunca gera ponto dentro de prédio
-          const w = findStreetSpot(col, this.body.pos.x, this.body.pos.z, 2, 14);
+          let w;
+          if (modo === 'br' && room.zone) {
+            // [ZONA-FOCO] BR: destino sempre perto do centro da zona — bots concentrados
+            const angZ = Math.random() * Math.PI * 2;
+            const distZ = Math.random() * room.zone.r * 0.6;
+            w = findStreetSpot(col,
+              room.zone.x + Math.cos(angZ) * distZ,
+              room.zone.z + Math.sin(angZ) * distZ, 3, 16);
+          } else {
+            w = findStreetSpot(col, this.body.pos.x, this.body.pos.z, 2, 14);
+          }
           // [BOT-MAPA] destino nunca fora dos predios
           this.wanderX = clamp(w.x, -200, 200);
           this.wanderZ = clamp(w.z, -200, 200);
@@ -365,6 +414,7 @@ export function makeBot(nick, dificuldade = 'media') {
         const toW = Math.atan2(this.wanderX - this.body.pos.x, this.wanderZ - this.body.pos.z);
         inp.yaw = toW;
         inp.moveZ = 0.5;
+        }
         }
       }
 
