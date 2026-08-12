@@ -108,23 +108,48 @@ export function criarHudEditor() {
     touch.style.zIndex = '';
     touch.style.pointerEvents = '';
     const pad = touch.querySelector('#tc-pad');
+    const personalizado = editaveis().some(b =>
+      b.style.left !== '' || b.style.top !== '' ||
+      b.style.right !== '' || b.style.bottom !== '');
     if (pad) {
-      pad.style.display = '';
-      pad.style.pointerEvents = '';
-      pad.style.position = '';
-      pad.style.inset = '';
-      pad.style.width = '';
-      pad.style.height = '';
-      pad.style.right = '';
-      pad.style.bottom = '';
-      pad.style.transform = '';
-      pad.style.transformOrigin = '';
+      if (!personalizado) {
+        pad.style.display = '';
+        pad.style.pointerEvents = '';
+        pad.style.position = '';
+        pad.style.inset = '';
+        pad.style.width = '';
+        pad.style.height = '';
+        pad.style.right = '';
+        pad.style.bottom = '';
+        pad.style.transform = '';
+        pad.style.transformOrigin = '';
+      } else {
+        // layout personalizado: o pad CONTINUA fullscreen sem transform para os
+        // % dos botoes valerem da viewport no jogo (senao o transform:scale(.84)
+        // do pad prende os botoes de novo e eles voltam a ficar colados na caixa)
+        pad.classList.remove('hidden');
+        pad.style.display = 'block';
+        pad.style.pointerEvents = 'none';
+        pad.style.position = 'fixed';
+        pad.style.inset = '0';
+        pad.style.width = '100%';
+        pad.style.height = '100%';
+        pad.style.right = 'auto';
+        pad.style.bottom = 'auto';
+        pad.style.transform = 'none';
+        pad.style.transformOrigin = '0 0';
+      }
     }
     for (const b of editaveis()) {
       b.classList.remove('customizing', 'custom-selected', 'hud-arrastando');
       b.style.display = '';
       b.style.pointerEvents = '';
-      b.style.position = '';
+      if (!personalizado) {
+        b.style.position = '';
+      } else {
+        // mantem fixed: os % continuam relativos a viewport no jogo
+        b.style.position = 'fixed';
+      }
       b.style.zIndex = '';
     }
   }
