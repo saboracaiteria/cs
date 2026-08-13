@@ -184,6 +184,8 @@ export class Foe {
     this.recarga = 0;
     this.t = Math.random() * 6;
     this.morteT = 0;
+    this.ladoDesvio = 0;   // [FIX-vibração] lado memorizado do deslize (não alterna por frame)
+    this.ladoT = 0;        // tempo travado em beco (troca de lado a cada 1.2s)
 
     if (ficha.humano) {
       const spec = { ...HUMANOIDES[ficha.humano] };
@@ -282,33 +284,52 @@ export class Foe {
     if (distH > parar) {
       vel = this.ficha.vel;
       const passo = Math.min(vel * dt, distH - parar);
-      p.x += (dx / distH) * passo;
-      p.z += (dz / distH) * passo;
-      // não atravessa a parede da arena
-      if (arena && !arena.dentro(p.x, p.z, -1)) {
-        p.x -= (dx / distH) * passo;
-        p.z -= (dz / distH) * passo;
+      // [FIX-vibração] olha ANTES de mover: anda reto SÓ se o destino direto
+      // está livre. Bloqueado, desliza pela tangente com LADO MEMORIZADO
+      // (this.ladoDesvio) — nunca alterna o lado por frame, então o bot não
+      // vibra de um lado para o outro contra a parede.
+      const ux = dx / distH, uz = dz / distH;
+      const nx0 = p.x + ux * passo;
+      const nz0 = p.z + uz * passo;
+
+      if (col && !this.ficha.colossal && col.isBlocked(nx0, nz0, 0.72, 0.5)) {
+        // bloqueado por prédio: desliza pela tangente no lado memorizado
+        const raio = 0.72;
+        const tx = uz, tz = -ux;
+        if (!this.ladoDesvio) {
+          const livreA = !col.isBlocked(p.x + tx * passo * 2, p.z + tz * passo * 2, raio, 0.5);
+          const livreB = !col.isBlocked(p.x - tx * passo * 2, p.z - tz * passo * 2, raio, 0.5);
+          this.ladoDesvio = livreA && !livreB ? 1 : !livreA && livreB ? -1 : (Math.random() < 0.5 ? 1 : -1);
+        }
+        let nx = p.x + tx * passo * this.ladoDesvio;
+        let nz = p.z + tz * passo * this.ladoDesvio;
+        if (col.isBlocked(nx, nz, raio, 0.5)) {
+          // lado travado: tenta o oposto (e memoriza)
+          nx = p.x - tx * passo * this.ladoDesvio;
+          nz = p.z - tz * passo * this.ladoDesvio;
+          if (!col.isBlocked(nx, nz, raio, 0.5)) {
+            this.ladoDesvio = -this.ladoDesvio;
+          } else {
+            // beco/canto: tenta reto mesmo assim (resolveCircle empurra p/ a
+            // direção de menor resistência e o bot escapa) — troca de lado só
+            // a cada 1.2s, nunca por frame (sem vibração)
+            this.ladoT = (this.ladoT || 0) + dt;
+            if (this.ladoT > 1.2) { this.ladoDesvio = Math.random() < 0.5 ? 1 : -1; this.ladoT = 0; }
+            nx = nx0; nz = nz0;
+          }
+        }
+        p.x = nx; p.z = nz;
+        col.resolveCircle(p, raio, this.altura + 0.6);
+      } else {
+        // caminho livre: anda reto
+        p.x = nx0; p.z = nz0;
+        if (col && !this.ficha.colossal) col.resolveCircle(p, 0.72, this.altura + 0.6);
       }
 
-      // [FIX-prédios] inimigo NÃO atravessa paredes: desliza ao longo
-      // delas em vez de entrar nos prédios e ficar preso dentro.
-      // Colossais seguem atravessando (o combate deles é no heli).
-      if (col && !this.ficha.colossal) {
-        const bloqueado = col.resolveCircle(p, 0.72, this.altura + 0.6);
-        if (bloqueado) {
-          // frente bloqueada (quase preso numa quina/parede): contorna
-          // pela tangente — tenta um lado, se ainda bloqueado, o outro
-          const tx = dz / distH, tz = -dx / distH;
-          for (const lado of [1, -1]) {
-            const nx = p.x + tx * passo * 0.9 * lado;
-            const nz = p.z + tz * passo * 0.9 * lado;
-            if (!col.isBlocked(nx, nz, 0.72, 0.5)) {
-              p.x = nx; p.z = nz;
-              break;
-            }
-          }
-          col.resolveCircle(p, 0.72, this.altura + 0.6);
-        }
+      // não atravessa a parede da arena
+      if (arena && !arena.dentro(p.x, p.z, -1)) {
+        p.x -= ux * passo;
+        p.z -= uz * passo;
       }
     } else if (this.recarga <= 0) {
       if (b && distH > this.ficha.alcance) {
