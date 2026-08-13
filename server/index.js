@@ -158,7 +158,7 @@ function handle(ws, msg) {
       // achar: os bots enchiam tudo e canJoin() ficava falso)
       const cfg = MODES[modo];
       const rng = makeRng(Date.now() & 0xffffffff);
-      while (room.totalSlots < cfg.maxPlayers - 1) {
+      while (room.totalSlots < cfg.maxPlayers) {
         const bot = makeBot(pickBotName(rng));
         room.addBot(bot);
       }

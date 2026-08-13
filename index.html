@@ -20,8 +20,8 @@
 <meta property="og:description" content="A cruzada da AGI Sagrada em mundo aberto 3D. Cinco chefões, sete fases, uma cidade brasileira inteira para atravessar.">
 <meta property="og:locale" content="pt_BR">
 <meta name="twitter:card" content="summary">
-<link rel="stylesheet" href="./css/style.css?v=20260826">
-<link rel="stylesheet" href="./css/multiplayer.css?v=20260826">
+<link rel="stylesheet" href="./css/style.css?v=20260827">
+<link rel="stylesheet" href="./css/multiplayer.css?v=20260827">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏺</text></svg>">
 </head>
 <body>
@@ -461,7 +461,7 @@
     <label class="mp-field"><span>SEU NOME</span><input id="mp-nick" type="text" maxlength="14" placeholder="Jogador" value="Jogador"></label>
     <div class="mp-cards">
       <button type="button" class="mp-card" id="mp-missoes"><b>📜 MISSÕES</b><span>Campanha solo — o jogo original</span></button>
-      <button type="button" class="mp-card" id="mp-dm"><b>⚔️ MULTIPLAYER</b><span>Mata-mata até 8 no servidor</span></button>
+      <button type="button" class="mp-card" id="mp-dm"><b>⚔️ MULTIPLAYER</b><span>Mata-mata — 12 jogadores (players + bots)</span></button>
       <button type="button" class="mp-card mp-br-off" id="mp-br" disabled title="Em breve"><b>🪂 BATTLE ROYALE</b><span>Zona encolhendo, loot, último vivo</span><i class="mp-tag">EM BREVE</i></button>
     </div>
     <div class="mp-rodape"><button type="button" class="mp-fechar">VOLTAR</button></div>
@@ -542,7 +542,7 @@
 <div id="fatal" class="hidden"></div>
 
 <script type="module">
-  import { boot } from './src/main.js?v=20260826';
+  import { boot } from './src/main.js?v=20260827';
   boot().catch((err) => {
     console.error(err);
     // [DIAG] titulo vira o erro + stack para leitura via snapshot

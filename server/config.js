@@ -122,7 +122,7 @@ export const MODES = {
   dm: {
     id: 'dm',
     label: 'MULTIPLAYER',
-    maxPlayers: 8,
+    maxPlayers: 12,   // total SEMPRE 12: players + bots (4 players -> 8 bots)
     minPlayers: 2,       // bots completam até minPlayers quando ligado
     killLimit: 25,
     timeLimit: 300,      // segundos (5 min — vence quem tiver mais kills)
