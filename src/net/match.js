@@ -21,6 +21,11 @@ import { clamp, damp, angleDelta } from '../utils.js';
 
 const INPUT_HZ = 30;   // 1 input por tick do servidor (30 Hz): degraus menores na fisica
 
+// espelho de server/config.js CAR — a predição do carro dirigido usa a MESMA
+// física do servidor (aceleração/esterço/colisão), senão o carro tremia ao
+// andar (position.set direto do snap = teleporte a cada pacote com latência)
+const CAR_MP = { radius: 2.1, height: 1.6, maxSpeed: 26, accel: 14, brake: 34, steer: 1.9 };
+
 export class Match {
   constructor(game, net, info) {
     this.game = game;
@@ -705,6 +710,12 @@ export class Match {
       const hl = this.helisMp.get(this._meuHeliId);
       if (hl) foc.set(hl.x, hl.y + 1.2, hl.z);   // [MIRA HELI] foco vertical igual ao solo (game.js:2086 p.y+1.2)
       else if (rpLoc) foc.set(rpLoc.x, rpLoc.y + 1.62, rpLoc.z);
+    } else if (this._emCarro && this._meuCarroId != null) {
+      // [CARRO-FIX] foco segue o CARRO predito (física local), não o snap cru —
+      // sem isto a câmera tremia junto com o teleporte do position.set
+      const cr = this.carrosMp.get(this._meuCarroId);
+      if (cr) foc.set(cr.x, cr.y + 1.2, cr.z);
+      else if (rpLoc) foc.set(rpLoc.x, rpLoc.y + 1.62, rpLoc.z);
     } else if (rpLoc) foc.set(rpLoc.x, rpLoc.y + 1.62, rpLoc.z);
     // [Bug2-fix] foco na altura dos olhos (+1.62) em vez dos ombros (+1.48):
     // Bob desce no enquadramento e a visão à frente fica desobstruída.
@@ -1011,6 +1022,33 @@ export class Match {
       hl.mesh.mpUpdate(dt, night);
     }
     this._atualizarHeliHud();
+
+    // carros: predição local do dirigido + interpolação dos remotos (mesmo padrão
+    // do heli) — sem isso o carro tremia/teleportava porque o mesh recebia
+    // position.set direto de cada snap (~100-170ms de latência)
+    const pilotoCarro = this._emCarro && this._meuCarroId != null;
+    for (const [cid, cr] of this.carrosMp) {
+      if (pilotoCarro && cid === this._meuCarroId) {
+        // predição local (mesma física do servidor): o carro responde NA HORA
+        this._predizerCarro(cr, dt);
+        // reconciliação: só adota o snap se a divergência for real (empurrão/teleporte)
+        if (cr.alvo && Math.hypot(cr.x - cr.alvo.x, cr.z - cr.alvo.z) > 10) {
+          cr.x = cr.alvo.x; cr.y = cr.alvo.y; cr.z = cr.alvo.z;
+          cr.speed = 0;
+        }
+        cr.mesh.speed = cr.speed;
+      } else if (cr.alvo) {
+        // remoto/livre: interpolação suave (damp) — sem teleporte nem travada
+        cr.x = damp(cr.x, cr.alvo.x, 8, dt);
+        cr.y = damp(cr.y, cr.alvo.y, 8, dt);
+        cr.z = damp(cr.z, cr.alvo.z, 8, dt);
+        cr.yaw = damp(cr.yaw, cr.alvo.yaw, 8, dt);
+        cr.mesh.speed = cr.snapSpeed || 0;
+      }
+      cr.mesh.root.position.set(cr.x, cr.y, cr.z);
+      cr.mesh.yaw = cr.yaw;
+      cr.mesh.syncTransform();
+    }
 
     // envia input a INPUT_HZ
     this._sendAcc += dt;
@@ -1337,6 +1375,38 @@ export class Match {
     hl.z = clamp(hl.z, -2600, 2600);
   }
 
+  /** Predição local do carro dirigido — replica EXATAMENTE a física do servidor
+   *  (server/cars.js updateCars): aceleração, esterço, colisão e solo. O mesh é
+   *  posicionado no _update; o snap volta só para reconciliar divergências reais. */
+  _predizerCarro(cr, dt) {
+    const inp = {
+      moveX: clamp(this.inp.mx + this._carSteer, -1, 1),
+      moveZ: clamp(this.inp.mz || 0, -1, 1),
+    };
+    // acelera / freia / ré (mesmas constantes do servidor)
+    const gas = clamp(inp.moveZ, -1, 1);
+    const alvo = gas * CAR_MP.maxSpeed;
+    const accel = gas !== 0 ? CAR_MP.accel : CAR_MP.brake;
+    cr.speed += clamp(alvo - cr.speed, -accel * dt, accel * dt);
+    // esterço proporcional à velocidade
+    if (Math.abs(cr.speed) > 0.4) {
+      const steer = -clamp(inp.moveX, -1, 1) * CAR_MP.steer * Math.min(1, Math.abs(cr.speed) / 9);
+      cr.yaw += steer * dt * (cr.speed >= 0 ? 1 : -1);
+    }
+    // anda
+    cr.x += Math.sin(cr.yaw) * cr.speed * dt;
+    cr.z += Math.cos(cr.yaw) * cr.speed * dt;
+    // colisão com prédios/postes (círculo do carro) e solo
+    const pos = { x: cr.x, y: cr.y, z: cr.z };
+    if (this.game.col.resolveCircle(pos, CAR_MP.radius, CAR_MP.height)) {
+      cr.x = pos.x; cr.z = pos.z;
+    }
+    cr.y = this.game.col.groundHeightAt(cr.x, cr.z) + 0.2;
+    // limite do mundo
+    cr.x = clamp(cr.x, -2500, 2500);
+    cr.z = clamp(cr.z, -2500, 2500);
+  }
+
   // ------------------------------------------------------------ veiculos
   _aplicarCarros(lista) {
     for (const c of lista) {
@@ -1354,15 +1424,19 @@ export class Match {
         const mesh = new Car(c.cor || 0xe53935, Math.random);
         mesh.root.traverse(o => { if (o.isMesh || o.isSprite) o.frustumCulled = false; });   // [INVISIVEL-FIX]
         this.game.gfx.scene.add(mesh.root);
-        cr = { mesh, x: c.x, y: c.y, z: c.z, playerId: null };
+        cr = { mesh, x: c.x, y: c.y, z: c.z, yaw: c.yaw || 0, speed: c.speed || 0, playerId: null, alvo: null };
+        // primeiro snap: posiciona direto (ainda nao ha historico p/ interpolar)
+        cr.mesh.root.position.set(c.x, c.y, c.z);
+        cr.mesh.yaw = cr.yaw;
+        cr.mesh.syncTransform();
         this.carrosMp.set(c.id, cr);
       }
-      cr.x = c.x; cr.y = c.y; cr.z = c.z;
       cr.playerId = c.playerId;
-      cr.mesh.root.position.set(c.x, c.y, c.z);
-      cr.mesh.yaw = c.yaw;
-      cr.mesh.syncTransform();
-      cr.mesh.speed = c.speed;
+      cr.snapSpeed = c.speed;
+      // [CARRO-FIX] alvo do servidor (snap autoritativo) — o MESH é posicionado
+      // no _update com predição local (dirigido) ou interpolação suave (remoto),
+      // nunca position.set direto (era o que fazia o carro tremer/teleportar).
+      cr.alvo = { x: c.x, y: c.y, z: c.z, yaw: c.yaw || 0 };
     }
   }
 

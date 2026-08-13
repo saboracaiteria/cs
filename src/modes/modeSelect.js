@@ -28,10 +28,7 @@ export function abrirModoSelect(game) {
     const n = nick ? nick.value.trim().slice(0, 14) || 'Jogador' : 'Jogador';
     iniciarMultiplayer(game, 'dm', n);
   };
-  if (btnBr) btnBr.onclick = () => {
-    fechar();
-    const n = nick ? nick.value.trim().slice(0, 14) || 'Jogador' : 'Jogador';
-    iniciarMultiplayer(game, 'br', n);
-  };
+  // [BR-OFF] battle royale desativado — botão vira tag "EM BREVE" (disabled no HTML)
+  // btnBr.onclick não é registrado: o <button> tem disabled e pointer-events:none
   modal.querySelector('.mp-fechar')?.addEventListener('click', fechar);
 }

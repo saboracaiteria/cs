@@ -173,6 +173,56 @@
   line-height: 1.45;
 }
 
+.mp-card.mp-br-off {
+  cursor: not-allowed;
+  opacity: .45;
+  filter: grayscale(.4);
+  pointer-events: none;
+}
+.mp-card.mp-br-off:hover {
+  background: rgba(255, 255, 255, .04);
+  border-color: var(--stroke);
+  transform: none;
+  box-shadow: none;
+}
+.mp-tag {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: linear-gradient(135deg, #ffb347, #ff6a3d);
+  color: #1a0f00;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+.mp-card.mp-br-off {
+  cursor: not-allowed;
+  opacity: .45;
+  filter: grayscale(.4);
+  pointer-events: none;
+}
+.mp-card.mp-br-off:hover {
+  background: rgba(255, 255, 255, .04);
+  border-color: var(--stroke);
+  transform: none;
+  box-shadow: none;
+}
+.mp-tag {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: linear-gradient(135deg, #ffb347, #ff6a3d);
+  color: #1a0f00;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
 .mp-rodape {
   display: flex;
   justify-content: center;

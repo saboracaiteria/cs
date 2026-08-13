@@ -89,6 +89,14 @@ export class Human {
       vertexColors: true, roughness: 0.78, metalness: 0.03,
       emissive: 0xffffff, emissiveIntensity: 0,
     });
+    // [NOITE-ROUPA] brilho noturno usa a COR do vertice (vColor): a noite a
+    // roupa mantem a cor original em vez de escurecer ou ficar lavada de branco
+    this.material.onBeforeCompile = (shader) => {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <emissivemap_fragment>',
+        '#include <emissivemap_fragment>\n\ttotalEmissiveRadiance = vColor * emissive;'
+      );
+    };
 
     /*
      * ------------------------------------------------------------ tronco
@@ -391,7 +399,6 @@ export class Human {
     this.head.rotation.y = damp(this.head.rotation.y, hy, 14, dt);
   }
 
-
   setPose(kind) {
     if (kind === 'panic') {
       this.armL.group.rotation.x = -2.7;
@@ -404,7 +411,9 @@ export class Human {
   get position() { return this.root.position; }
 
   setNight(n) {
-    this.material.emissiveIntensity = n * 0.14;   // brilho sutil a noite: ilumina sem lavar a cor (nightFactor max ~0.6)
+    // [NOITE-ROUPA] a noite a roupa mantem a cor do dia: o shader usa
+    // vColor * emissive (uniform jah escalado por emissiveIntensity no JS)
+    this.material.emissiveIntensity = n * 1.1;
   }
 
   dispose() {
