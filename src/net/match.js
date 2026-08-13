@@ -744,6 +744,9 @@ export class Match {
         this._ultNoite = night;
         if (this.game.city) this.game.city.setNight(night);
         if (this.game.cars) this.game.cars.setNight(night);
+        if (this.game.player) this.game.player.human.setNight(night);
+        if (this.game.peds) this.game.peds.setNight(night);
+        for (const rp of this.avatares.values()) rp.human.setNight(night);
       }
       // [iluminacao/animacoes] o resto do mundo tambem fica parado no MP:
       // replicar os updates que o SOLO faz por frame (lampadas dos postes,

@@ -87,6 +87,7 @@ export class Human {
     // um único material por pessoa — as cores vêm dos vértices
     this.material = new THREE.MeshStandardMaterial({
       vertexColors: true, roughness: 0.78, metalness: 0.03,
+      emissive: 0xffffff, emissiveIntensity: 0,
     });
 
     /*
@@ -401,6 +402,10 @@ export class Human {
   }
 
   get position() { return this.root.position; }
+
+  setNight(n) {
+    this.material.emissiveIntensity = n * 0.55;   // roupas visiveis a noite (nightFactor max ~0.6)
+  }
 
   dispose() {
     // as texturas de número são compartilhadas via cache — quem descarta

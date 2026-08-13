@@ -2009,6 +2009,8 @@ export class Game {
     const night = this.sky.nightFactor;
     this.sky.setPaused(false);
     this.sky.update(dt, this._focus);
+    this.player.human.setNight(night);
+    this.peds.setNight(night);
     this.city.setNight(night);
     this.props.update(dt, night, this._focus);
     this.landmarks.update(dt, night);
@@ -2096,6 +2098,8 @@ export class Game {
     // ------------------------------------------------ mundo
     const night = this.sky.nightFactor;
     this.sky.update(dt, this._focus);                         // [13]
+    this.player.human.setNight(night);
+    this.peds.setNight(night);
     this.city.setNight(night);                                // [20] janelas acesas
     this.props.update(dt, night, this._focus);                // [22]
     this.landmarks.update(dt, night);                         // [53][54]

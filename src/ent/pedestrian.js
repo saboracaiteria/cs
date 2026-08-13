@@ -288,6 +288,12 @@ export class PedestrianSystem {
   }
 
   get count() { return this.peds.length; }
+
+  setNight(n) {
+    for (const p of this.peds) {
+      if (p.alive && p.human) p.human.setNight(n);
+    }
+  }
 }
 
 export { PED_OFF };

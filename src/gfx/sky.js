@@ -125,7 +125,7 @@ export class SkySystem {
 
     // ---------------------------------------------------------- lua
     const moonMat = new THREE.MeshBasicMaterial({
-      color: 0xfdf6e0, fog: false, transparent: true, depthTest: false,
+      color: 0xfdf6e0, fog: false, transparent: true, depthTest: true,
     });
     this.moon = new THREE.Mesh(new THREE.SphereGeometry(22, 24, 16), moonMat);
     this.moon.renderOrder = -998;
@@ -191,7 +191,7 @@ export class SkySystem {
       sizeAttenuation: false,
       transparent: true,
       opacity: 0,
-      depthTest: false,
+      depthTest: true,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
       fog: false,
