@@ -17,7 +17,7 @@ import { Helicopter } from '../ent/helicopter.js';
 import * as THREE from '../../vendor/three.module.js';
 import { T } from './protocol.js';
 import { CAMERA, HELI } from '../config.js';
-import { clamp, damp } from '../utils.js';
+import { clamp, damp, angleDelta } from '../utils.js';
 
 const INPUT_HZ = 30;   // 1 input por tick do servidor (30 Hz): degraus menores na fisica
 
@@ -982,9 +982,34 @@ export class Match {
       this._shake = Math.max(0, this._shake - dt * 2.4);
     }
 
-    // helicopteros: rotor/beacon animados + painel ALT/VEL do piloto
+    // helicopteros: predição local do pilotado + interpolação dos remotos
     const night = this.game && this.game.sky ? this.game.sky.nightFactor : 0;
-    for (const hl of this.helisMp.values()) hl.mesh.mpUpdate(dt, night);
+    const pilotoLocal = this._emHeli && this._meuHeliId != null;
+    for (const hl of this.helisMp.values()) {
+      if (pilotoLocal && hl.id === this._meuHeliId && hl.piloted) {
+        // predição local (mesma física do servidor): o aparelho responde NA HORA
+        this._predizerHeli(hl, dt);
+        // reconciliação: só adota o snap se a divergência for real (empurrão/teleporte)
+        if (hl.alvo && Math.hypot(hl.x - hl.alvo.x, hl.z - hl.alvo.z) > 10) {
+          hl.x = hl.alvo.x; hl.y = hl.alvo.y; hl.z = hl.alvo.z;
+          hl.velx = 0; hl.vely = 0; hl.velz = 0;
+        }
+        hl.mesh.yaw = hl.yaw;
+        hl.mesh.pitch = hl.pitch;
+        hl.mesh.roll = hl.roll;
+      } else if (hl.alvo) {
+        // remoto/livre: interpolação suave (damp) — sem teleporte nem travada
+        hl.x = damp(hl.x, hl.alvo.x, 8, dt);
+        hl.y = damp(hl.y, hl.alvo.y, 8, dt);
+        hl.z = damp(hl.z, hl.alvo.z, 8, dt);
+        hl.mesh.yaw = damp(hl.mesh.yaw, hl.alvo.yaw, 8, dt);
+        hl.mesh.pitch = damp(hl.mesh.pitch, hl.alvo.pitch, 8, dt);
+        hl.mesh.roll = damp(hl.mesh.roll, hl.alvo.roll, 8, dt);
+      }
+      hl.mesh.root.position.set(hl.x, hl.y, hl.z);
+      hl.mesh.root.rotation.set(hl.mesh.pitch, hl.mesh.yaw, hl.mesh.roll, 'YXZ');
+      hl.mesh.mpUpdate(dt, night);
+    }
     this._atualizarHeliHud();
 
     // envia input a INPUT_HZ
@@ -1255,6 +1280,63 @@ export class Match {
     };
   }
 
+  /** Predição local do heli pilotado — replica EXATAMENTE a física do
+   * servidor (server/helis.js updateHelis) para o aparelho responder na hora
+   * do input, sem esperar o snapshot (era o que causava a "travada" ao voar). */
+  _predizerHeli(hl, dt) {
+    const inp = {
+      forward: clamp(this.inp.mz || 0, -1, 1),
+      strafe: clamp(this.inp.mx || 0, -1, 1),
+      up: this.inp.up ? 1 : 0,
+      down: this.inp.down ? 1 : 0,
+      yawLeft: this._heliYaw > 0 ? 1 : 0,
+      yawRight: this._heliYaw < 0 ? 1 : 0,
+      desiredYaw: this.yaw + Math.PI,   // igual ao heliDesiredYaw enviado
+    };
+    // guinada manual (Q/R) + nariz segue a câmera
+    hl.yaw += (inp.yawLeft - inp.yawRight) * HELI.yawRate * dt;
+    const d = angleDelta(hl.yaw, inp.desiredYaw);
+    hl.yaw += clamp(d * 2.0, -HELI.yawRate, HELI.yawRate) * dt;
+    // inclinação visual (mesmo amortecimento do servidor)
+    hl.pitch = damp(hl.pitch, clamp(inp.forward * 0.42, -0.42, 0.42), 4.5, dt);
+    hl.roll = damp(hl.roll, clamp(inp.strafe * 0.40, -0.40, 0.40), 4.5, dt);
+    // forças de translação (frente = nariz +Z — convenção do modelo)
+    const fx = Math.sin(hl.yaw), fz = Math.cos(hl.yaw);
+    const rx = -Math.cos(hl.yaw), rz = Math.sin(hl.yaw);
+    hl.velx += (fx * inp.forward + rx * inp.strafe) * HELI.tiltAccel * dt;
+    hl.velz += (fz * inp.forward + rz * inp.strafe) * HELI.tiltAccel * dt;
+    hl.vely += (inp.up - inp.down) * HELI.liftAccel * dt;
+    if (inp.up === 0 && inp.down === 0) hl.vely = damp(hl.vely, 0, 2.2, dt);
+    // arrasto e limites
+    const drag = Math.exp(-HELI.drag * dt);
+    hl.velx *= drag; hl.velz *= drag;
+    hl.vely = clamp(hl.vely, -HELI.maxLift, HELI.maxLift);
+    const hs = Math.hypot(hl.velx, hl.velz);
+    if (hs > HELI.maxSpeed) { hl.velx *= HELI.maxSpeed / hs; hl.velz *= HELI.maxSpeed / hs; }
+    // integração
+    const yAntes = hl.y;
+    hl.x += hl.velx * dt;
+    hl.y += hl.vely * dt;
+    hl.z += hl.velz * dt;
+    // não desce abaixo da superfície
+    const col = this.game.col;
+    const surf = col.groundHeightAt(hl.x, hl.z, hl.y);
+    const minY = surf + HELI.landHeight;
+    if (hl.y < minY && yAntes >= minY - 0.02) { hl.y = minY; if (hl.vely < 0) hl.vely = 0; }
+    // não atravessa prédios/marcos (empurra para fora, igual ao servidor)
+    const before = { x: hl.x, z: hl.z };
+    const pos = { x: hl.x, y: hl.y, z: hl.z };
+    if (col.resolveCircle(pos, 2.0)) {
+      hl.x = pos.x; hl.z = pos.z;
+      hl.velx = (hl.x - before.x) * 6;
+      hl.velz = (hl.z - before.z) * 6;
+    }
+    // teto de voo e limites do mundo
+    if (hl.y > 150) { hl.y = 150; hl.vely = Math.min(0, hl.vely); }
+    hl.x = clamp(hl.x, -2600, 2600);
+    hl.z = clamp(hl.z, -2600, 2600);
+  }
+
   // ------------------------------------------------------------ veiculos
   _aplicarCarros(lista) {
     for (const c of lista) {
@@ -1289,18 +1371,21 @@ export class Match {
       let hl = this.helisMp.get(h.id);
       if (!hl) {
         const mesh = new Helicopter(this.game.gfx.scene, this.game.col, h.cor || 0x1f4f8f);
-        hl = { mesh, x: h.x, y: h.y, z: h.z, vel: 0, playerId: null };
+        hl = {
+          id: h.id, mesh,
+          x: h.x, y: h.y, z: h.z,
+          velx: 0, vely: 0, velz: 0,
+          yaw: h.yaw || 0, pitch: h.pitch || 0, roll: h.roll || 0,
+          vel: 0, playerId: null, alvo: null,
+        };
         this.helisMp.set(h.id, hl);
       }
-      hl.x = h.x; hl.y = h.y; hl.z = h.z;
+      // alvo do servidor (snap autoritativo) — o MESH é posicionado no _update
+      // com predição local (piloto) ou interpolação suave (remoto), nunca teleporte.
+      hl.alvo = { x: h.x, y: h.y, z: h.z, yaw: h.yaw || 0, pitch: h.pitch || 0, roll: h.roll || 0 };
       hl.vel = h.speed || 0;
       hl.playerId = h.playerId;
       hl.fuel = h.fuel ?? 100;
-      hl.mesh.root.position.set(h.x, h.y, h.z);
-      hl.mesh.yaw = h.yaw;
-      hl.mesh.pitch = h.pitch || 0;
-      hl.mesh.roll = h.roll || 0;
-      hl.mesh.root.rotation.set(hl.mesh.pitch, h.yaw, hl.mesh.roll, 'YXZ');
       hl.mesh.piloted = h.playerId != null && (h.fuel ?? 100) > 0;
     }
   }
