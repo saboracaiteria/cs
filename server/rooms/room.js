@@ -321,6 +321,14 @@ export class Room {
       if (p.inCar != null) continue;   // o carro move o corpo do motorista
       if (p.inHeli != null) continue;  // o helicóptero move o corpo do piloto
       const r = stepBody(this.world, p.body, p.body._inp, dt);
+      // [S23-FIX] NaN sanitize: 0/0 ou exp() estourado em alguma GPU/input
+      // geraria posicao NaN -> snapshot NaN -> avatar 'explode' no cliente.
+      if (!Number.isFinite(p.body.pos.x) || !Number.isFinite(p.body.pos.y) || !Number.isFinite(p.body.pos.z)) {
+        p.body.pos.x = this._safeX ?? 0; p.body.pos.y = this._safeY ?? 2; p.body.pos.z = this._safeZ ?? 0;
+        p.body.vel = { x: 0, y: 0, z: 0 };
+      } else {
+        this._safeX = p.body.pos.x; this._safeY = p.body.pos.y; this._safeZ = p.body.pos.z;
+      }
       if (p.body.onGround) p.body._caiuHeli = false;
       if (r.fallDamage > 0) this._danoQueda(p, r);
     }
@@ -409,7 +417,7 @@ export class Room {
       if (h.playerId == null) { h.inp = null; continue; }
       const p = this._all().find((pp) => pp.id === h.playerId);
       // [BOT-VEICULO] heli de bot tambem voa na metade (42 m/s cheio e impossivel mirar)
-      h.velMult = p && !p.client ? 0.5 : 1;
+      h.velMult = p && !p.client ? 0.25 : 1;
       h.inp = p && p.body
         ? {
             forward: clampNum(p.body.moveZ || 0, -1, 1),
@@ -423,6 +431,18 @@ export class Room {
         : { forward: 0, strafe: 0, up: 0, down: 0, yawLeft: 0, yawRight: 0 };
     }
     updateHelis(this.world, this.helis, dt);
+    for (const h of this.helis) {
+      if (!Number.isFinite(h.x) || !Number.isFinite(h.y) || !Number.isFinite(h.z)) {
+        h.x = this._safeX ?? 0; h.y = Math.max(20, this._safeY ?? 20); h.z = this._safeZ ?? 0;
+        h.vel = { x: 0, y: 0, z: 0 };
+      }
+    }
+    for (const h of this.helis) {
+      if (!Number.isFinite(h.x) || !Number.isFinite(h.y) || !Number.isFinite(h.z)) {
+        h.x = this._safeX ?? 0; h.y = Math.max(20, this._safeY ?? 20); h.z = this._safeZ ?? 0;
+        h.vel = { x: 0, y: 0, z: 0 };
+      }
+    }
     for (const p of this._all()) {
       if (p.inHeli != null && p.body) {
         const h = this.helis.find((hh) => hh.id === p.inHeli);
@@ -449,9 +469,21 @@ export class Room {
         ? { moveX: p.body.moveX || 0, moveZ: p.body.moveZ || 0 }
         : { moveX: 0, moveZ: 0 };
       // [BOT-VEICULO] carro de bot tambem anda na metade (senao "passa como raio" a 26 m/s)
-      c.velMult = p && !p.client ? 0.5 : 1;
+      c.velMult = p && !p.client ? 0.35 : 1;
     }
     updateCars(this.world, this.cars, dt);
+    for (const c of this.cars) {
+      if (!Number.isFinite(c.x) || !Number.isFinite(c.y) || !Number.isFinite(c.z)) {
+        c.x = this._safeX ?? 0; c.y = this._safeY ?? 2; c.z = this._safeZ ?? 0;
+        c.vel = { x: 0, y: 0, z: 0 };
+      }
+    }
+    for (const c of this.cars) {
+      if (!Number.isFinite(c.x) || !Number.isFinite(c.y) || !Number.isFinite(c.z)) {
+        c.x = this._safeX ?? 0; c.y = this._safeY ?? 2; c.z = this._safeZ ?? 0;
+        c.vel = { x: 0, y: 0, z: 0 };
+      }
+    }
     for (const p of this._all()) {
       if (p.inCar != null && p.body) {
         const c = this.cars.find((cc) => cc.id === p.inCar);

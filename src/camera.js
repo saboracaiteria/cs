@@ -266,6 +266,13 @@ export class GameCamera {
     this._look.y += lift + dist * this.frameLift;   // [CALIBRACAO] removido ads*1.5: a mira nao sobe no ADS
     this.cam.lookAt(this._look);
 
+    // [S23-FIX] se a posicao/olhar da camera virar NaN (driver RDNA2 corrompe 1 frame),
+    // todos os vertices explodem na tela (flicks verdes). Detecta e restaura o ultimo valor bom.
+    if (!Number.isFinite(this.cam.position.x) || !Number.isFinite(this.cam.position.y) || !Number.isFinite(this.cam.position.z)) {
+      this.cam.position.copy(this._smoothFocus);
+      this._first = true;
+    }
+
     this._applyShake(dt);
   }
 
@@ -297,6 +304,10 @@ export class GameCamera {
 
     this._look.copy(this._pos).add(dir);
     this.cam.lookAt(this._look);
+    // [S23-FIX] anti-NaN
+    if (!Number.isFinite(this.cam.position.x) || !Number.isFinite(this.cam.position.y) || !Number.isFinite(this.cam.position.z)) {
+      this.cam.position.copy(this._pos).setY(Math.max(0, this._pos.y));
+    }
     this._applyShake(dt);
   }
 

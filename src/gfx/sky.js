@@ -26,7 +26,20 @@ function makeSky() {
       console.warn('[sky] shader do Sky mudou; brilho do céu não foi reescalado');
       return;
     }
-    shader.fragmentShader = 'uniform float skyScale;\n' + shader.fragmentShader.replace(
+    // [S23-FIX] Preetham tem pow() com base que pode ficar NEGATIVA por
+    // precisao float no Chrome/ANGLE do Exynos RDNA2 -> pow(neg, frac) = NaN
+    // -> gl_FragColor NaN -> o ceu inteiro vira verde/lixo (flicks). Clamps
+    // de custo zero: em caso normal a base ja e >= 0, nada muda.
+    let frag = shader.fragmentShader;
+    frag = frag.replaceAll('pow( 93.885 - ( ( zenithAngle * 180.0 ) / pi ), -1.253 )',
+      'pow( max( 0.0, 93.885 - ( ( zenithAngle * 180.0 ) / pi ) ), -1.253 )');
+    frag = frag.replaceAll('pow( vSunE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - Fex ), vec3( 1.5 ) )',
+      'pow( max( 0.0, vSunE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - Fex ) ), vec3( 1.5 ) )');
+    frag = frag.replaceAll('pow( vSunE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * Fex, vec3( 1.0 / 2.0 ) )',
+      'pow( max( 0.0, vSunE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * Fex ), vec3( 1.0 / 2.0 ) )');
+    frag = frag.replaceAll('pow( 1.0 - dot( up, vSunDirection ), 5.0 )',
+      'pow( max( 0.0, 1.0 - dot( up, vSunDirection ) ), 5.0 )');
+    shader.fragmentShader = 'uniform float skyScale;\n' + frag.replace(
       SKY_PATCH_TARGET,
       'gl_FragColor = vec4( retColor * skyScale, 1.0 );',
     );

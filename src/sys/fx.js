@@ -52,7 +52,8 @@ export class FX {
           vColor = aColor;
           vAlpha = aAlpha;
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = aSize * (420.0 / max(0.001, -mv.z));
+          float distZ = -mv.z;
+          gl_PointSize = (distZ > 0.001) ? aSize * (420.0 / distZ) : 0.0;
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: `

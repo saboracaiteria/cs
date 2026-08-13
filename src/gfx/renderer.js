@@ -25,7 +25,12 @@ export class Graphics {
     // SEM fallback: em drivers sem render-to-half-float (WebGL1/WebView antigo,
     // ex.: Samsung Internet) o framebuffer corrompe -> tela VERDE piscando ao
     // iniciar a partida. Detectamos e degradamos para 8 bits.
-    this._halfFloatOk = this._detectHalfFloat();
+    // [S23-FIX] S23 FE (Exynos Xclipse RDNA2 da AMD) corrompe render target
+    // HalfFloat em certas dimensoes -> 'explosao de vertices' + flicks verdes
+    // (o fix even32/par era p/ Adreno e nao cobre o RDNA2). Detecta a GPU real
+    // e, nos casos problematicos, usa o caminho 8 bits (sem bloom/SMAA) estavel.
+    this._halfFloatOk = this._detectHalfFloat() && !this._gpuProblemaHalfFloat();
+    if (!this._halfFloatOk && this._detectHalfFloat()) console.warn('[gfx] GPU com half-float corrompido: bloom/SMAA desligados (8 bits)');
 
     this.preset = PRESETS[DEFAULT_PRESET];
     this.renderer.setPixelRatio(this._pixelRatioFor(this.preset));
@@ -101,6 +106,25 @@ export class Graphics {
       return false;
     }
   }
+
+  _gpuProblemaHalfFloat() {
+    try {
+      const gl = this.renderer.getContext();
+      if (!gl) return false;
+      const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+      const gpu = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || '') : '';
+      // Exynos Xclipse (RDNA2/AMD) no S23 FE: HalfFloat RT corrompe -> tela verde/vertices explodem
+      if (/Xclipse|Exynos|RDNA|AMD/i.test(gpu)) return true;
+      // fallback: Chrome Android generico (driver desconhecido)
+      const ua = (navigator.userAgent || '');
+      if (/Android/i.test(ua) && /Chrome/i.test(ua) && !/Edg|SamsungBrowser|OPR/i.test(ua)) {
+        // so desliga se o renderer nao for um driver conhecido estavel
+        if (!/Adreno|Mali/i.test(gpu)) return true;
+      }
+      return false;
+    } catch (e) { return false; }
+  }
+
 
   _pixelRatioFor(preset) {
     const dpr = Math.min(window.devicePixelRatio || 1, preset.pixelRatioCap ?? 2);
