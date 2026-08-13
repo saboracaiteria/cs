@@ -97,9 +97,13 @@ function galpao(scene, col, spec) {
    * 5,2 m, bem acima da cabeça, e um colisor ali barraria quem passa.
    */
   const top = PISO + alt;
+  // [FIX-prédios] fechar a PORTA INVISÍVEL: o vão de PORTA_W ficava sem
+  // colisão nenhuma — os bots (e o jogador) entravam por ali e ficavam
+  // presos dentro do galpão. Agora uma parede de colisão cobre o vão.
   for (const s of [-1, 1]) {
     col.addBox(cx + s * (PORTA_W / 2 + ladoW / 2), cz + hp, ladoW / 2, E, top, 'img', PISO - 1);
   }
+  col.addBox(cx, cz + hp, PORTA_W / 2 + 0.3, E, top, 'img', PISO - 1);
   col.addBox(cx, cz - hp, hl, E, top, 'img', PISO - 1);
   col.addBox(cx - hl, cz, E, hp, top, 'img', PISO - 1);
   col.addBox(cx + hl, cz, E, hp, top, 'img', PISO - 1);

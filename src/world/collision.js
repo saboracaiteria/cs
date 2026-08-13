@@ -184,7 +184,7 @@ export class CollisionWorld {
   roofHeightAt(x, z) {
     let best = 0;
     for (const e of this.near(x, z, 0.1)) {
-      if (e.tag !== 'building' && e.tag !== 'helipad') continue;
+      if (e.tag !== 'building' && e.tag !== 'helipad' && e.tag !== 'img') continue;
       if (e.kind === 'box') {
         if (x >= e.minX && x <= e.maxX && z >= e.minZ && z <= e.maxZ && e.top > best) best = e.top;
       }
