@@ -64,7 +64,8 @@ export function stepBody(world, body, inp, dt) {
   const wishX = (inp.moveZ * -sinY) + (inp.moveX * cosY);
   const wishZ = (inp.moveZ * -cosY) - (inp.moveX * sinY);
   const len = Math.hypot(wishX, wishZ);
-  const maxSpeed = inp.run ? P.runSpeed : P.walkSpeed;
+  // [BOT-VEL] bots tem velMult 0.5: andam na metade da velocidade do jogador
+  const maxSpeed = (inp.run ? P.runSpeed : P.walkSpeed) * (body.velMult ?? 1);
   let wx = 0, wz = 0;
   if (len > 0.001) {
     wx = (wishX / len) * maxSpeed;

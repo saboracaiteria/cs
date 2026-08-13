@@ -25,12 +25,12 @@ import { CORCOVADO } from '../world/landmarks.js';
  */
 export const FICHAS = {
   drone: {
-    vida: 20, vel: 5.2, voa: 3.2, dano: 1, alcance: 2.2, recarga: 1.5, pontos: 5,
+    vida: 20, vel: 3.2, voa: 3.2, dano: 1, alcance: 2.2, recarga: 1.5, pontos: 5,
     modelo: 'drone',
     bola: { raio: 0.42, vel: 30, recarga: 2.2, alcance: 55, cor: 0xff4d4d },
   },
   crawler: {
-    vida: 26, vel: 3.7, dano: 1, alcance: 2.0, recarga: 1.4, pontos: 5,
+    vida: 26, vel: 3.2, dano: 1, alcance: 2.0, recarga: 1.4, pontos: 5,
     modelo: 'crawler',
     bola: { raio: 0.5, vel: 24, recarga: 2.6, alcance: 42, cor: 0xff7a1a },
   },
@@ -55,7 +55,7 @@ export const FICHAS = {
     bola: { raio: 0.6, vel: 32, recarga: 2.4, alcance: 52, cor: 0xff4d4d },
   },
   clone: {
-    vida: 38, vel: 3.5, dano: 1, alcance: 2.4, recarga: 1.3, pontos: 12,
+    vida: 38, vel: 3.2, dano: 1, alcance: 2.4, recarga: 1.3, pontos: 12,
     humano: 'clone',
     bola: { raio: 0.5, vel: 28, recarga: 2.5, alcance: 46, cor: 0x25d0ff },
   },
@@ -65,7 +65,7 @@ export const FICHAS = {
 export const CHEFES = {
   estagiario: {
     nome: 'ESTAGIÁRIO VIBE-CODER',
-    vida: 210, vel: 3.3, dano: 1, alcance: 4.5, recarga: 1.7,
+    vida: 210, vel: 3.2, dano: 1, alcance: 4.5, recarga: 1.7,
     pontos: 100, humano: 'estagiario', porte: 'medio',
     fases: [
       { ate: 1.00, rotulo: 'CUMPRINDO OKR',        chama: 2, tipo: 'drone', intervalo: 6.0 },
@@ -120,7 +120,7 @@ export const CHEFES = {
   },
 
   ilon: {
-    nome: 'ILON MOSCA', vida: 520, vel: 3.4, dano: 1, alcance: 13, recarga: 1.9,
+    nome: 'ILON MOSCA', vida: 520, vel: 3.2, dano: 1, alcance: 13, recarga: 1.9,
     pontos: 250, humano: 'ilon', porte: 'grande',
     fases: [
       // fase 1: tuíta de cima mandando robô; fase 2: desce e briga
@@ -132,7 +132,7 @@ export const CHEFES = {
   },
 
   samuca: {
-    nome: 'SAMUCA ALTÍSSIMO', vida: 330, vel: 3.6, dano: 1, alcance: 4.5, recarga: 1.6,
+    nome: 'SAMUCA ALTÍSSIMO', vida: 330, vel: 3.2, dano: 1, alcance: 4.5, recarga: 1.6,
     pontos: 250, humano: 'samuca', porte: 'medio',
     fases: [
       { ate: 1.00, rotulo: 'EXPERIÊNCIA ANTECIPADA DE COMBATE', chama: 2, tipo: 'pm', intervalo: 5.0 },

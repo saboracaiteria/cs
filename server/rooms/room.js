@@ -264,6 +264,8 @@ export class Room {
       yaw: Math.atan2(-pt.x, -pt.z),
       pitch: 0,
       onGround: true,
+      // [BOT-VEL] bot anda na METADE da velocidade do jogador (6.4 vs 12.8 m/s)
+      velMult: p.client ? 1 : 0.5,
     };
     p.hp = 100;
     p.semDano = 0;
@@ -281,6 +283,8 @@ export class Room {
     if (!p.body) return;
     if (msg.car != null) this._veiculo(p, msg.car);
     if (msg.heli != null) this._veiculoHeli(p, msg.heli);
+    // [BOT-VEL] bot nunca corre: com run=false o teto e walkSpeed 12.8 x 0.5 = 6.4 m/s
+    if (!p.client) msg.run = false;
     const inp = {
       moveX: clampNum(msg.moveX, -1, 1),
       moveZ: clampNum(msg.moveZ, -1, 1),
