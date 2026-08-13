@@ -141,22 +141,26 @@ export class RemotePlayer {
 
 
     if (this.local && this._predicted) {
-      // [REDE-FLUIDEZ] reconciliação do jogador LOCAL: corrige com velocidade
-      // limitada (máx 45 m/s) — nunca salta, a menos que seja respawn real
-      // (>20m de divergência = o snap do servidor mudou de cena mesmo).
+      // [REDE-FLUIDEZ] jogador LOCAL: a PREDIÇÃO local manda — o snap do
+      // servidor está SEMPRE atrasado pela latência (err ~ velocidade × RTT).
+      // Corrigir esse erro a cada frame (como o maxCorr=45 fazia) puxava o
+      // jogador de volta sem parar = micro-teleportes. Agora: só corrige
+      // divergência REAL (colisão/empurrão no servidor), com limiar alto e
+      // correção LENTA — a fluidez do movimento local é preservada.
       const dx = (this._tX ?? this.x) - this.x;
       const dz = (this._tZ ?? this.z) - this.z;
       const err = Math.hypot(dx, dz);
-      if (err > 0.6) {
+      if (err > 3.5) {
         if (err > 20) {
+          // respawn/teleporte legítimo do servidor
           this.x = this._tX; this.z = this._tZ;
           this._vx = 0; this._vz = 0; this._vy = 0;
         } else {
-          const maxCorr = 45 * dt;                 // limite de correção (m/s)
-          const k = Math.min(1, maxCorr / err);    // nunca mais que maxCorr por frame
+          const maxCorr = 12 * dt;                 // correção lenta (12 m/s máx)
+          const k = Math.min(1, maxCorr / err);    // suave, sem salto
           this.x += dx * k;
           this.z += dz * k;
-          if (err > 4) { this._vx = 0; this._vz = 0; this._vy = 0; }
+          if (err > 6) { this._vx = 0; this._vz = 0; this._vy = 0; }
         }
       }
       const dy = (this._tY ?? this.y) - this.y;

@@ -85,6 +85,33 @@ export class SnapshotBuffer {
     };
   }
 
+    /**
+   * [LOCAL] Interpolação suave entre os 2 snaps MAIS RECENTES (sem delay fixo).
+   * O jogador local é movido pela PREDIÇÃO local (predictBody); este alvo
+   * suavizado serve só para RECONCILIAÇÃO. O snap cru (ultimoPlayer) causava
+   * micro-teleportes: a predição anda pra frente, o snap atrasado da rede puxa
+   * pra trás a cada frame (degraus de 30Hz + latência) — luta sem fim.
+   */
+  ultimoLer(id, agoraMs = performance.now()) {
+    if (this.fila.length === 0) return null;
+    const b = this.fila[this.fila.length - 1];
+    const pb = b.data.players.find((p) => p.id === id);
+    if (!pb) return null;
+    if (this.fila.length < 2) return { ...pb };
+    const a = this.fila[this.fila.length - 2];
+    const pa = a.data.players.find((p) => p.id === id);
+    if (!pa) return { ...pb };
+    const k = Math.max(0, Math.min(1, (agoraMs - a.t) / Math.max(1, b.t - a.t)));
+    return {
+      ...pb,
+      x: pa.x + (pb.x - pa.x) * k,
+      y: pa.y + (pb.y - pa.y) * k,
+      z: pa.z + (pb.z - pa.z) * k,
+      yaw: lerpAngulo(pa.yaw ?? 0, pb.yaw ?? 0, k),
+      pitch: (pa.pitch ?? 0) + ((pb.pitch ?? 0) - (pa.pitch ?? 0)) * k,
+    };
+  }
+
   /** Player do snapshot MAIS RECENTE (sem delay) — usado para o jogador local. */
   ultimoPlayer(id) {
     const s = this.ultimo();

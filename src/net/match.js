@@ -656,7 +656,7 @@ export class Match {
     for (const [id, rp] of this.avatares) {
       // [REDE-FLUIDEZ] local: snap mais recente (a predição local já
       // compensa o atraso); remotos: ler() com delay fixo de 120ms.
-      const d = rp.local ? this.snapBuf.ultimoPlayer(id) : this.snapBuf.ler(id);
+      const d = rp.local ? this.snapBuf.ultimoLer(id) : this.snapBuf.ler(id);
       if (!d) continue;
       rp.aplicar(d);
       // o avatar local gira com o mouse na hora (a posição continua vindo
@@ -701,7 +701,7 @@ export class Match {
     // câmera de ombro em terceira pessoa, igual à do single: o mouse gira
     // o olhar na hora (sem a latência do servidor) e a câmera se posiciona
     // atrás e à direita do Bob, que fica visível com a arma na mão
-    const eu = this.snapBuf.ultimoPlayer(this.meuId);
+    const eu = this.snapBuf.ultimoLer(this.meuId);
     const foc = this._camFocus;
     // o foco segue o CORPO VISUAL do Bob (posição suavizada pelo damp), não o
     // snap cru — o alvo da câmera fica contínuo mesmo com jitter de rede
