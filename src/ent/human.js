@@ -404,7 +404,7 @@ export class Human {
   get position() { return this.root.position; }
 
   setNight(n) {
-    this.material.emissiveIntensity = n * 0.55;   // roupas visiveis a noite (nightFactor max ~0.6)
+    this.material.emissiveIntensity = n * 0.14;   // brilho sutil a noite: ilumina sem lavar a cor (nightFactor max ~0.6)
   }
 
   dispose() {
