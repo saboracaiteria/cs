@@ -49,6 +49,10 @@ export class RemotePlayer {
     this.human.setWeapon(makePistola());
     this.root = this.human.root;
     scene.add(this.root);
+    // [INVISIVEL-FIX] entidades do MP sempre renderizam: com a câmera do heli
+    // em altitude o frustum culling cortava avatares no chão (ângulo íngreme
+    // para baixo) e eles sumiam para quem voava — mesmo estando de frente.
+    this.root.traverse(o => { if (o.isMesh || o.isSprite) o.frustumCulled = false; });
 
     // [TAG] nome acima da cabeça — todo player vê o nick dos outros (e dos
     // bots, com 🤖). Sprite 2D sempre de frente, tamanho constante em tela.
@@ -56,6 +60,7 @@ export class RemotePlayer {
     if (!this.local) this._criarTag(cor);
 
     this.loro = new Loro(scene, { cor: LORO_CORES[h] });
+    this.loro.root.traverse(o => { if (o.isMesh || o.isSprite) o.frustumCulled = false; });
 
     this.x = 0; this.y = 0; this.z = 0;
     this.yaw = 0; this.pitch = 0;
@@ -100,6 +105,7 @@ export class RemotePlayer {
       tex.anisotropy = 4;
       const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false });
       this.tag = new THREE.Sprite(mat);
+      this.tag.frustumCulled = false;   // [INVISIVEL-FIX] nome nunca some
       this.tag.scale.set(1.5, 0.42, 1);
       this.tag.position.set(0, -999, 0);   // escondido até o primeiro update
       this.scene.add(this.tag);

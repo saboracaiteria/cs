@@ -1352,6 +1352,7 @@ export class Match {
       let cr = this.carrosMp.get(c.id);
       if (!cr) {
         const mesh = new Car(c.cor || 0xe53935, Math.random);
+        mesh.root.traverse(o => { if (o.isMesh || o.isSprite) o.frustumCulled = false; });   // [INVISIVEL-FIX]
         this.game.gfx.scene.add(mesh.root);
         cr = { mesh, x: c.x, y: c.y, z: c.z, playerId: null };
         this.carrosMp.set(c.id, cr);

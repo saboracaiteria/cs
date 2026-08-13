@@ -17,6 +17,9 @@ export class Helicopter {
     scene.add(this.root);
 
     this._build();
+    // [INVISIVEL-FIX] heli nunca é cortado pelo frustum culling (câmera do
+    // outro heli em altitude deixava o aparelho invisível mesmo de frente)
+    this.root.traverse(o => { if (o.isMesh || o.isSprite) o.frustumCulled = false; });
 
     this.vel = new THREE.Vector3();
     this.yaw = 0;
