@@ -10,7 +10,7 @@
  */
 const TICK_MS = 1000 / 30;   // 33.3ms — um tick do servidor
 const DELAY_MS = 120;        // atraso fixo de interpolação (~4 ticks)
-const MAX_EXTRA_MS = 100;    // extrapolação máxima quando a rede atrasa
+const MAX_EXTRA_MS = 50;   // [RAIO-FIX] extrapolacao maxima reduzida (100ms projetava o avatar p/ o lado errado)
 
 function lerpAngulo(a, b, k) {
   if (a == null) return b ?? 0;
@@ -45,7 +45,7 @@ export class SnapshotBuffer {
    * Posição interpolada para o tempo (agora - DELAY_MS).
    * Sem snapshot futuro → extrapola com a velocidade dos 2 últimos snaps.
    */
-  ler(id, agoraMs = performance.now()) {
+  ler(id, agoraMs = performance.now(), opts = {}) {
     if (this.fila.length === 0) return null;
     const i = this._achar(agoraMs);
     const a = this.fila[i];
@@ -60,7 +60,9 @@ export class SnapshotBuffer {
         const pAnt = ant.data.players.find((p) => p.id === id);
         if (pAnt && a.t > ant.t) {
           const dtS = Math.max(0.001, (a.t - ant.t) / 1000);
-          const extra = Math.min(MAX_EXTRA_MS / 1000, Math.max(0, (agoraMs - DELAY_MS - a.t) / 1000));
+          // [RAIO-FIX] bot (IA vira brusco): extrapolar projeta o avatar na
+          // direcao ANTIGA = parece raio eletrico. Sem extrapolacao p/ bots.
+          const extra = opts.semExtra ? 0 : Math.min(MAX_EXTRA_MS / 1000, Math.max(0, (agoraMs - DELAY_MS - a.t) / 1000));
           return {
             ...pa,
             x: pa.x + ((pa.x - pAnt.x) / dtS) * extra,

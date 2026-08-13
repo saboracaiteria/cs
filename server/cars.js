@@ -126,7 +126,7 @@ export function updateCars(world, cars, dt) {
 
     // acelera / freia / ré
     const gas = clamp(inp.moveZ, -1, 1);
-    const alvo = gas * CAR.maxSpeed;
+    const alvo = gas * CAR.maxSpeed * (c.velMult ?? 1);   // [BOT-VEICULO] velMult 0.5 p/ carro de bot
     const accel = gas !== 0 ? CAR.accel : CAR.brake;
     c.speed += clamp(alvo - c.speed, -accel * dt, accel * dt);
 

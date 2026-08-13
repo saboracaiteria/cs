@@ -408,6 +408,8 @@ export class Room {
     for (const h of this.helis) {
       if (h.playerId == null) { h.inp = null; continue; }
       const p = this._all().find((pp) => pp.id === h.playerId);
+      // [BOT-VEICULO] heli de bot tambem voa na metade (42 m/s cheio e impossivel mirar)
+      h.velMult = p && !p.client ? 0.5 : 1;
       h.inp = p && p.body
         ? {
             forward: clampNum(p.body.moveZ || 0, -1, 1),
@@ -446,6 +448,8 @@ export class Room {
       c.inp = p && p.body
         ? { moveX: p.body.moveX || 0, moveZ: p.body.moveZ || 0 }
         : { moveX: 0, moveZ: 0 };
+      // [BOT-VEICULO] carro de bot tambem anda na metade (senao "passa como raio" a 26 m/s)
+      c.velMult = p && !p.client ? 0.5 : 1;
     }
     updateCars(this.world, this.cars, dt);
     for (const p of this._all()) {

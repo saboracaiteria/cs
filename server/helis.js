@@ -147,7 +147,8 @@ export function updateHelis(world, helis, dt) {
     h.vel.x *= drag; h.vel.z *= drag;
     h.vel.y = clamp(h.vel.y, -HELI.maxLift, HELI.maxLift);
     const hs = Math.hypot(h.vel.x, h.vel.z);
-    if (hs > HELI.maxSpeed) { h.vel.x *= HELI.maxSpeed / hs; h.vel.z *= HELI.maxSpeed / hs; }
+    const velMax = HELI.maxSpeed * (h.velMult ?? 1);   // [BOT-VEICULO] heli de bot voa na metade
+    if (hs > velMax) { h.vel.x *= velMax / hs; h.vel.z *= velMax / hs; }
 
     // integração
     const yAntes = h.y;

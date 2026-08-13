@@ -136,45 +136,48 @@ export class RemotePlayer {
 
 
   update(dt, speed = 0, animar = true, air = 0, run = false) {
-    this._run = run;   // [ANIM] correndo de verdade (tronco inclina só correndo)
-
-
+    this._run = run;   // [ANIM] correndo de verdade (tronco inclina so correndo)
 
     if (this.local && this._predicted) {
-      // [REDE-FLUIDEZ] jogador LOCAL: a PREDIÇÃO local manda — o snap do
-      // servidor está SEMPRE atrasado pela latência (err ~ velocidade × RTT).
-      // Corrigir esse erro a cada frame (como o maxCorr=45 fazia) puxava o
-      // jogador de volta sem parar = micro-teleportes. Agora: só corrige
-      // divergência REAL (colisão/empurrão no servidor), com limiar alto e
-      // correção LENTA — a fluidez do movimento local é preservada.
+      // [REDE-FLUIDEZ] jogador LOCAL: a PREDICAO local manda — o snap do
+      // servidor esta SEMPRE atrasado pela latencia (err ~ velocidade x RTT).
+      // Por isso o limiar e DINAMICO: corrige so divergencia REAL.
       const dx = (this._tX ?? this.x) - this.x;
       const dz = (this._tZ ?? this.z) - this.z;
       const err = Math.hypot(dx, dz);
-      if (err > 3.5) {
+      // [PAREDE-FIX] limiar 8m: cobre a LATENCIA ao correr (29 m/s x 250ms =
+      // 7.25m). O snap do servidor esta SEMPRE atrasado pelo RTT: ao encostar
+      // na parede, a predicao local ja parou mas o snap ainda mostra o jogador
+      // andando (distancia = vel x RTT, ate 4-5m). Com limiar fixo 3.5m a
+      // correcao disparava TODO frame, puxava o jogador para tras e zerava a
+      // velocidade = PRESO e TREMENDO na parede. Agora so corrige divergencia
+      // REAL (colisao local vs servidor diferente, empurrao, respawn > 8m).
+      if (err > 8) {
         if (err > 20) {
-          // respawn/teleporte legítimo do servidor
+          // respawn/teleporte legitimo do servidor
           this.x = this._tX; this.z = this._tZ;
           this._vx = 0; this._vz = 0; this._vy = 0;
         } else {
-          const maxCorr = 12 * dt;                 // correção lenta (12 m/s máx)
-          const k = Math.min(1, maxCorr / err);    // suave, sem salto
+          // correcao lenta (25 m/s max) — NAO zera as vels: o jogador local
+          // segue o input e o snap so corrige a divergencia real devagar
+          const maxCorr = 25 * dt;
+          const k = Math.min(1, maxCorr / err);
           this.x += dx * k;
           this.z += dz * k;
-          if (err > 6) { this._vx = 0; this._vz = 0; this._vy = 0; }
         }
       }
       const dy = (this._tY ?? this.y) - this.y;
       if (dy < -1.2) this.y += dy * Math.min(1, 10 * dt);
     } else {
-      // [REDE-FLUIDEZ] avatar REMOTO: correção com velocidade limitada (máx
-      // 35 m/s) — sem o "teleporte" de antes (|dx|>2 saltava direto pro alvo).
-      // Erros pequenos seguem suaves; erros grandes (jitter/empurrão) são
-      // alcançados em ~0,3s em vez de pular.
+      // [REDE-FLUIDEZ] avatar REMOTO: correcao com velocidade limitada (max
+      // 22 m/s) — sem o "teleporte" de antes (|dx|>2 saltava direto pro alvo).
+      // Erros pequenos seguem suaves; erros grandes (jitter/empurrao) sao
+      // alcancados em ~0,3s em vez de pular.
       const dx = (this._tX ?? this.x) - this.x;
       const dz = (this._tZ ?? this.z) - this.z;
       const err = Math.hypot(dx, dz);
       if (err > 0.0001) {
-        const maxCorr = (this.local ? 50 : 35) * dt;
+        const maxCorr = (this.local ? 50 : 22) * dt;   // [RAIO-FIX] 22 m/s: correcao remota suave
         const k = Math.min(1, maxCorr / err);
         this.x += dx * k;
         this.z += dz * k;

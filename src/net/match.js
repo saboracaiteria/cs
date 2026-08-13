@@ -656,7 +656,7 @@ export class Match {
     for (const [id, rp] of this.avatares) {
       // [REDE-FLUIDEZ] local: snap mais recente (a predição local já
       // compensa o atraso); remotos: ler() com delay fixo de 120ms.
-      const d = rp.local ? this.snapBuf.ultimoLer(id) : this.snapBuf.ler(id);
+      const d = rp.local ? this.snapBuf.ultimoLer(id) : this.snapBuf.ler(id, performance.now(), { semExtra: rp.bot });
       if (!d) continue;
       rp.aplicar(d);
       // o avatar local gira com o mouse na hora (a posição continua vindo
