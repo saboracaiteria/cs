@@ -986,7 +986,7 @@ export class Match {
     const night = this.game && this.game.sky ? this.game.sky.nightFactor : 0;
     const pilotoLocal = this._emHeli && this._meuHeliId != null;
     for (const hl of this.helisMp.values()) {
-      if (pilotoLocal && hl.id === this._meuHeliId && hl.piloted) {
+      if (pilotoLocal && hl.id === this._meuHeliId) {
         // predição local (mesma física do servidor): o aparelho responde NA HORA
         this._predizerHeli(hl, dt);
         // reconciliação: só adota o snap se a divergência for real (empurrão/teleporte)
