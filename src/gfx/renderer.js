@@ -145,6 +145,15 @@ export class Graphics {
       composer = new EffectComposer(this.renderer, rt);
       console.warn('[gfx] driver sem half-float render target — bloom/SMAA desligados (fallback 8 bits)');
     }
+    // [MOBILE-FIX] HalfFloatType corrompe com dimensao IMPAR no Adreno (Samsung).
+    // O EffectComposer cria renderTarget1/2 HalfFloat no tamanho real (ex. 2340*1.5=3510
+    // IMPAR no S23) e o UnrealBloomPass divide por 2 cinco vezes (nMips=5) sem arredondar
+    // (1755 -> 877 -> 438 -> 219 IMPAR) -> framebuffer corrompido -> METADE DA TELA VERDE
+    // piscando. Instala o override do setSize ANTES do primeiro setSize (senao o RT
+    // principal ja nasce impar) e arredonda para multiplos de 32 em TODOS os níveis.
+    const even32 = (v) => Math.max(2, Math.round(v / 32) * 32);
+    const origComposerSetSize = composer.setSize.bind(composer);
+    composer.setSize = (cw, ch) => origComposerSetSize(even32(cw), even32(ch));
     composer.setPixelRatio(pr);
     composer.setSize(w, h);
 
@@ -177,6 +186,27 @@ export class Graphics {
         new THREE.Vector2(bw, bh),
         QUALITY.bloomStrength, QUALITY.bloomRadius, QUALITY.bloomThreshold,
       );
+      // [MOBILE-FIX] o setSize ORIGINAL faz resx=round(w/2) e divide por 2 cinco vezes
+      // sem arredondar; com base impar (S23: 3510px) os mips 1755->877->438->219 quebram
+      // o framebuffer HalfFloat no Adreno. Aqui cada nivel e arredondado para PAR.
+      {
+        const origBloomSetSize = bloom.setSize.bind(bloom);
+        bloom.setSize = (bw2, bh2) => {
+          // par(x) arredonda para o PAR mais proximo (min 2)
+          const par = (v) => Math.max(2, Math.round(v / 2) * 2);
+          let resx = par(bw2 / 2);
+          let resy = par(bh2 / 2);
+          bloom.renderTargetBright.setSize(resx, resy);
+          for (let i = 0; i < bloom.nMips; i++) {
+            bloom.renderTargetsHorizontal[i].setSize(resx, resy);
+            bloom.renderTargetsVertical[i].setSize(resx, resy);
+            bloom.separableBlurMaterials[i].uniforms["invSize"].value.set(1 / resx, 1 / resy);
+            resx = par(resx / 2);
+            resy = par(resy / 2);
+          }
+          bloom.resolution.set(bw2, bh2);
+        };
+      }
       composer.addPass(bloom);
       this.bloomPass = bloom;
     } else {
@@ -185,7 +215,12 @@ export class Graphics {
 
     composer.addPass(new OutputPass());
 
-    if (this.preset.smaa && this._halfFloatOk) composer.addPass(new SMAAPass(w, h));
+    if (this.preset.smaa && this._halfFloatOk) {
+      const smaa = new SMAAPass(w, h);
+      const origSmaaSetSize = smaa.setSize.bind(smaa);
+      smaa.setSize = (sw, sh) => origSmaaSetSize(even32(sw), even32(sh));
+      composer.addPass(smaa);
+    }
 
     this.composer = composer;
   }
