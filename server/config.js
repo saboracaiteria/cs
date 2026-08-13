@@ -109,7 +109,7 @@ export const NET = {
   /** Quantos inputs o servidor aceita por segundo por jogador (anti-spam). */
   maxInputRate: 40,
   /** Depois disto sem mensagem, o jogador é desconectado. */
-  timeoutMs: 60_000,
+  timeoutMs: 15_000,
   /** Máximo de mensagens por segundo por conexão (anti-flood). */
   maxMsgPerSec: 120,
   maxPayload: 4096,

@@ -67,5 +67,7 @@ export function lobbyPlayer(id, nick, opts = {}) {
     bot: !!opts.bot,
     ping: 0,
     cor: opts.cor ?? CORES_ROUPA[Math.abs(id) % CORES_ROUPA.length],
+    token: opts.token || null,
+    token: opts.token || null,
   };
 }

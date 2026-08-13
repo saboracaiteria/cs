@@ -48,12 +48,12 @@ export class RoomManager {
    * jogador vê os outros online (na lista global) e os CHAMA pelo convite:
    * quem aceita é movido para a sala de quem chamou.
    */
-  join(client, nick, modo, cor, cycle) {
+  join(client, nick, modo, cor, cycle, token) {
     // [fix] procura sala existente com vaga ANTES de criar nova:
     // sem isto, cada player criava a PRÓPRIA sala (19 bots cada) = servidor
     // com CPU dobrado (jogo travado) e cada um via bots/carros diferentes
     const room = this.find(modo) || this.create(modo, cycle);
-    room.addClient(client, nick, cor);
+    room.addClient(client, nick, cor, token);
     return room;
   }
 
@@ -77,6 +77,17 @@ export class RoomManager {
   }
 
   /** A sala onde um jogador (humano) está, ou null. */
+
+  findByToken(token) {
+    if (!token) return null;
+    for (const r of this.rooms.values()) {
+      for (const p of r.players.values()) {
+        if (p.token === token) return { room: r, player: p };
+      }
+    }
+    return null;
+  }
+
   salaDe(id) {
     for (const r of this.rooms.values()) {
       if (r.players.has(id)) return r;

@@ -98,7 +98,10 @@ wss.on('connection', (ws, req) => {
 
   ws.on('close', () => {
     if (ws._room && ws._playerId != null) {
-      ws._room.removePlayer(ws._playerId);
+      // [FIX-FANTASMA] se o player ja foi reutilizado por OUTRO ws (reconexao
+      // com token), o close deste ws antigo NAO pode remove-lo da sala
+      const p = ws._room.players.get(ws._playerId);
+      if (!p || p.client === ws) ws._room.removePlayer(ws._playerId);
     }
     ws._room = null;
   });
@@ -110,12 +113,38 @@ function handle(ws, msg) {
   switch (msg.t) {
     case T.HELLO: {
       // dedupe: o cliente envia HELLO no onopen e no replay (2x por conexão).
-      // Sem isso o mesmo ws vira 2 players em 2 salas — o "fantasma" que
+      // Sem isso o mesmo ws vira 2 players em 2 salas — o fantasma que
       // entope a lista ONLINE e faz o botão INICIAR sumir (meuId errado)
       if (ws._room || ws._playerId != null) break;
+      // [FIX-FANTASMA] reconexao com o MESMO token = mesmo jogador voltando.
+      // Reutiliza o player antigo (mesmo id/host/pronto) em vez de criar um
+      // 2o player 'fantasma' que roubava o host e fazia o botao INICIAR sumir
+      // (o dedupe acima so cobre HELLO duplicado no MESMO ws, nao reconexao).
+      const token = typeof msg.token === 'string' && msg.token ? msg.token : null;
       const nick = sanitizeNick(msg.nick) || 'Jogador';
       const modo = msg.modo === 'br' ? 'br' : 'dm';
       const cor = Number.isInteger(msg.cor) ? (msg.cor | 0) : 0;   // [ROUPA] cor da camisa
+      if (token) {
+        const achou = manager.findByToken(token);
+        if (achou) {
+          const { room: salaAntiga, player } = achou;
+          // atualiza nick/cor/ciclo (jogador pode ter mudado no seletor)
+          player.nick = nick;
+          player.cor = cor;
+          if (['ciclo','dia','noite'].includes(msg.cycle)) player.cycle = msg.cycle;
+          // substitui o ws antigo pelo novo (mesmo player, mesmo id)
+          if (player.client && player.client !== ws) {
+            try { player.client.close(4001, 'reconectado'); } catch {}
+          }
+          player.client = ws;
+          ws._room = salaAntiga;
+          ws._playerId = player.id;
+          salaAntiga._sendTo(player, T.WELCOME, { id: player.id, salaId: salaAntiga.salaId, modo: salaAntiga.modo, cfg: salaAntiga.publicCfg(), host: player.host, cor: player.cor });
+          salaAntiga._bcastLobby();
+          console.log('[MP] reconexao: ' + nick + ' voltou como id ' + player.id + ' (host=' + player.host + ')');
+          return;
+        }
+      }
       // [DIA-NOITE] config de tempo do host (ciclo | dia | noite) — define o clima da sala
       const cycle = ['ciclo', 'dia', 'noite'].includes(msg.cycle) ? msg.cycle : 'ciclo';
       if (msg.v !== NET.version) {
@@ -123,7 +152,7 @@ function handle(ws, msg) {
         ws.close(4001, 'versao');
         return;
       }
-      const room = manager.join(ws, nick, modo, cor, cycle);
+      const room = manager.join(ws, nick, modo, cor, cycle, token);
       // bots preenchem as vagas — mas SEMPRE deixa 1 vaga livre: se outro
       // humano entrar, ele cai na MESMA sala (era o motivo de ninguém se
       // achar: os bots enchiam tudo e canJoin() ficava falso)
@@ -135,7 +164,7 @@ function handle(ws, msg) {
       }
       break;
     }
-    case T.INPUT: {
+case T.INPUT: {
       const room = ws._room;
       const p = room && ws._playerId != null ? room.players.get(ws._playerId) : null;
       if (p && room.state === 'playing' && p.body) {

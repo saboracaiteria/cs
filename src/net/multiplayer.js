@@ -39,6 +39,15 @@ window.addEventListener('mp-cycle', (e) => {
 // [ROUPA] lê a cor ativa do seletor (#mp-roupa) — 0xe8453c se não houver
 // [DIA-NOITE] config de tempo do jogador (ciclo | dia | noite) — salva nas opções [13].
 // Quem CRIA a sala (host) define o clima da partida; os demais seguem via snap.
+
+function tokenSessao() {
+  try {
+    let t = localStorage.getItem('mp-token');
+    if (!t) { t = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('mp-token', t); }
+    return t;
+  } catch { return ''; }
+}
+
 function lerCycle() {
   try { return new Settings().get('cycleMode') || 'ciclo'; } catch { return 'ciclo'; }
 }
@@ -118,7 +127,7 @@ export function iniciarMultiplayer(game, modo, nick) {
       lobby.alerta('🔄 Servidor acordando… (Render free: 1º acesso pode demorar até 1 min)', 'aviso');
     }
   };
-  net._onReplay = () => net.enviar({ t: T.HELLO, v: NET_VERSION, nick, modo, cor: net.cor, cycle: lerCycle() });
+  net._onReplay = () => net.enviar({ t: T.HELLO, v: NET_VERSION, nick, modo, cor: net.cor, cycle: lerCycle(), token: tokenSessao() });
   net.conectar();   // o onopen do ClientNet já reenvia o HELLO (_onReplay)
 }
 

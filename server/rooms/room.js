@@ -59,9 +59,9 @@ export class Room {
   get totalSlots() { return this.players.size + this.bots.size; }
 
   /** Jogador humano entra (vindo do WebSocket). */
-  addClient(client, nick, cor) {
+  addClient(client, nick, cor, token) {
     const id = uid++;
-    const p = lobbyPlayer(id, nick, { host: this.players.size === 0 && this.bots.size === 0, cor });
+    const p = lobbyPlayer(id, nick, { host: this.players.size === 0 && this.bots.size === 0, cor, token });
     // humano tem prioridade: se a sala está cheia de bots, um bot cede a vaga
     if (this.players.size + this.bots.size >= this.cfg.maxPlayers && this.bots.size > 0) {
       const [bid, bot] = this.bots.entries().next().value;
