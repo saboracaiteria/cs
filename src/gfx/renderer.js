@@ -20,6 +20,13 @@ export class Graphics {
       powerPreference: 'high-performance',
       stencil: false,
     });
+
+    // [MOBILE-FIX] three.js r152+ cria EffectComposer/Bloom/SMAA com HalfFloatType
+    // SEM fallback: em drivers sem render-to-half-float (WebGL1/WebView antigo,
+    // ex.: Samsung Internet) o framebuffer corrompe -> tela VERDE piscando ao
+    // iniciar a partida. Detectamos e degradamos para 8 bits.
+    this._halfFloatOk = this._detectHalfFloat();
+
     this.preset = PRESETS[DEFAULT_PRESET];
     this.renderer.setPixelRatio(this._pixelRatioFor(this.preset));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -80,6 +87,21 @@ export class Graphics {
    * nativa (0.62 = 38% dos pixels), que é o ganho de FPS mais direto que existe.
    * O teto de 2 evita explodir a conta em telas de altíssimo DPI.
    */
+  /** true se o driver consegue renderizar em HalfFloatType (bloom/SMAA/composer). */
+  _detectHalfFloat() {
+    try {
+      const gl = this.renderer.getContext();
+      if (!gl || typeof gl.getExtension !== 'function') return false;
+      if (this.renderer.capabilities && this.renderer.capabilities.isWebGL2) {
+        return !!gl.getExtension('EXT_color_buffer_float');
+      }
+      return !!(gl.getExtension('OES_texture_half_float') &&
+        (gl.getExtension('EXT_color_buffer_half_float') || gl.getExtension('WEBGL_color_buffer_float')));
+    } catch (e) {
+      return false;
+    }
+  }
+
   _pixelRatioFor(preset) {
     const dpr = Math.min(window.devicePixelRatio || 1, preset.pixelRatioCap ?? 2);
     return Math.max(0.5, dpr * preset.renderScale * (this._dynScale || 1));
@@ -109,8 +131,21 @@ export class Graphics {
     const w = window.innerWidth, h = window.innerHeight;
     if (this.composer) this.composer.dispose();
 
-    const composer = new EffectComposer(this.renderer);
-    composer.setPixelRatio(this._pixelRatioFor(this.preset));
+    const pr = this._pixelRatioFor(this.preset);
+    let composer;
+    if (this._halfFloatOk) {
+      composer = new EffectComposer(this.renderer);
+    } else {
+      // [MOBILE-FIX] sem render-to-half-float: composer em UnsignedByteType
+      // (o default HalfFloatType do r152+ corrompe e fica verde)
+      const rt = new THREE.WebGLRenderTarget(
+        Math.max(2, Math.round(w * pr)), Math.max(2, Math.round(h * pr)),
+        { type: THREE.UnsignedByteType, depthBuffer: true, stencilBuffer: false },
+      );
+      composer = new EffectComposer(this.renderer, rt);
+      console.warn('[gfx] driver sem half-float render target — bloom/SMAA desligados (fallback 8 bits)');
+    }
+    composer.setPixelRatio(pr);
     composer.setSize(w, h);
 
     /*
@@ -124,7 +159,7 @@ export class Graphics {
     composer.addPass(new RenderPass(this.scene, this.camera));
 
     // bloom: faz janelas acesas, postes, faróis e explosões "estourarem"
-    if (this.preset.bloom) {
+    if (this.preset.bloom && this._halfFloatOk) {
       /*
        * O bloom é o passe mais caro do pipeline: 5 níveis de mip, cada um com
        * desfoque horizontal e vertical, tudo em tela cheia. É fill-rate puro,
@@ -133,8 +168,13 @@ export class Graphics {
        * borrado por natureza) e devolve muito quadro por segundo.
        */
       const bs = this.preset.bloomScale ?? 0.5;
+      // [MOBILE-FIX] dimensoes MULTIPLO DE 32: o bloom divide por 2 cinco
+      // vezes (nMips=5); dimensao impar em half-float corrompe o framebuffer
+      // em alguns Adreno (Samsung) -> tela verde piscando
+      const bw = Math.max(64, Math.round((w * bs) / 32) * 32);
+      const bh = Math.max(64, Math.round((h * bs) / 32) * 32);
       const bloom = new UnrealBloomPass(
-        new THREE.Vector2(Math.max(64, w * bs), Math.max(64, h * bs)),
+        new THREE.Vector2(bw, bh),
         QUALITY.bloomStrength, QUALITY.bloomRadius, QUALITY.bloomThreshold,
       );
       composer.addPass(bloom);
@@ -145,7 +185,7 @@ export class Graphics {
 
     composer.addPass(new OutputPass());
 
-    if (this.preset.smaa) composer.addPass(new SMAAPass(w, h));
+    if (this.preset.smaa && this._halfFloatOk) composer.addPass(new SMAAPass(w, h));
 
     this.composer = composer;
   }
