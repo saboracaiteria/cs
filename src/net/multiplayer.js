@@ -36,10 +36,6 @@ window.addEventListener('mp-cycle', (e) => {
   else if (net && net.host) net.enviar({ t: T.CYCLE, mode });
 });
 
-// [DIA-NOITE] host mudou o clima nas opcoes durante o MP -> manda o modo exato ao servidor
-
-});
-
 // [ROUPA] lê a cor ativa do seletor (#mp-roupa) — 0xe8453c se não houver
 // [DIA-NOITE] config de tempo do jogador (ciclo | dia | noite) — salva nas opções [13].
 // Quem CRIA a sala (host) define o clima da partida; os demais seguem via snap.
