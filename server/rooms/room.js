@@ -186,13 +186,17 @@ export class Room {
   }
 
   /** [DIA-NOITE] host alterna: ciclo -> dia -> noite -> ciclo */
-  cycleBy() {
+  cycleBy(modo) {
     const ordem = ['ciclo', 'dia', 'noite'];
-    const i = (ordem.indexOf(this.cycleMode) + 1) % ordem.length;
-    this.cycleMode = ordem[i];
+    if (modo === 'ciclo' || modo === 'dia' || modo === 'noite') {
+      this.cycleMode = modo;
+    } else {
+      const i = (ordem.indexOf(this.cycleMode) + 1) % ordem.length;
+      this.cycleMode = ordem[i];
+    }
     if (this.cycleMode === 'dia') this.hour = 12;         // fixedDayHour
     else if (this.cycleMode === 'noite') this.hour = 22;  // fixedNightHour
-    this._log('host alternou o tempo para: ' + this.cycleMode);
+    this._log('host definiu o tempo para: ' + this.cycleMode);
   }
 
   _beginGame() {

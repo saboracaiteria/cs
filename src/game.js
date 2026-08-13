@@ -1029,6 +1029,11 @@ export class Game {
     this.city.setNight(n);
     this.props.update(0, n, this._focus);
     this.cars.setNight(n);
+
+    // [DIA-NOITE] no multiplayer o host repassa a escolha ao servidor,
+    // senao o snap do host sobrescreve e o modo nunca fixa (o listener do
+    // multiplayer.js decide se envia: so envia se estiver conectado e for host)
+    window.dispatchEvent(new CustomEvent('mp-cycle', { detail: mode }));
   }
 
   /** Tecla N: percorre ciclo -> sempre dia -> sempre noite. */

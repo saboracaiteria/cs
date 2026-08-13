@@ -170,7 +170,7 @@ function handle(ws, msg) {
       // [DIA-NOITE] só o HOST controla o tempo da partida
       const room = ws._room;
       const p = room && ws._playerId != null ? room.players.get(ws._playerId) : null;
-      if (p && p.host && room.cycleBy) room.cycleBy();
+      if (p && p.host && room.cycleBy) room.cycleBy(msg.mode);
       break;
     }
     case T.START: {

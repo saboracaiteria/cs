@@ -507,10 +507,13 @@ export class Match {
   }
 
   /** [DIA-NOITE] tecla N: só o HOST controla o tempo da partida */
-  _pedirCycle() {
+  _pedirCycle(modo) {
     if (this.net && this.net.host) {
-      this.net.enviar({ t: T.CYCLE });
-      if (this.game && this.game.hud) this.game.hud.toast('🌗 HOST — alternando dia/noite', 'time');
+      this.net.enviar(modo ? { t: T.CYCLE, mode: modo } : { t: T.CYCLE });
+      if (this.game && this.game.hud) {
+        const nomes = { ciclo: 'CICLO DIA/NOITE', dia: 'SEMPRE DIA', noite: 'SEMPRE NOITE' };
+        this.game.hud.toast('🌗 HOST — ' + (nomes[modo] || 'alternando dia/noite'), 'time');
+      }
     } else if (this.game && this.game.hud) {
       this.game.hud.toast('⏰ Só o host controla o dia/noite', 'aviso');
     }
