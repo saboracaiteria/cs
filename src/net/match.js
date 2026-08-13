@@ -144,6 +144,7 @@ export class Match {
     if (this.game && this.game.peds) this.game.peds.group.visible = false;
     // o helicoptero do single tambem some — no MP os aparelhos vem do servidor
     if (this.game && this.game.heli) this.game.heli.root.visible = false;
+    if (this.game && this.game.imgBuildings) this.game.imgBuildings.esconderParaMp(this.game.col);
 
     // esconde a tela de abertura do single
     const ab = document.getElementById('title-screen');
@@ -1803,6 +1804,7 @@ export class Match {
     if (this._saiu) return;   // [FIX] idempotente: sairMultiplayer() reentrante não repete a limpeza
     this._saiu = true;
     if (this.game) this.game._mp = false;
+    if (this.game && this.game.imgBuildings) this.game.imgBuildings.restaurarDoMp(this.game.col);
     this._rodando = false;
     if (this._raf) cancelAnimationFrame(this._raf);
     window.removeEventListener('keydown', this._kd);

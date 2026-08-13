@@ -7,7 +7,7 @@
 import { CollisionWorld } from './collision.js';
 import { terrainHeight, bridgeY, onBridge, LAKE, BRIDGE } from './terrain.js';
 import { buildCity } from './city.js';
-import { buildLandmarksCollision, buildIMGBuildingsCollision, buildBrazilLandmarksCollision } from './landmarksCollision.js';
+import { buildLandmarksCollision, buildBrazilLandmarksCollision } from './landmarksCollision.js';
 import { buildPropsCollision } from './propsCollision.js';
 import { CURB_H, HALF } from '../config.js';
 
@@ -42,7 +42,8 @@ export function buildWorld() {
 
   // marcos do mapa (Rio, IMG e Brasil)
   buildLandmarksCollision(col);
-  buildIMGBuildingsCollision(col);
+  // [MP] galpões IMG (Labs/Estúdio) do centro NÃO existem no multiplayer:
+  // spawn não nasce dentro deles e não há parede invisível.
   buildBrazilLandmarksCollision(col);
 
   // postes e árvores (mesma seed 777 do cliente) — o jogador não atravessa no MP
