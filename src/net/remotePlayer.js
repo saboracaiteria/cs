@@ -116,6 +116,15 @@ export class RemotePlayer {
 
 
   aplicar(d) {
+    // [REDE-FLUIDEZ] primeiro snap: adota a posição direto (sem deslizar do 0,0,0)
+    if (this._tX === undefined) {
+      this.x = d.x; this.y = d.y; this.z = d.z;
+    }
+    // [REDE-FLUIDEZ] respawn legítimo (morto -> vivo): teleporta de verdade
+    if (!this.vivo && (d.hp ?? 1) > 0) {
+      this.x = d.x; this.y = d.y; this.z = d.z;
+      this._vx = 0; this._vz = 0; this._vy = 0;
+    }
     this._tX = d.x; this._tZ = d.z;
     this._tY = d.y;   // alvos suavizados no update (degraus do servidor tremiam)
     this.yaw = d.yaw ?? this.yaw;
@@ -132,39 +141,42 @@ export class RemotePlayer {
 
 
     if (this.local && this._predicted) {
-
-
-
+      // [REDE-FLUIDEZ] reconciliação do jogador LOCAL: corrige com velocidade
+      // limitada (máx 45 m/s) — nunca salta, a menos que seja respawn real
+      // (>20m de divergência = o snap do servidor mudou de cena mesmo).
       const dx = (this._tX ?? this.x) - this.x;
       const dz = (this._tZ ?? this.z) - this.z;
       const err = Math.hypot(dx, dz);
-      if (err > 3) {
-
-        this.x = this._tX; this.z = this._tZ;
-        this._vx = 0; this._vz = 0; this._vy = 0;
-      } else if (err > 0.6) {
-
-        const k = Math.min(1, 3 * dt);
-        this.x += dx * k;
-        this.z += dz * k;
+      if (err > 0.6) {
+        if (err > 20) {
+          this.x = this._tX; this.z = this._tZ;
+          this._vx = 0; this._vz = 0; this._vy = 0;
+        } else {
+          const maxCorr = 45 * dt;                 // limite de correção (m/s)
+          const k = Math.min(1, maxCorr / err);    // nunca mais que maxCorr por frame
+          this.x += dx * k;
+          this.z += dz * k;
+          if (err > 4) { this._vx = 0; this._vz = 0; this._vy = 0; }
+        }
       }
-
-
-
-
       const dy = (this._tY ?? this.y) - this.y;
       if (dy < -1.2) this.y += dy * Math.min(1, 10 * dt);
     } else {
+      // [REDE-FLUIDEZ] avatar REMOTO: correção com velocidade limitada (máx
+      // 35 m/s) — sem o "teleporte" de antes (|dx|>2 saltava direto pro alvo).
+      // Erros pequenos seguem suaves; erros grandes (jitter/empurrão) são
+      // alcançados em ~0,3s em vez de pular.
       const dx = (this._tX ?? this.x) - this.x;
       const dz = (this._tZ ?? this.z) - this.z;
-      if (Math.abs(dx) > 2 || Math.abs(dz) > 2) { this.x += dx; this.z += dz; }
-      else {
-        const k = Math.min(1, (this.local ? 40 : 18) * dt);
+      const err = Math.hypot(dx, dz);
+      if (err > 0.0001) {
+        const maxCorr = (this.local ? 50 : 35) * dt;
+        const k = Math.min(1, maxCorr / err);
         this.x += dx * k;
         this.z += dz * k;
       }
       const dy = (this._tY ?? this.y) - this.y;
-      this.y += Math.abs(dy) < 0.08 ? dy * Math.min(1, 18 * dt) : dy;
+      this.y += Math.abs(dy) < 0.08 ? dy * Math.min(1, 18 * dt) : Math.max(-8, Math.min(8, dy));
     }
     this.root.position.set(this.x, this.y, this.z);
 

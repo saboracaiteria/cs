@@ -17,7 +17,7 @@ import { Helicopter } from '../ent/helicopter.js';
 import * as THREE from '../../vendor/three.module.js';
 import { T } from './protocol.js';
 import { CAMERA, HELI } from '../config.js';
-import { clamp, damp, angleDelta } from '../utils.js';
+import { clamp, damp, dampAngle, angleDelta } from '../utils.js';
 
 const INPUT_HZ = 30;   // 1 input por tick do servidor (30 Hz): degraus menores na fisica
 
@@ -652,10 +652,11 @@ export class Match {
       rpPred._predicted = false;
     }
 
-    const alpha = this.snapBuf.alpha();
     this._animF++;
     for (const [id, rp] of this.avatares) {
-      const d = this.snapBuf.ler(id, alpha);
+      // [REDE-FLUIDEZ] local: snap mais recente (a predição local já
+      // compensa o atraso); remotos: ler() com delay fixo de 120ms.
+      const d = rp.local ? this.snapBuf.ultimoPlayer(id) : this.snapBuf.ler(id);
       if (!d) continue;
       rp.aplicar(d);
       // o avatar local gira com o mouse na hora (a posição continua vindo
@@ -700,7 +701,7 @@ export class Match {
     // câmera de ombro em terceira pessoa, igual à do single: o mouse gira
     // o olhar na hora (sem a latência do servidor) e a câmera se posiciona
     // atrás e à direita do Bob, que fica visível com a arma na mão
-    const eu = this.snapBuf.ler(this.meuId, alpha);
+    const eu = this.snapBuf.ultimoPlayer(this.meuId);
     const foc = this._camFocus;
     // o foco segue o CORPO VISUAL do Bob (posição suavizada pelo damp), não o
     // snap cru — o alvo da câmera fica contínuo mesmo com jitter de rede
@@ -1009,11 +1010,19 @@ export class Match {
         hl.mesh.pitch = hl.pitch;
         hl.mesh.roll = hl.roll;
       } else if (hl.alvo) {
-        // remoto/livre: interpolação suave (damp) — sem teleporte nem travada
-        hl.x = damp(hl.x, hl.alvo.x, 8, dt);
+        // [REDE-FLUIDEZ] remoto/livre: correção com velocidade limitada (máx
+        // 90 m/s) — o damp(λ=8) antigo "voava" com erro grande (8×15m = 120m/s
+        // no 1º frame = teleporte suave). Agora o limite é fixo: salto de 15m
+        // leva ~0,17s para alcançar, sem pulo.
+        const dxh = hl.alvo.x - hl.x, dzh = hl.alvo.z - hl.z;
+        const errh = Math.hypot(dxh, dzh);
+        if (errh > 0.0001) {
+          const k = Math.min(1, (90 * dt) / errh);
+          hl.x += dxh * k;
+          hl.z += dzh * k;
+        }
         hl.y = damp(hl.y, hl.alvo.y, 8, dt);
-        hl.z = damp(hl.z, hl.alvo.z, 8, dt);
-        hl.mesh.yaw = damp(hl.mesh.yaw, hl.alvo.yaw, 8, dt);
+        hl.mesh.yaw = dampAngle(hl.mesh.yaw, hl.alvo.yaw, 8, dt);
         hl.mesh.pitch = damp(hl.mesh.pitch, hl.alvo.pitch, 8, dt);
         hl.mesh.roll = damp(hl.mesh.roll, hl.alvo.roll, 8, dt);
       }
@@ -1038,11 +1047,17 @@ export class Match {
         }
         cr.mesh.speed = cr.speed;
       } else if (cr.alvo) {
-        // remoto/livre: interpolação suave (damp) — sem teleporte nem travada
-        cr.x = damp(cr.x, cr.alvo.x, 8, dt);
+        // [REDE-FLUIDEZ] remoto/livre: correção com velocidade limitada (máx
+        // 55 m/s) — sem o "voo" do damp(λ=8) antigo com erro grande.
+        const dxc = cr.alvo.x - cr.x, dzc = cr.alvo.z - cr.z;
+        const errc = Math.hypot(dxc, dzc);
+        if (errc > 0.0001) {
+          const k = Math.min(1, (55 * dt) / errc);
+          cr.x += dxc * k;
+          cr.z += dzc * k;
+        }
         cr.y = damp(cr.y, cr.alvo.y, 8, dt);
-        cr.z = damp(cr.z, cr.alvo.z, 8, dt);
-        cr.yaw = damp(cr.yaw, cr.alvo.yaw, 8, dt);
+        cr.yaw = dampAngle(cr.yaw, cr.alvo.yaw, 8, dt);
         cr.mesh.speed = cr.snapSpeed || 0;
       }
       cr.mesh.root.position.set(cr.x, cr.y, cr.z);
