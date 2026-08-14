@@ -59,8 +59,11 @@ export class RemotePlayer {
     this.tag = null;
     if (!this.local) this._criarTag(cor);
 
-    this.loro = new Loro(scene, { cor: LORO_CORES[h] });
-    this.loro.root.traverse(o => { if (o.isMesh || o.isSprite) o.frustumCulled = false; });
+    // [MP-LIMPO] papagaio removido do MP: cada avatar criava um Loro animado
+    // todo frame (asas/seguida) — custo x N avatares por frame. O Loro do SOLO
+    // continua (game.js player.loro). Para voltar, descomente as 2 linhas:
+    // this.loro = new Loro(scene, { cor: LORO_CORES[h] });
+    // this.loro.root.traverse(o => { if (o.isMesh || o.isSprite) o.frustumCulled = false; });
 
     this.x = 0; this.y = 0; this.z = 0;
     this.yaw = 0; this.pitch = 0;
@@ -203,14 +206,16 @@ export class RemotePlayer {
     this.human.lookPitch = this.pitch;
     this.human.update(dt, speed, { air, run: this._run });
     if (!this.local) this.root.visible = this.vivo;
-    this.loro.visible = this.vivo && !this._loroSkip;
-    if (this.vivo && !this._loroSkip) {
-      if (this._loroYaw == null) this._loroYaw = this.yaw + Math.PI;
-      let d = this.yaw + Math.PI - this._loroYaw;
-      while (d > Math.PI) d -= Math.PI * 2;
-      while (d < -Math.PI) d += Math.PI * 2;
-      this._loroYaw += d * Math.min(1, 12 * dt);
-      this.loro.update(dt, this.root.position, this._loroYaw, speed);
+    if (this.loro) {   // [MP-LIMPO] papagaio do MP removido (this.loro fica undefined)
+      this.loro.visible = this.vivo && !this._loroSkip;
+      if (this.vivo && !this._loroSkip) {
+        if (this._loroYaw == null) this._loroYaw = this.yaw + Math.PI;
+        let d = this.yaw + Math.PI - this._loroYaw;
+        while (d > Math.PI) d -= Math.PI * 2;
+        while (d < -Math.PI) d += Math.PI * 2;
+        this._loroYaw += d * Math.min(1, 12 * dt);
+        this.loro.update(dt, this.root.position, this._loroYaw, speed);
+      }
     }
   }
 
