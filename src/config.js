@@ -380,7 +380,7 @@ export const QUALITY = {
    * (janelas acesas, postes, faróis, semáforos, traçantes e explosões) e o
    * céu não vira uma névoa leitosa em cima da cena.
    */
-  bloomStrength: 0.62,
+  bloomStrength: 0.5,   // [FPS2] bloom mais leve (era 0.62)
   bloomRadius: 0.6,
   bloomThreshold: 1.55,
   /** Exposição do tone mapping (o céu já é reescalado em gfx/sky.js). */
@@ -462,7 +462,7 @@ export const PRESETS = [
     renderScale: 0.75,
     // sombra curta e barata: pega o que está perto do jogador, que é o que
     // realmente se vê, e deixa o passe de sombra pequeno
-    shadows: true, shadowMapSize: 1024, shadowRadius: 45,
+    shadows: true, shadowMapSize: 1024, shadowRadius: 38,   // [FPS2] area de sombra -29% (menos casters no passe)
     shadowType: 'basic',     // [FPS] PCF basico (era PCFSoft): ~35% mais barato no passe de sombra
     bloom: true, smaa: false, bloomScale: 0.4,
     dynamicLights: 3,

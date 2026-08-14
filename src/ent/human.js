@@ -209,7 +209,7 @@ export class Human {
      * mexem, e a mecânica de animação/arma continua idêntica.
      */
     const upper = new THREE.Mesh(
-      capsule(0.056, 0.208, 0, -UPPER_ARM / 2, 0, this.shirt, 1, 0.9, 4, 10),
+      capsule(0.056, 0.208, 0, -UPPER_ARM / 2, 0, this.shirt, 1, 0.9, 2, 6),
       this.material,
     );
     upper.castShadow = this.fullShadow;
@@ -218,7 +218,7 @@ export class Human {
     const fore = new THREE.Group();
     fore.position.y = -UPPER_ARM;
     const foreGeos = [
-      capsule(0.048, 0.204, 0, -FOREARM / 2, 0, this.skin, 1, 0.9, 4, 10),
+      capsule(0.048, 0.204, 0, -FOREARM / 2, 0, this.skin, 1, 0.9, 2, 6),
     ];
     const hand = sphere(0.062, 0, -FOREARM - 0.03, 0, this.skin, 0.85, 1);
     const foreMesh = new THREE.Mesh(mergeGeometries([foreGeos[0], hand], false), this.material);
@@ -235,7 +235,7 @@ export class Human {
 
     // coxa em cápsula (calça justa) — altura total = THIGH, igual à caixa antiga
     const thigh = new THREE.Mesh(
-      capsule(0.077, 0.296, 0, -THIGH / 2, 0, this.pants, 0.94, 1.02, 5, 12),
+      capsule(0.077, 0.296, 0, -THIGH / 2, 0, this.pants, 0.94, 1.02, 3, 8),
       this.material,
     );
     thigh.castShadow = this.fullShadow;
@@ -244,7 +244,7 @@ export class Human {
     const shinGroup = new THREE.Group();
     shinGroup.position.y = -THIGH;
     // canela em cápsula + bota com bico arredondado (bola achatada na ponta)
-    const shinGeo = capsule(0.064, 0.302, 0, -SHIN / 2, 0, this.pants, 0.94, 1.02, 5, 12);
+    const shinGeo = capsule(0.064, 0.302, 0, -SHIN / 2, 0, this.pants, 0.94, 1.02, 3, 8);
     const footGeo = new THREE.BoxGeometry(0.135, 0.085, 0.27).translate(0, -SHIN - 0.042, 0.055);
     paint(footGeo, shoeColor);
     const toe = sphere(0.065, 0, -SHIN - 0.042, 0.128, shoeColor, 0.52, 0.95);
