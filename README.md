@@ -1069,7 +1069,7 @@ O **multiplayer** deste projeto foi implementado e roda 24/7 num servidor
 **Oracle Cloud** — este repositório modificado é o
 **[saboracaiteria](https://github.com/saboracaiteria)**.
 
-Modificado e mantido por **[@niildoxz](https://github.com/niildoxz)** usando o
+Modificado e mantido por **@niildoxz** usando o
 **AI Coding IDE mobile** — a IDE com IA que roda nativa no Android, com
 terminal, Git/GitHub integrado e deploy 1-clique para a VM.
 
