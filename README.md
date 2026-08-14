@@ -1065,9 +1065,14 @@ O jogo está em produção 24/7 numa VM grátis da Oracle Cloud:
 
 ## 🤖 Desenvolvido com AI Coding IDE mobile
 
-Este repositório é modificado e mantido por **[@nildoxz](https://github.com/nildoxz)**
-usando o **AI Coding IDE mobile** — a IDE com IA que roda nativa no Android,
-com terminal, Git/GitHub integrado e deploy 1-clique para a VM.
+O **multiplayer** deste projeto foi implementado e roda 24/7 num servidor
+**Oracle Cloud** — este repositório modificado é o
+**[saboracaiteria](https://github.com/saboracaiteria)**.
 
-- 👤 **@nildoxz** — autor das modificações, otimizações e deploys
+Modificado e mantido por **[@niildoxz](https://github.com/niildoxz)** usando o
+**AI Coding IDE mobile** — a IDE com IA que roda nativa no Android, com
+terminal, Git/GitHub integrado e deploy 1-clique para a VM.
+
+- 👤 **@niildoxz** — autor das modificações, otimizações e deploys
 - 📱 **AI Coding IDE mobile** — ferramenta de desenvolvimento usada neste projeto
+- 💬 Telegram do AI Coding IDE: **https://t.me/+YzxicUy7gTo4YTIx**
