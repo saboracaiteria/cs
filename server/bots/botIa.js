@@ -41,8 +41,8 @@ const BOT_CORES = [0xe8453c, 0x2f9e5f, 0x3a6fd8, 0xe0a323, 0x9c4fd8, 0xd84f8f, 0
 export function makeBot(nick, dificuldade = 'expert') {
   const DIF = {
     facil: { precisao: 0.25, reacao: 0.6, danoMult: 1.0, visao: 30 },
-    media: { precisao: 0.45, reacao: 0.4, danoMult: 1.5, visao: 42 },
-    dificil: { precisao: 0.7, reacao: 0.22, danoMult: 1.8, visao: 55 },
+    media: { precisao: 0.45, reacao: 0.4, danoMult: 1.25, visao: 42 },   // [DANO2] dano reduzido
+    dificil: { precisao: 0.7, reacao: 0.22, danoMult: 1.5, visao: 55 },   // [DANO2] dano reduzido
     // [EXPERT] perfil padrão do multiplayer: mira excelente, reação rápida e
     // visão longa — mas é BASTANTE LENTO no movimento (compensado no room.js)
     expert: { precisao: 0.78, reacao: 0.16, danoMult: 1.0, visao: 60 },
@@ -171,7 +171,7 @@ export function makeBot(nick, dificuldade = 'expert') {
           inp.yaw = yawC;
           this._fireT = (this._fireT || 0) - dt;
           if (this._fireT <= 0 && Math.abs(diff) < 0.35) {
-            this._fireT = 0.5 + (1 - this.precisao) * 0.5;
+            this._fireT = 0.85 + (1 - this.precisao) * 0.7;   // [DANO2] cadência reduzida (carro)
             const dyC = (best.body.pos.y + 1.2) - c.y;
             room.onShoot(this, { yaw: c.yaw, pitch: Math.atan2(dyC, distC) });
           }
@@ -330,7 +330,7 @@ export function makeBot(nick, dificuldade = 'expert') {
         // dispara só depois da reação ao alvo e com a mira alinhada
         this._fireT = (this._fireT || 0) - dt;
         if (this._reacaoT <= 0 && this._fireT <= 0 && Math.abs(angleDelta(this.body.yaw, yaw)) < 0.25) {
-          this._fireT = 0.5 + (1 - this.precisao) * 0.6;
+          this._fireT = 0.85 + (1 - this.precisao) * 0.7;   // [DANO2] cadência reduzida (pé)
           room.onShoot(this, { yaw: this.body.yaw, pitch: this.body.pitch });
         }
         // [BOT-PULO] pulo tático em combate próximo

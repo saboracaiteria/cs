@@ -640,7 +640,7 @@ export class Room {
     // antigo danoMult da dificuldade deixava o bot forte demais.
     const atiradorBot = !!this.bots.get(p.id);
     const mult = best.cabeca && W.headshotMult ? W.headshotMult : 1;
-    const dmg = (atiradorBot ? W.damage * 0.6 * (p.danoMult ?? 1) : W.damage) * mult;   // [BOT-DANO] bots dao 40% menos — frenético: bot mata bot em ~3-4s
+    const dmg = (atiradorBot ? W.damage * 0.45 * (p.danoMult ?? 1) : W.damage) * mult;   // [BOT-DANO2] bots dao 55% menos — player tem tempo de revidar
     if (best.carro) this._carDano(best.carro, dmg);
     else this._damage(best.alvo, p, dmg, p.arma);
   }
