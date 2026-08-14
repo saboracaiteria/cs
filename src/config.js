@@ -382,7 +382,7 @@ export const QUALITY = {
   bloomStrength: 0.5,   // [FPS2] bloom mais leve (era 0.62)
   bloomRadius: 0.6,
   bloomThreshold: 1.55,
-  /** Exposição do tone mapping (o céu já é reescalado em gfx/sky.js). */
+  leafDetail: 1,   // [FPS] subdivisao da copa das arvores (1 = 240 tris/arvore, 0 = 60 tris)
   exposure: 1.12,
   /**
    * Névoa só para dar profundidade atmosférica. Precisa ser fraca o bastante
@@ -455,6 +455,7 @@ export const PRESETS = [
     dynamicLights: 0,
     fogFar: 1400,
     envUpdate: 12,
+    leafDetail: 0,   // [FPS] copa das arvores com 1/4 dos triangulos
   },
   {
     id: 'media', label: 'MÉDIA',
@@ -469,6 +470,7 @@ export const PRESETS = [
     envUpdate: 6,
     shadowTickEvery: 3,     // [FPS] sombra a cada 3 frames (era 2): -33% de custo
     dynFloor: 0.62,         // [FPS] mais margem p/ a resolucao dinamica agir antes de travar
+    leafDetail: 0,   // [FPS] copa das arvores com 1/4 dos triangulos (60 tris em vez de 240)
   },
   {
     id: 'alta', label: 'ALTA',
@@ -478,6 +480,7 @@ export const PRESETS = [
     dynamicLights: 6,
     fogFar: 2300,
     envUpdate: 3,
+    leafDetail: 1,   // copa cheia (240 tris/arvore) — maquina forte aguenta
   },
   {
     id: '120fps', label: '120 FPS',
@@ -493,6 +496,7 @@ export const PRESETS = [
     targetMsHigh: 8.0,
     targetMsLow: 6.5,
     shadowTickEvery: 3,
+    leafDetail: 0,   // [FPS] copa das arvores com 1/4 dos triangulos
   },
 ];
 

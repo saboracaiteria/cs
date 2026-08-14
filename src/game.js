@@ -152,7 +152,8 @@ export class Game {
     });
 
     await step('plantando árvores e postes...', () => {
-      this.props = new Props(this.gfx.scene, this.col);
+      const presetArv = PRESETS[this.settings.get('presetIndex')] || PRESETS[DEFAULT_PRESET];
+      this.props = new Props(this.gfx.scene, this.col, 777, presetArv.leafDetail ?? 1);   // [FPS] copa conforme o preset
       this.props.build(this.city);                           // [16][22]
     });
 

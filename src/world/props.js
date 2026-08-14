@@ -17,10 +17,11 @@ const BAND = CELL / 2 - PROP_OFF;            // 22.1
  * além de bancos e lixeiras. Tudo instanciado para manter o custo baixo.
  */
 export class Props {
-  constructor(scene, collision, seed = 777) {
+  constructor(scene, collision, seed = 777, leafDetail = 1) {
     this.scene = scene;
     this.col = collision;
     this.rng = makeRng(seed);
+    this.leafDetail = Math.max(0, Math.min(1, leafDetail | 0));   // [FPS] copa: 0 = 60 tris, 1 = 240 tris
     this.group = new THREE.Group();
     this.group.name = 'props';
     scene.add(this.group);
@@ -207,17 +208,20 @@ export class Props {
 
     // copa: três massas irregulares dão volume sem custo
     const blobs = [];
-    const b1 = new THREE.IcosahedronGeometry(1.75, 1); b1.translate(0, 3.9, 0); blobs.push(b1);
-    const b2 = new THREE.IcosahedronGeometry(1.25, 1); b2.translate(0.95, 3.25, 0.4); blobs.push(b2);
-    const b3 = new THREE.IcosahedronGeometry(1.15, 1); b3.translate(-0.8, 3.45, -0.55); blobs.push(b3);
+    // [FPS] copa: Icosahedron detail ajustado (1 = 240 tris/arvore, 0 = 60 tris = -75%)
+    const d = this.leafDetail;
+    const jit = d === 0 ? 0.55 : 0.35;   // jitter maior esconde as faces grandes do icosaedro
+    const b1 = new THREE.IcosahedronGeometry(1.75, d); b1.translate(0, 3.9, 0); blobs.push(b1);
+    const b2 = new THREE.IcosahedronGeometry(1.25, d); b2.translate(0.95, 3.25, 0.4); blobs.push(b2);
+    const b3 = new THREE.IcosahedronGeometry(1.15, d); b3.translate(-0.8, 3.45, -0.55); blobs.push(b3);
     const leafGeo = mergeGeometries(blobs, false);
     // deforma um pouco os vértices para tirar a cara de esfera
     const lp = leafGeo.attributes.position;
     for (let i = 0; i < lp.count; i++) {
       lp.setXYZ(i,
-        lp.getX(i) + (rng() - 0.5) * 0.35,
-        lp.getY(i) + (rng() - 0.5) * 0.35,
-        lp.getZ(i) + (rng() - 0.5) * 0.35);
+        lp.getX(i) + (rng() - 0.5) * jit,
+        lp.getY(i) + (rng() - 0.5) * jit,
+        lp.getZ(i) + (rng() - 0.5) * jit);
     }
     leafGeo.computeVertexNormals();
     const leafMat = new THREE.MeshStandardMaterial({
@@ -257,7 +261,7 @@ export class Props {
 
     // arbustos das praças
     if (this.bushSpots.length) {
-      const bushGeo = new THREE.IcosahedronGeometry(0.85, 1);
+      const bushGeo = new THREE.IcosahedronGeometry(0.85, d);   // [FPS] arbusto segue a qualidade da copa
       const bushMat = new THREE.MeshStandardMaterial({ color: 0x3f6b2d, roughness: 0.92, flatShading: true });
       const bushes = new THREE.InstancedMesh(bushGeo, bushMat, this.bushSpots.length);
       bushes.castShadow = true; bushes.receiveShadow = true;
