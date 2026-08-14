@@ -26,6 +26,10 @@ const INPUT_HZ = 30;   // 1 input por tick do servidor (30 Hz): degraus menores 
 // andar (position.set direto do snap = teleporte a cada pacote com latência)
 const CAR_MP = { radius: 2.1, height: 1.6, maxSpeed: 26, accel: 14, brake: 34, steer: 1.9 };
 
+function esc(s) {
+  return String(s).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+}
+
 export class Match {
   constructor(game, net, info) {
     this.game = game;
@@ -76,6 +80,7 @@ export class Match {
     this._raf = null;
     this._revNick = "";
     this._revId = null;
+    this._ultimosPlayers = [];   // [PLACA] ultimo snapshot de players (placar final da vitoria)
     this._saiu = false;         // [FIX] guard de reentrância do sair()
     this._ult = 0;
     this._pausado = false;      // pausa única (mesma tela/menus do solo)
@@ -528,6 +533,7 @@ export class Match {
 
   _snap(msg) {
     this.snapBuf.push(msg);
+    this._ultimosPlayers = msg.players || this._ultimosPlayers;   // [PLACA] guarda o placar final
     this._snapHour = msg.hour;         // [DIA-NOITE] hora controlada pelo host
     this._snapCycle = msg.cycleMode;
     // registra nicks e garante avatares (cor da roupa sincronizada)
@@ -1254,6 +1260,8 @@ export class Match {
     if (ov) {
       ov.classList.remove('hidden');
       ov.className = 'mp-overlay morte';
+      const placaMorte = ov.querySelector('.ov-placa');
+      if (placaMorte) placaMorte.classList.add('hidden');   // [PLACA] placa so na tela de vitoria
       ov.querySelector('.ov-titulo').textContent = 'VOCÊ MORREU';
       ov.querySelector('.ov-sub').textContent = por ? `Eliminado por ${por}` : 'Você foi eliminado';
       // [respawn] DM: o botão principal volta para a partida NA HORA (pede ao
@@ -1333,6 +1341,40 @@ export class Match {
       ov.classList.add('hidden');
       this.sair();
     };
+
+    this._preencherPlaca(ov);
+  }
+
+  /** [PLACA] placa de campeao na tela de vitoria: vencedor + top 3 do placar final. */
+  _preencherPlaca(ov) {
+    const placa = ov.querySelector('.ov-placa');
+    if (!placa) return;
+    placa.classList.remove('hidden');
+
+    const nome = placa.querySelector('.ov-placa-nome');
+    if (nome) nome.textContent = this._revNick || 'Alguém';
+
+    const podium = placa.querySelector('.ov-placa-podium');
+    if (!podium) return;
+    podium.innerHTML = '';
+
+    const medalhas = ['🥇', '🥈', '🥉'];
+    const lista = (this._ultimosPlayers || [])
+      .slice()
+      .sort((a, b) => (b.kills || 0) - (a.kills || 0))
+      .slice(0, 3);
+
+    lista.forEach((p, i) => {
+      const row = document.createElement('div');
+      row.className = 'ov-pod-row' +
+        (p.id === this._revId ? ' ov-pod-camp' : '') +
+        (p.id === this.meuId ? ' ov-pod-eu' : '');
+      row.innerHTML =
+        '<span class="ov-pod-med">' + (medalhas[i] || '▪') + '</span>' +
+        '<span class="ov-pod-nick">' + esc(p.nick || '?') + (p.id === this.meuId ? ' (você)' : '') + '</span>' +
+        '<span class="ov-pod-kills">' + (p.kills || 0) + ' 💀</span>';
+      podium.appendChild(row);
+    });
   }
 
   /** Predição local do heli pilotado — replica EXATAMENTE a física do
