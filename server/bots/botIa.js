@@ -38,11 +38,14 @@ export const NOMES = [
 /** Paleta de roupas dos bots (espelha a do jogador). */
 const BOT_CORES = [0xe8453c, 0x2f9e5f, 0x3a6fd8, 0xe0a323, 0x9c4fd8, 0xd84f8f, 0x23b0c9, 0x8a6f4f, 0x5a6b8a, 0xc9c23a];
 
-export function makeBot(nick, dificuldade = 'media') {
+export function makeBot(nick, dificuldade = 'expert') {
   const DIF = {
     facil: { precisao: 0.25, reacao: 0.6, danoMult: 1.0, visao: 30 },
     media: { precisao: 0.45, reacao: 0.4, danoMult: 1.5, visao: 42 },
     dificil: { precisao: 0.7, reacao: 0.22, danoMult: 1.8, visao: 55 },
+    // [EXPERT] perfil padrão do multiplayer: mira excelente, reação rápida e
+    // visão longa — mas é BASTANTE LENTO no movimento (compensado no room.js)
+    expert: { precisao: 0.78, reacao: 0.16, danoMult: 1.0, visao: 60 },
   };
   const d = DIF[dificuldade] || DIF.media;
   return {
@@ -71,6 +74,19 @@ export function makeBot(nick, dificuldade = 'media') {
     _travaZ: 0,
     _danoDe: null,     // ultimo atirador que acertou o bot
     _danoT: -99,       // tempo (s) do ultimo dano sofrido
+    _reacaoT: 0,       // [EXPERT] tempo restante p/ reagir a um alvo novo
+    _strafeT: 0,       // [EXPERT] tempo restante no strafe atual
+    _strafeDir: 1,     // [EXPERT] direção do strafe (+1/-1)
+    // [EXPERT] distância de engajamento ideal conforme a arma equipada
+    _alcanceIdeal() {
+      switch (this.arma) {
+        case "escopeta": return 9;
+        case "pistola": return 20;
+        case "metralhadora": return 30;
+        case "rifle": return 50;
+        default: return 18;
+      }
+    },
     levouDano(dmg, por) {
       this._danoDe = por || null;
       this._danoT = Date.now() / 1000;
@@ -113,7 +129,11 @@ export function makeBot(nick, dificuldade = 'media') {
           o.body.pos.x, o.body.pos.y + 1.2, o.body.pos.z)) continue;
         bestD = dd; best = o;
       }
+      // [EXPERT] tempo de reação: alvo novo exige um instante antes de atirar
+      const alvoNovo = best && best !== this.target;
       this.target = best;
+      if (alvoNovo) this._reacaoT = this.reacao;
+      this._reacaoT = Math.max(0, this._reacaoT - dt);
 
       const inp = { moveX: 0, moveZ: 0, yaw: this.body.yaw, pitch: 0, run: false, jump: false, up: false, down: false, heliYaw: 0, heliDesiredYaw: null };
 
@@ -275,24 +295,50 @@ export function makeBot(nick, dificuldade = 'media') {
         const yaw = Math.atan2(-dx, -dz);
         const dist = Math.hypot(dx, dz);
         const pitch = Math.atan2(dy, dist);
+        const now = Date.now() / 1000;
         this.body.yaw += angleDelta(this.body.yaw, yaw) * Math.min(1, 8 * dt);
         this.body.pitch = pitch * 0.8;
-        // atira com cadência limitada pela precisão
+        // [EXPERT] alcance ideal conforme a arma: mantém a distância tática
+        const alcance = this._alcanceIdeal();
+        const longe = dist > alcance * 1.2;
+        const perto = dist < alcance * 0.55;
+        // [EXPERT] consciência de fogo: sabe quem o acertou e quando
+        const sobFogo = this._danoDe && (now - this._danoT) < 2.5;
+        const vidaBaixa = this.hp < 35;
+        // [EXPERT] strafe lateral: muda de direção a cada instante
+        this._strafeT -= dt;
+        if (this._strafeT <= 0) {
+          this._strafeT = 0.7 + Math.random() * 1.3;
+          this._strafeDir = Math.random() < 0.5 ? 1 : -1;
+        }
+        const strafe = this._strafeDir;
+        if (sobFogo && vidaBaixa) {
+          // auto-preservação: recua de costas (mirando) em zigue-zague
+          inp.moveZ = -0.8;
+          inp.moveX = strafe * 0.7;
+          inp.jump = Math.random() < 0.12;
+        } else if (sobFogo) {
+          // sob fogo: desvia forte (strafe) mantendo a mira
+          inp.moveZ = longe ? 0.4 : 0;
+          inp.moveX = strafe * 0.9;
+        } else {
+          // combate normal: mantém a distância ideal + strafe constante
+          inp.moveZ = longe ? 0.55 : perto ? -0.35 : 0;
+          inp.moveX = strafe * 0.55;
+        }
+        inp.yaw = this.body.yaw;
+        // dispara só depois da reação ao alvo e com a mira alinhada
         this._fireT = (this._fireT || 0) - dt;
-        if (this._fireT <= 0 && Math.abs(angleDelta(this.body.yaw, yaw)) < 0.3) {
+        if (this._reacaoT <= 0 && this._fireT <= 0 && Math.abs(angleDelta(this.body.yaw, yaw)) < 0.25) {
           this._fireT = 0.5 + (1 - this.precisao) * 0.6;
           room.onShoot(this, { yaw: this.body.yaw, pitch: this.body.pitch });
         }
-        // aproxima/recua um pouco
-        // [BOT-PULO] pulo em combate proximo (simula strafe de player)
+        // [BOT-PULO] pulo tático em combate próximo
         this._puloT -= dt;
-        if (dist < 12 && this._puloT <= 0 && Math.random() < 0.2) {
+        if (dist < 12 && this._puloT <= 0 && Math.random() < 0.15) {
           inp.jump = true;
-          this._puloT = 1.1 + Math.random() * 1.7;
+          this._puloT = 1.2 + Math.random() * 1.6;
         }
-        inp.moveZ = dist > 14 ? 0.5 : dist < 6 ? -0.5 : 0;
-        inp.yaw = this.body.yaw;
-        inp.run = true;
       } else {
 
         // [BOT-CARRO] sem alvo: prefere pegar um carro livre e rodar pela cidade
