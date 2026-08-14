@@ -893,69 +893,70 @@ body:not(.toque).mp-ativo #perfbox{
   left:auto; right:14px; transform:none;
   top:max(10px, env(safe-area-inset-top));
 }
-#mp-pausa{
-  position:fixed; top:max(18px, env(safe-area-inset-top)); right:max(20px, env(safe-area-inset-right));
-  z-index:97; width:44px; height:44px; border-radius:13px;
-  background:var(--panel); border:1px solid var(--stroke); color:var(--ink);
-  font-size:19px; cursor:pointer; backdrop-filter:blur(8px);
-  -webkit-backdrop-filter:blur(8px);
-  display:flex; align-items:center; justify-content:center;
-  pointer-events:auto;
+/* ===== placa de campeao (tela de vitoria do MP) ===== */
+.ov-placa {
+  position: relative;
+  width: min(430px, 88vw);
+  margin: 2px auto 26px;
+  padding: 26px 22px 22px;
+  background: linear-gradient(160deg, #7a4a1e 0%, #5b3313 45%, #4a280e 100%);
+  border: 6px solid #d9a441;
+  border-radius: 18px;
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, .55),
+    inset 0 0 26px rgba(0, 0, 0, .45),
+    inset 0 2px 0 rgba(255, 214, 130, .28);
 }
-#mp-pausa:active{transform:scale(.93)}
-#mp-pausa.hidden{display:none}
-#mp-placar{
-  position:fixed; top:max(18px, env(safe-area-inset-top)); right:max(76px, calc(env(safe-area-inset-right) + 58px));
-  z-index:97; width:44px; height:44px; border-radius:13px;
-  background:var(--panel); border:1px solid var(--stroke); color:var(--ink);
-  font-size:19px; cursor:pointer; backdrop-filter:blur(8px);
-  -webkit-backdrop-filter:blur(8px);
-  display:flex; align-items:center; justify-content:center;
-  pointer-events:auto;
+.mp-overlay.morte .ov-placa { display: none; }
+.ov-placa-titulo {
+  font-size: clamp(20px, 4.4vw, 26px);
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #ffe9b0;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, .55), 0 0 22px rgba(255, 200, 80, .45);
+  margin-bottom: 4px;
 }
-#mp-placar:active{transform:scale(.93)}
-#mp-placar.hidden{display:none}
-
-/* ---------- Touch MP: joystick + area de olhar (celular) ---------- */
-#mp-joy{
-  position:fixed;
-  left:calc(20px + env(safe-area-inset-left));
-  bottom:calc(20px + env(safe-area-inset-bottom));
-  z-index:95; width:158px; height:158px; border-radius:50%;
-  border:2px solid rgba(255,255,255,.22);
-  background:radial-gradient(circle, rgba(8,12,20,.5), rgba(8,12,20,.2));
-  box-shadow:0 6px 24px rgba(0,0,0,.4);
-  touch-action:none; pointer-events:none; user-select:none;
+.ov-placa-nome {
+  font-size: clamp(26px, 6vw, 38px);
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, .6), 0 0 30px rgba(255, 220, 120, .55);
+  margin-bottom: 14px;
+  word-break: break-word;
 }
-#mp-joy .knob{
-  position:absolute; left:50%; top:50%; width:66px; height:66px;
-  margin:-33px 0 0 -33px; border-radius:50%;
-  background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(190,205,225,.6));
-  border:1px solid rgba(255,255,255,.6);
-  box-shadow:0 4px 14px rgba(0,0,0,.55);
+.ov-placa-podium {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-/* area de olhar/atirar: a tela inteira (listeners no document) */
-#mp-look{
-  position:fixed; inset:0; z-index:94; pointer-events:none; touch-action:none;
+.ov-pod-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 235, 190, .10);
+  border: 1px solid rgba(255, 225, 160, .18);
+  font-size: 14px;
+  color: rgba(255, 244, 214, .92);
 }
-
-/* botões de ação do toque do MP (ATIRAR/PULAR/AÇÃO/CORRER) — mesmo padrão do solo */
-#mp-pad{
-  position:absolute; width:360px; height:200px; pointer-events:none; touch-action:none;
-  right:calc(env(safe-area-inset-right) + 2px);
-  bottom:calc(env(safe-area-inset-bottom) + 6px);
-  z-index:96;
+.ov-pod-row.ov-pod-camp {
+  background: rgba(255, 214, 90, .18);
+  border-color: rgba(255, 214, 90, .55);
+  box-shadow: 0 0 18px rgba(255, 200, 60, .22);
 }
-#mp-pad .tc-btn{ pointer-events:auto; }
-#mp-correr{ background:rgba(20,120,255,.25); border-color:rgba(20,120,255,.55); color:#cfe4ff; }
-#mp-girar-esq{right:16px; bottom:124px; width:82px; height:82px; font-size:11px}
-#mp-girar-dir{right:110px; bottom:124px; width:82px; height:82px; font-size:11px}
-/* ---------------------------------------------------------------- lobby: online + convite */
-.lobby-online{
-  margin-top:14px; text-align:left;
+.ov-pod-row.ov-pod-eu { color: #fff; font-weight: 800; }
+.ov-pod-med { font-size: 18px; width: 26px; text-align: center; flex: none; }
+.ov-pod-nick { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-pod-kills { flex: none; opacity: .85; }
+.ov-placa-parafuso {
+  position: absolute;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f0d9a8, #8a6428 55%, #3d2a0c);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .6), inset 0 -1px 2px rgba(0, 0, 0, .5);
 }
-.lobby-online h3{
-  margin:0 0 6px; font-size:12px; letter-spacing:.14em; color:#9fb4cc;
-}
-.lobby-online-list{
-  list-style:none; margin:0; padding:0; max-height:150px; overflow-y:auto;
+.ov-p-tl { top: 7px; left: 7px; }
+.ov-p-tr { top: 7px; right: 7px; }
+.ov-p-bl { bottom: 7px; left: 7px; }
+.ov-p-br { bottom: 7px; right: 7px; }
