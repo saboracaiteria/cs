@@ -321,7 +321,6 @@ export class City {
 
     for (const b of this.blocks) {
       if (b.type !== 'urban') continue;
-      if (b.density < 0.45) continue;   // [CENARIO-LIMPO] sem predios nas bordas: em volta so lago, pontes e Cristo
 
       const lots = this._splitBlock(b, rng);
       for (const lot of lots) {
