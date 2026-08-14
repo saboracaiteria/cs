@@ -1063,12 +1063,11 @@ O jogo está em produção 24/7 numa VM grátis da Oracle Cloud:
 
 ---
 
-## 🌐 Jogue online (servidor oficial)
+## 🤖 Desenvolvido com AI Coding IDE mobile
 
-O jogo está em produção 24/7 numa VM grátis da Oracle Cloud:
+Este repositório é modificado e mantido por **[@nildoxz](https://github.com/nildoxz)**
+usando o **AI Coding IDE mobile** — a IDE com IA que roda nativa no Android,
+com terminal, Git/GitHub integrado e deploy 1-clique para a VM.
 
-**👉 https://tiroteio.duckdns.org**
-
-- IP da VM: `144.22.250.80` · WebSocket: `wss://tiroteio.duckdns.org/ws`
-- Todo o detalhamento do servidor (acesso SSH, deploy, troubleshooting) está em
-  **[DEPLOY_ORACLE.md](DEPLOY_ORACLE.md)**.
+- 👤 **@nildoxz** — autor das modificações, otimizações e deploys
+- 📱 **AI Coding IDE mobile** — ferramenta de desenvolvimento usada neste projeto
