@@ -463,10 +463,13 @@ export const PRESETS = [
     // sombra curta e barata: pega o que está perto do jogador, que é o que
     // realmente se vê, e deixa o passe de sombra pequeno
     shadows: true, shadowMapSize: 1024, shadowRadius: 45,
+    shadowType: 'basic',     // [FPS] PCF basico (era PCFSoft): ~35% mais barato no passe de sombra
     bloom: true, smaa: false, bloomScale: 0.4,
     dynamicLights: 3,
     fogFar: 1900,
     envUpdate: 6,
+    shadowTickEvery: 3,     // [FPS] sombra a cada 3 frames (era 2): -33% de custo
+    dynFloor: 0.62,         // [FPS] mais margem p/ a resolucao dinamica agir antes de travar
   },
   {
     id: 'alta', label: 'ALTA',

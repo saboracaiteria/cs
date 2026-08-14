@@ -153,7 +153,7 @@ export class Car {
     // as 4 rodas em uma InstancedMesh: 1 draw call, com esterço e giro por roda
     this.wheelMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, metalness: 0.25 });
     this.wheels = new THREE.InstancedMesh(wheelGeometry(), this.wheelMat, 4);
-    this.wheels.castShadow = true;
+    this.wheels.castShadow = false;   // [FPS] rodas nao projetam sombra (so a carroceria)
     this.wheels.frustumCulled = false;
     this.root.add(this.wheels);
     this._wheelSpin = 0;

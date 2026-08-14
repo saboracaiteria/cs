@@ -228,7 +228,7 @@ export class Props {
     const n = this.treeSpots.length;
     const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, n);
     const leaves = new THREE.InstancedMesh(leafGeo, leafMat, n);
-    trunks.castShadow = true; leaves.castShadow = true;      // [44]
+    trunks.castShadow = true; leaves.castShadow = false;      // [FPS] folhas nao projetam sombra (so o tronco)
     trunks.receiveShadow = true; leaves.receiveShadow = true;
 
     const m = new THREE.Matrix4();

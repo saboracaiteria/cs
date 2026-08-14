@@ -137,7 +137,7 @@ export class Game {
     };
 
     await step('gerando terreno...', () => {
-      this.terrain = new Terrain(this.gfx.scene, this.col);
+      this.terrain = new Terrain(this.gfx.scene, this.col, this.gfx.preset?.id || 'alta');  // [FPS] 1 lamina de agua fora do preset ALTA
       this.terrain.build();                                  // [52]
     });
 
