@@ -145,6 +145,7 @@ export class Match {
     // o helicoptero do single tambem some — no MP os aparelhos vem do servidor
     if (this.game && this.game.heli) this.game.heli.root.visible = false;
     if (this.game && this.game.imgBuildings) this.game.imgBuildings.esconderParaMp(this.game.col);
+    if (this.game && this.game.minimap) this.game.minimap.setModoMp(true);   // [MP-MAPA] minimapa limpo/barato no MP
 
     // esconde a tela de abertura do single
     const ab = document.getElementById('title-screen');
@@ -1805,6 +1806,7 @@ export class Match {
     this._saiu = true;
     if (this.game) this.game._mp = false;
     if (this.game && this.game.imgBuildings) this.game.imgBuildings.restaurarDoMp(this.game.col);
+    if (this.game && this.game.minimap) this.game.minimap.setModoMp(false);   // [MP-MAPA] devolve o minimapa do solo
     this._rodando = false;
     if (this._raf) cancelAnimationFrame(this._raf);
     window.removeEventListener('keydown', this._kd);

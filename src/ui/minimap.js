@@ -1,4 +1,6 @@
 import { LAKE, BRIDGE } from '../world/terrain.js';
+import { HERCILIO } from '../world/brasil.js';
+import { CORCOVADO } from '../world/landmarks.js';
 
 const RANGE = 165;            // metros visíveis do centro à borda
 
@@ -21,6 +23,12 @@ export class Minimap {
     this.scale = this.R / RANGE;
     this.pulse = 0;
     this._acc = 0;
+    this.modoMp = false;   // [MP-MAPA] minimapa limpo e mais barato no multiplayer
+  }
+
+  /** [MP-MAPA] Liga/desliga o modo multiplayer (chamado pelo match.js). */
+  setModoMp(v) {
+    this.modoMp = !!v;
   }
 
   /**
@@ -35,7 +43,7 @@ export class Minimap {
      * O tempo acumulado é repassado à animação para o pulso não desacelerar.
      */
     this._acc += dt;
-    if (this._acc < 1 / 20) return;
+    if (this._acc < 1 / (this.modoMp ? 8 : 20)) return;   // [MP-MAPA] MP desenha a 8 fps (era 20)
     const step = this._acc;
     this._acc = 0;
 
@@ -70,13 +78,16 @@ export class Minimap {
     };
 
     // ---- [52] lago e ponte
-    if (this._near(LAKE.minX, LAKE.minZ, px, pz, 420) || this._near(LAKE.maxX, LAKE.maxZ, px, pz, 420)) {
+    // [MP-MAPA] no MP o lago e as duas pontes aparecem SEMPRE (referência do mapa)
+    if (this.modoMp || this._near(LAKE.minX, LAKE.minZ, px, pz, 420) || this._near(LAKE.maxX, LAKE.maxZ, px, pz, 420)) {
       quad(LAKE.minX, LAKE.minZ, LAKE.maxX, LAKE.maxZ, '#173d52');
       quad(BRIDGE.x - BRIDGE.halfW, BRIDGE.z0, BRIDGE.x + BRIDGE.halfW, BRIDGE.z3, '#5a5148');
+      quad(HERCILIO.x - HERCILIO.halfW, HERCILIO.z0, HERCILIO.x + HERCILIO.halfW, HERCILIO.z3, '#6b6258');   // [MP-MAPA] 2ª ponte: Hercílio Luz
     }
 
     // ---- quarteirões
     const R2 = (RANGE + 50) * (RANGE + 50);
+    if (!this.modoMp) {   // [MP-MAPA] sem quarteirões/prédios no MP
     for (const b of this.city.blocks) {
       const dx = b.cx - px, dz = b.cz - pz;
       if (dx * dx + dz * dz > R2) continue;
@@ -92,9 +103,10 @@ export class Minimap {
       if (dx * dx + dz * dz > R2) continue;
       quad(bd.x - bd.w / 2, bd.z - bd.d / 2, bd.x + bd.w / 2, bd.z + bd.d / 2, '#5b6470');
     }
+    }   // [MP-MAPA] fim: sem construções no MP
 
     // ---- pessoas e carros
-    if (ents) {
+    if (ents && !this.modoMp) {   // [MP-MAPA] sem peds/cars do solo no minimapa do MP
       ctx.fillStyle = 'rgba(190,200,215,.55)';
       for (const p of ents.peds.peds) {
         const pos = p.human.root.position;
@@ -125,7 +137,7 @@ export class Minimap {
         // halo vermelho pulsante (ajuda a enxergar de relance)
         ctx.save();
         ctx.shadowColor = '#ff2a2a';
-        ctx.shadowBlur = 16 * plPulse;
+        ctx.shadowBlur = this.modoMp ? 0 : 16 * plPulse;   // [MP-MAPA] sem blur caro no MP
         ctx.beginPath();
         ctx.arc(sx, sy, rBlip, 0, Math.PI * 2);
         ctx.fillStyle = '#ff2a2a';
@@ -136,7 +148,7 @@ export class Minimap {
         ctx.stroke();
 
         // triangulo ambar: direcao para onde o inimigo esta olhando
-        if (pl.yaw != null) {
+        if (pl.yaw != null && !this.modoMp) {   // [MP-MAPA] sem setinha de direção no MP
           const ddx = -Math.sin(pl.yaw), ddz = -Math.cos(pl.yaw);
           const sx2 = -ddx * c + ddz * s;
           const sy2 = -ddx * s - ddz * c;
@@ -191,9 +203,38 @@ export class Minimap {
       ctx.stroke();
     }
 
+    // [MP-MAPA] Cristo Redentor sempre visível no MP (na borda quando longe)
+    if (this.modoMp) {
+      const ccx = TX(CORCOVADO.x, CORCOVADO.z), ccy = TY(CORCOVADO.x, CORCOVADO.z);
+      const dc = Math.hypot(ccx - this.cx, ccy - this.cy);
+      let sx = ccx, sy = ccy;
+      if (dc > this.R - 10) {
+        const k = (this.R - 10) / (dc || 1);
+        sx = this.cx + (ccx - this.cx) * k;
+        sy = this.cy + (ccy - this.cy) * k;
+      }
+      const rp = 5 + Math.sin(this.pulse) * 1.2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(sx, sy, rp, 0, Math.PI * 2);
+      ctx.fillStyle = '#f5c542';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.55)';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(30,20,0,.85)';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - 4); ctx.lineTo(sx, sy + 4);
+      ctx.moveTo(sx - 4, sy); ctx.lineTo(sx + 4, sy);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     ctx.restore();
 
     // ---- seta do jogador, sempre no centro apontando para cima
+    if (!this.modoMp) {   // [MP-MAPA] sem o triângulo de direção do player no MP
     ctx.save();
     ctx.translate(this.cx, this.cy);
     ctx.beginPath();
@@ -208,6 +249,7 @@ export class Minimap {
     ctx.stroke();
     ctx.fill();
     ctx.restore();
+    }   // [MP-MAPA] fim: sem triângulo do player
 
     // ---- cone de visão
     ctx.save();
@@ -254,7 +296,7 @@ export class Minimap {
 
     ctx.save();
     ctx.shadowColor = color;
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = this.modoMp ? 0 : 12;   // [MP-MAPA] sem blur caro no MP
     ctx.beginPath();
     ctx.arc(sx, sy, radius, 0, Math.PI * 2);
     ctx.fillStyle = color;
