@@ -269,8 +269,7 @@ export const DEFAULT_POPULATION = 2;
  * `brasil.js` já importa `terrain.js`: pôr no outro sentido faria ciclo.
  */
 export const PLATOS = [
-  { id: 'pelourinho', x: -121.6, z: -435.0, rot: -0.25, hx: 62, hz: 34, fade: 26 },
-  { id: 'museu', x: -424.3, z: 140.8, rot: 0.42, hx: 58, hz: 52, fade: 28 },
+  // [CENARIO-LIMPO] platos do museu/pelourinho removidos junto com as construcoes
 ];
 
 // ---------------------------------------------------------------- [54] bondinho

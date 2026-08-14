@@ -97,8 +97,9 @@ export class BrazilLandmarks {
 
   build() {
     this._herciliLuz();       // [57]
-    this._museuDoOlho();      // [58]
-    this._pelourinho();       // [59]
+    // [CENARIO-LIMPO] museu do olho e pelourinho removidos: em volta da cidade so lago, pontes e Cristo
+    // this._museuDoOlho();      // [58]
+    // this._pelourinho();       // [59]
   }
 
   /** Registra um material para acender junto com a noite. */
