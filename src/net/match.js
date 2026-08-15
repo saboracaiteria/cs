@@ -1282,6 +1282,8 @@ export class Match {
       }
       const btnX = ov.querySelector('#mp-overlay-x');
       if (btnX) btnX.onclick = () => { ov.classList.add('hidden'); this.sair(); };
+    }
+    if (this.brHud) this.brHud.esconder();
   }
 
   /** Aviso do servidor no DM: {id, t} = segundos até renascer. */
@@ -1347,6 +1349,8 @@ export class Match {
 
 
     this._preencherPlaca(ov);
+  }
+
   /** [PLACA] placa de campeao na tela de vitoria: vencedor + top 3 do placar final. */
   _preencherPlaca(ov) {
     const placa = ov.querySelector('.ov-placa');
