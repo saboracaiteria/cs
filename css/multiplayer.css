@@ -694,6 +694,8 @@
   position: fixed;
   inset: 0;
   z-index: 180;
+  overflow-y: auto;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -928,6 +930,8 @@ body:not(.toque).mp-ativo #perfbox{
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-height: 42vh;
+  overflow-y: auto;
 }
 .ov-pod-row {
   display: flex;

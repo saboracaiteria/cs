@@ -1280,6 +1280,10 @@ export class Match {
         btnSair.classList.remove('hidden');
         btnSair.onclick = () => { ov.classList.add('hidden'); this.sair(); };
       }
+      const btnX = ov.querySelector('#mp-overlay-x');
+      if (btnX) btnX.onclick = () => { ov.classList.add('hidden'); this.sair(); };
+      const btnX = ov.querySelector('#mp-overlay-x');
+      if (btnX) btnX.onclick = () => { ov.classList.add('hidden'); this.sair(); };
     }
     if (this.brHud) this.brHud.esconder();
   }
@@ -1341,6 +1345,12 @@ export class Match {
       ov.classList.add('hidden');
       this.sair();
     };
+
+    const btnX = ov.querySelector('#mp-overlay-x');
+    if (btnX) btnX.onclick = () => { ov.classList.add('hidden'); this.sair(); };
+
+    const btnX = ov.querySelector('#mp-overlay-x');
+    if (btnX) btnX.onclick = () => { ov.classList.add('hidden'); this.sair(); };
 
     this._preencherPlaca(ov);
   }
