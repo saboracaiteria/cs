@@ -6,9 +6,12 @@
 
 import { dist2D, angleDelta, clamp, findStreetSpot } from '../util.js';
 
+const __velLog = new Map();   // [LOG-VEL] por sala: timer da amostra de velocidade
+
+
 /** Máx. de bots atirando no MESMO alvo ao mesmo tempo. Sem este limite todos
  *  os bots focavam o jogador junto e ele morria em segundos. */
-const MAX_FOCO = 2;
+const MAX_FOCO = 3;   // [BOT-ALVO] ate 3 bots no mesmo alvo
 
 /** Linha de visão: amostra o segmento olho->peito a cada ~4 m; um sólido na
  *  altura do olhar entre os dois pontos bloqueia (bot não atira em parede). */
@@ -124,7 +127,8 @@ export function makeBot(nick, dificuldade = 'expert') {
       }
       for (const o of room._all()) {
         if (o === this || o.hp <= 0 || !o.body) continue;
-        const dd = dist2D(this.body.pos.x, this.body.pos.z, o.body.pos.x, o.body.pos.z);
+        let dd = dist2D(this.body.pos.x, this.body.pos.z, o.body.pos.x, o.body.pos.z);
+        if (!room.bots.has(o.id)) dd -= 45;   // [BOT-ALVO] bots preferem atacar humanos (players)
         if (dd >= bestD || (foco.get(o) || 0) >= MAX_FOCO) continue;
         // olho do bot (1.5) até o peito do alvo (1.2): se bater parede, não vê
         if (!temVisao(col,
@@ -136,6 +140,20 @@ export function makeBot(nick, dificuldade = 'expert') {
       const alvoNovo = best && best !== this.target;
       this.target = best;
       if (alvoNovo) this._reacaoT = this.reacao;
+      if (alvoNovo && best && !room.bots.has(best.id)) {
+        this._logAtaqueT = (this._logAtaqueT || 0) + dt;
+        if (this._logAtaqueT >= 6) {
+          this._logAtaqueT = 0;
+          room._log('🎯 ' + this.nick + ' → ' + best.nick + ' (humano) a ' + Math.round(bestD) + 'm');
+        }
+      }
+      if (alvoNovo && best && !room.bots.has(best.id)) {
+        this._logAtaqueT = (this._logAtaqueT || 0) + dt;
+        if (this._logAtaqueT >= 6) {
+          this._logAtaqueT = 0;
+          room._log('🎯 ' + this.nick + ' → ' + best.nick + ' (humano) a ' + Math.round(bestD) + 'm');
+        }
+      }
       this._reacaoT = Math.max(0, this._reacaoT - dt);
 
       const inp = { moveX: 0, moveZ: 0, yaw: this.body.yaw, pitch: 0, run: false, jump: false, up: false, down: false, heliYaw: 0, heliDesiredYaw: null };
@@ -320,6 +338,8 @@ export function makeBot(nick, dificuldade = 'expert') {
           inp.moveZ = -0.8;
           inp.moveX = strafe * 0.7;
           inp.jump = Math.random() < 0.12;
+          inp.run = true;   // [BOT-VEL] foge correndo (vida baixa)
+          inp.run = true;   // [BOT-VEL] foge correndo (vida baixa)
         } else if (sobFogo) {
           // sob fogo: desvia forte (strafe) mantendo a mira
           inp.moveZ = longe ? 0.4 : 0;
@@ -328,6 +348,8 @@ export function makeBot(nick, dificuldade = 'expert') {
           // combate normal: mantém a distância ideal + strafe constante
           inp.moveZ = longe ? 0.55 : perto ? -0.35 : 0.12;   // [BOT-VIDA] nunca para de vez no meio da rua
           inp.moveX = strafe * 0.55;
+          inp.run = longe;   // [BOT-VEL] corre quando longe (nunca acima da velocidade do player)
+          inp.run = longe;   // [BOT-VEL] corre quando longe (nunca acima da velocidade do player)
         }
         inp.yaw = this.body.yaw;
         // dispara só depois da reação ao alvo e com a mira alinhada
@@ -368,8 +390,8 @@ export function makeBot(nick, dificuldade = 'expert') {
             this._carroYawW = 0;
           } else {
             inp.yaw = Math.atan2(cNear.x - this.body.pos.x, cNear.z - this.body.pos.z);
-            inp.moveZ = 0.6;
-            inp.run = true;
+            inp.moveZ = 1;
+            inp.run = false;   // [BOT-VEL] anda ate o carro (nao fica 2x mais rapido que o player)
           }
         } else {
 
@@ -432,6 +454,11 @@ export function makeBot(nick, dificuldade = 'expert') {
           inp.run = true;
           this.wanderT = 0;
           this._strafeDir = Math.random() < 0.5 ? 1 : -1;
+          this._logTravaT = (this._logTravaT || 0) + dt;
+          if (this._logTravaT >= 5) {
+            this._logTravaT = 0;
+            room._log('⚠️ ' + this.nick + ' travou em (' + Math.round(this.body.pos.x) + ',' + Math.round(this.body.pos.z) + ')');
+          }
         }
       }
 
@@ -452,6 +479,18 @@ export function makeBot(nick, dificuldade = 'expert') {
 
       this._lastInput = inp;
       room._applyInput(this, inp);
+
+      // [LOG-VEL] amostra de velocidade media (bots vs players) a cada 15s
+      const VK = 's' + room.salaId;
+      let vT = __velLog.get(VK) || 0;
+      vT += dt;
+      if (vT >= 15) {
+        __velLog.set(VK, 0);
+        const med = (arr) => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : '-';
+        const vb = med([...room.bots.values()].filter((b) => b.body && b.hp > 0).map((b) => Math.hypot(b.body.vel.x, b.body.vel.z)));
+        const vp = med([...room.players.values()].filter((p) => p.body && p.hp > 0).map((p) => Math.hypot(p.body.vel.x, p.body.vel.z)));
+        room._log('[VEL] bots=' + vb + ' players=' + vp + ' u/s');
+      } else __velLog.set(VK, vT);
     },
   };
 }

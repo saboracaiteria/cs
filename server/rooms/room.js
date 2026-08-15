@@ -11,6 +11,11 @@ import { createHelis, updateHelis } from '../helis.js';
 import { createMissis, updateMissis } from '../missiles.js';
 import { WEAPONS } from '../weapons.js';
 import { makeRng, findFreeSpot, dist2D } from '../util.js';
+import fs from 'fs';
+
+// [LOG] arquivo de logs de diagnostico (ssh: tail -f /srv/cs/logs/bob.log)
+const LOG_FILE = '/srv/cs/logs/bob.log';
+try { fs.mkdirSync('/srv/cs/logs', { recursive: true }); } catch {}
 
 let uid = 1000;
 
@@ -745,7 +750,9 @@ export class Room {
   }
 
   _log(...args) {
-    console.log(`[sala ${this.salaId} ${this.modo}]`, ...args);
+    const msg = `[sala ${this.salaId} ${this.modo}] ${args.join(' ')}`;
+    console.log(msg);
+    try { fs.appendFileSync(LOG_FILE, new Date().toISOString().slice(11, 19) + ' ' + msg + '\n'); } catch {}
   }
 
   publicCfg() {

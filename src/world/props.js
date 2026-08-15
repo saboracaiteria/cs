@@ -208,12 +208,23 @@ export class Props {
 
     // copa: três massas irregulares dão volume sem custo
     const blobs = [];
-    // [FPS] copa: Icosahedron detail ajustado (1 = 240 tris/arvore, 0 = 60 tris = -75%)
+    // [NUVEM] copa com formato de nuvem: esferas suaves sobrepostas (puffs).
+    // baixa/media/120fps: 6 puffs de 20 tris = 120 tris (-50% vs os 240 do antigo).
     const d = this.leafDetail;
-    const jit = d === 0 ? 0.55 : 0.35;   // jitter maior esconde as faces grandes do icosaedro
-    const b1 = new THREE.IcosahedronGeometry(1.75, d); b1.translate(0, 3.9, 0); blobs.push(b1);
-    const b2 = new THREE.IcosahedronGeometry(1.25, d); b2.translate(0.95, 3.25, 0.4); blobs.push(b2);
-    const b3 = new THREE.IcosahedronGeometry(1.15, d); b3.translate(-0.8, 3.45, -0.55); blobs.push(b3);
+    const jit = 0.08;   // quase sem jitter — a forma fica lisa e arredondada (nuvem de verdade)
+    if (d === 0) {
+      const b1 = new THREE.IcosahedronGeometry(1.8, 0); b1.translate(0, 3.85, 0); blobs.push(b1);
+      const b2 = new THREE.IcosahedronGeometry(1.35, 0); b2.translate(0.95, 3.25, 0.35); blobs.push(b2);
+      const b3 = new THREE.IcosahedronGeometry(1.25, 0); b3.translate(-0.9, 3.45, -0.5); blobs.push(b3);
+      const b4 = new THREE.IcosahedronGeometry(0.9, 0); b4.translate(0.3, 4.7, 0.2); blobs.push(b4);
+      const b5 = new THREE.IcosahedronGeometry(0.75, 0); b5.translate(-0.45, 4.15, 0.8); blobs.push(b5);
+      const b6 = new THREE.IcosahedronGeometry(0.7, 0); b6.translate(0.8, 4.3, -0.65); blobs.push(b6);
+    } else {
+      const b1 = new THREE.IcosahedronGeometry(1.75, 1); b1.translate(0, 3.9, 0); blobs.push(b1);
+      const b2 = new THREE.IcosahedronGeometry(1.25, 1); b2.translate(0.95, 3.25, 0.4); blobs.push(b2);
+      const b3 = new THREE.IcosahedronGeometry(1.15, 1); b3.translate(-0.8, 3.45, -0.55); blobs.push(b3);
+      const b4 = new THREE.IcosahedronGeometry(0.75, 1); b4.translate(0.25, 4.7, 0.15); blobs.push(b4);
+    }
     const leafGeo = mergeGeometries(blobs, false);
     // deforma um pouco os vértices para tirar a cara de esfera
     const lp = leafGeo.attributes.position;
