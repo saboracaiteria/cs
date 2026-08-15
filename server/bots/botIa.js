@@ -62,8 +62,8 @@ export function makeBot(nick, dificuldade = 'expert') {
     wanderZ: 0,
     // [BOT-HELI] 30% dos bots embarcam num helicoptero livre e perseguem
     // os players pelo ar disparando MISSELS (BR e DM)
-    pilotarHeli: Math.random() < 0.35,
-    pilotarCarro: Math.random() < 0.5,   // [BOT-CARRO] bots tambem dirigem carros
+    pilotarHeli: Math.random() < 0.5,   // [BOT-VIDA] mais bots voando
+    pilotarCarro: Math.random() < 0.7,   // [BOT-CARRO] bots tambem dirigem carros (mais vida)
     _heliT: 0,
     _missilT: 0,
     _carroT: 0,
@@ -72,6 +72,9 @@ export function makeBot(nick, dificuldade = 'expert') {
     _travaT: 0,
     _travaX: 0,
     _travaZ: 0,
+    _posT_T: 0,      // [BOT-VIDA] timer anti-travamento geral
+    _posT_X: 0,
+    _posT_Z: 0,
     _danoDe: null,     // ultimo atirador que acertou o bot
     _danoT: -99,       // tempo (s) do ultimo dano sofrido
     _reacaoT: 0,       // [EXPERT] tempo restante p/ reagir a um alvo novo
@@ -323,7 +326,7 @@ export function makeBot(nick, dificuldade = 'expert') {
           inp.moveX = strafe * 0.9;
         } else {
           // combate normal: mantém a distância ideal + strafe constante
-          inp.moveZ = longe ? 0.55 : perto ? -0.35 : 0;
+          inp.moveZ = longe ? 0.55 : perto ? -0.35 : 0.12;   // [BOT-VIDA] nunca para de vez no meio da rua
           inp.moveX = strafe * 0.55;
         }
         inp.yaw = this.body.yaw;
@@ -415,6 +418,23 @@ export function makeBot(nick, dificuldade = 'expert') {
 
       // aplica input
       // [BOT-PULO] travou num obstaculo (anda mas nao sai do lugar): pula
+      // [BOT-VIDA] anti-travamento geral: corpo parado por ~1.6s mesmo com input -> pula e foge
+      this._posT_T += dt;
+      if (this._posT_T >= 1.6) {
+        const andou = Math.hypot(this.body.pos.x - this._posT_X, this.body.pos.z - this._posT_Z);
+        this._posT_T = 0;
+        this._posT_X = this.body.pos.x;
+        this._posT_Z = this.body.pos.z;
+        if (andou < 1.3) {
+          inp.jump = true;
+          this.body.yaw += (Math.random() < 0.5 ? 1 : -1) * (1.4 + Math.random() * 1.0);
+          inp.moveZ = 0.8;
+          inp.run = true;
+          this.wanderT = 0;
+          this._strafeDir = Math.random() < 0.5 ? 1 : -1;
+        }
+      }
+
       if (inp.moveZ > 0.3) {
         const mexeu = Math.hypot(this.body.pos.x - this._travaX, this.body.pos.z - this._travaZ);
         if (mexeu < 0.12) this._travaT += dt;

@@ -25,6 +25,7 @@ export class KeysScreen {
     this.onMudou = null;
 
     $('keys-close').addEventListener('click', () => this.fechar());
+    $('keys-x').addEventListener('click', () => this.fechar());
     $('keys-reset').addEventListener('click', () => {
       this.binds.reset();
       this.aguardando = null;

@@ -113,6 +113,33 @@ export function createCars(world, count) {
  * solo — faixas, semáforos, curvas de Bézier no cruzamento); os dirigidos
  * seguem o input do motorista (aceleração, esterço, colisão, limite).
  */
+// [FIX-CARRO] Re-encaixa um carro liberado pelo jogador na malha de trafego,
+// na pista mais proxima da posicao atual, com velocidade ZERADA. Sem isso o
+// trafego teletransportava o carro para o quarteirao antigo (parecia que o
+// carro sumia ao descer) e ele partia em alta velocidade.
+export function realinharTrafico(car) {
+  car.speed = 0;
+  const i = clamp(Math.round((car.x + HALF) / CELL), 1, GRID - 2);
+  const j = clamp(Math.round((car.z + HALF) / CELL), 1, GRID - 2);
+  let best = -1, bestD = Infinity;
+  for (let d = 0; d < 4; d++) {
+    const p = lanePoint(i, j, d, -(STOP_LINE + 6));
+    const dd = (p.x - car.x) ** 2 + (p.z - car.z) ** 2;
+    if (dd < bestD) { bestD = dd; best = d; }
+  }
+  car.i = i; car.j = j; car.dir = best; car.state = 'drive';
+  car.nextDir = best; car.prevDir = best; car.crossT = 0; car.bez = null;
+  const d = DIRS[best];
+  const nx = nodeCoord(i) + LANE_OFF[best].x;
+  const nz = nodeCoord(j) + LANE_OFF[best].z;
+  const s = d.x !== 0 ? d.x * (nx - car.x) : d.z * (nz - car.z);
+  car.s = clamp(s, STOP_LINE + 3, CELL - ROAD_H - 2);
+  car.cruise = CAR.npcSpeed * (0.85 + car._rng() * 0.25);
+  car.yaw = Math.atan2(d.x, d.z);
+  const p2 = lanePoint(i, j, best, -car.s);
+  car.x = p2.x; car.z = p2.z;
+}
+
 export function updateCars(world, cars, dt) {
   const t = (cars._trafficTime = (cars._trafficTime || 0) + dt);
   for (const c of cars) {

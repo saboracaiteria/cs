@@ -49,6 +49,9 @@ export class RemotePlayer {
     this.human.setWeapon(makePistola());
     this.root = this.human.root;
     scene.add(this.root);
+    // [SPAWN-FIX] nasce FORA do mapa (invisivel) ate o 1o snap do servidor —
+    // antes o avatar aparecia parado no centro (0,0,0) e depois "transportava"
+    this.root.position.set(0, -999, 0);
     // [INVISIVEL-FIX] entidades do MP sempre renderizam: com a câmera do heli
     // em altitude o frustum culling cortava avatares no chão (ângulo íngreme
     // para baixo) e eles sumiam para quem voava — mesmo estando de frente.
@@ -66,6 +69,7 @@ export class RemotePlayer {
     // this.loro.root.traverse(o => { if (o.isMesh || o.isSprite) o.frustumCulled = false; });
 
     this.x = 0; this.y = 0; this.z = 0;
+    this._visto = false;   // [SPAWN-FIX] ainda sem snap do servidor
     this.yaw = 0; this.pitch = 0;
     this.hp = 100;
     this.vivo = true;
@@ -122,6 +126,8 @@ export class RemotePlayer {
     // [REDE-FLUIDEZ] primeiro snap: adota a posição direto (sem deslizar do 0,0,0)
     if (this._tX === undefined) {
       this.x = d.x; this.y = d.y; this.z = d.z;
+      this.root.position.set(d.x, d.y, d.z);   // [SPAWN-FIX] teleporta direto p/ o spawn real
+      this._visto = true;
     }
     // [REDE-FLUIDEZ] respawn legítimo (morto -> vivo): teleporta de verdade
     if (!this.vivo && (d.hp ?? 1) > 0) {
@@ -140,6 +146,12 @@ export class RemotePlayer {
 
   update(dt, speed = 0, animar = true, air = 0, run = false) {
     this._run = run;   // [ANIM] correndo de verdade (tronco inclina so correndo)
+
+    if (!this._visto) {   // [SPAWN-FIX] invisivel ate o 1o snap (nao fica boneco parado no centro)
+      this.root.position.set(0, -999, 0);
+      if (this.tag) this.tag.position.set(0, -999, 0);
+      return;
+    }
 
     if (this.local && this._predicted) {
       // [REDE-FLUIDEZ] jogador LOCAL: a PREDICAO local manda — o snap do

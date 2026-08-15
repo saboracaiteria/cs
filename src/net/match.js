@@ -1530,8 +1530,8 @@ export class Match {
     if (!cr) return;
     const p = new THREE.Vector3(cr.x, cr.y + 0.6, cr.z);
     if (this.game && this.game.fx) {
-      this.game.fx.explode(p, 1.8);
-      if (this.game.audio) this.game.audio.explosao(1.8);
+      this.game.fx.explode(p, 0.36);   // [FPS-ARTEFATO] explosao do carro -80% (menos particulas/travadas)
+      if (this.game.audio) this.game.audio.explosao(0.36);
     }
     cr.mesh.dispose(this.game.gfx.scene);
     this.carrosMp.delete(msg.id);

@@ -550,6 +550,7 @@ export class Game {
     // ---------------------------------------------------- telas do menu
     $('open-options').addEventListener('click', () => this._abrirOpcoes(true));
     $('options-close').addEventListener('click', () => this._abrirOpcoes(false));
+    $('options-x').addEventListener('click', () => this._abrirOpcoes(false));
     $('open-keys').addEventListener('click', () => this.keys.abrir());
     this.hudEditor.onAbrir(() => this.keys.fechar());
     this.hudEditor.onFechar(() => this.keys.abrir());
@@ -1423,9 +1424,9 @@ export class Game {
     if (!car || !car.alive) return;
     if (car === this.playerCar) return;
     const p = car.root.position;
-    this.fx.explode(new THREE.Vector3(p.x, p.y + 0.8, p.z), 0.95);
-    this.audio.explosao(2);
-    this.camera.addShake(byBullet ? 0.4 : 0.7);
+    this.fx.explode(new THREE.Vector3(p.x, p.y + 0.8, p.z), 0.19);   // [FPS-ARTEFATO] explosao do carro -80%
+    this.audio.explosao(0.4);
+    this.camera.addShake(byBullet ? 0.2 : 0.35);
     this.cars.remove(car, true);                              // [29] repõe outro
     this.addTime(GAME.killTimeBonus, '+5s');                  // [32]
     this.hud.hitMarker();

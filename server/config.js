@@ -122,7 +122,7 @@ export const MODES = {
   dm: {
     id: 'dm',
     label: 'MULTIPLAYER',
-    maxPlayers: 12,   // total SEMPRE 12: players + bots (4 players -> 8 bots)
+    maxPlayers: 10,   // total SEMPRE 10: players + bots (4 players -> 6 bots)
     minPlayers: 2,       // bots completam até minPlayers quando ligado
     killLimit: 25,
     timeLimit: 300,      // segundos (5 min — vence quem tiver mais kills)
@@ -133,7 +133,7 @@ export const MODES = {
   br: {
     id: 'br',
     label: 'BATTLE ROYALE',
-    maxPlayers: 20,
+    maxPlayers: 10,
     minPlayers: 6,       // bots completam até minPlayers quando ligado
     lootPerSpawn: 3,     // itens por ponto de loot
     zoneStartR: 210,     // raio inicial da zona

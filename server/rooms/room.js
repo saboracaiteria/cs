@@ -6,7 +6,7 @@
 import { NET, MODES, CAR, NUM_CARS, HELI, NUM_HELIS, MISSIL, PLAYER } from '../config.js';
 import { T, send, lobbyPlayer } from '../protocol.js';
 import { stepBody } from '../physics.js';
-import { createCars, updateCars } from '../cars.js';
+import { createCars, updateCars, realinharTrafico } from '../cars.js';
 import { createHelis, updateHelis } from '../helis.js';
 import { createMissis, updateMissis } from '../missiles.js';
 import { WEAPONS } from '../weapons.js';
@@ -362,6 +362,7 @@ export class Room {
     if (c) {
       c.playerId = null;
       c.inp = null;
+      realinharTrafico(c);   // [FIX-CARRO] para e re-encaixa na malha — o carro NAO some ao descer
       const pt = findFreeSpot(this.world.col, c.x + 3, c.z + 3, 0.6);
       if (p.body) {
         p.body.pos.x = pt.x;

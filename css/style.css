@@ -752,10 +752,20 @@ kbd{
   background:rgba(3,6,12,.74); backdrop-filter:blur(10px);
 }
 .menu-panel{
+  position:relative;
   width:min(640px,96vw); margin:auto; padding:28px 30px;
   max-height:none;
 }
 .menu-panel h2{font-size:26px; letter-spacing:2px; margin-bottom:14px}
+.card-x{
+  position:absolute; top:12px; right:12px;
+  width:34px; height:34px; border-radius:50%; padding:0;
+  border:1px solid var(--stroke); background:rgba(255,255,255,.06);
+  color:rgba(255,255,255,.75); font-size:15px; line-height:1;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  z-index:2;
+}
+.card-x:hover{background:rgba(255,90,90,.28); color:#fff}
 .menu-actions{
   display:flex; gap:12px; align-items:center; justify-content:center;
   flex-wrap:wrap; margin-top:22px; border-top:1px solid var(--stroke); padding-top:18px;

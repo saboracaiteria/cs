@@ -226,7 +226,6 @@ export class Props {
     leafGeo.computeVertexNormals();
     const leafMat = new THREE.MeshStandardMaterial({
       color: 0x4f7a34, roughness: 0.88, metalness: 0,
-      flatShading: true,
     });
 
     const n = this.treeSpots.length;
@@ -262,7 +261,7 @@ export class Props {
     // arbustos das praças
     if (this.bushSpots.length) {
       const bushGeo = new THREE.IcosahedronGeometry(0.85, d);   // [FPS] arbusto segue a qualidade da copa
-      const bushMat = new THREE.MeshStandardMaterial({ color: 0x3f6b2d, roughness: 0.92, flatShading: true });
+      const bushMat = new THREE.MeshStandardMaterial({ color: 0x3f6b2d, roughness: 0.92 });
       const bushes = new THREE.InstancedMesh(bushGeo, bushMat, this.bushSpots.length);
       bushes.castShadow = true; bushes.receiveShadow = true;
       for (let i = 0; i < this.bushSpots.length; i++) {
