@@ -46,6 +46,16 @@ export async function boot() {
 
   function frame(now) {
     if (!ativo) return;               // parado pelo multiplayer: não re-agenda
+
+    // [FPS] frame cap: display 120Hz não deve renderizar 120 fps quando o
+    // preset manda 60. Pula o tick sem mexer em last (dt real é medido
+    // entre renders, então o próximo frame compensa sozinho).
+    const capMs = game.frameCapMs || 0;
+    if (capMs > 0 && now - last < capMs * 0.85) {
+      requestAnimationFrame(frame);
+      return;
+    }
+
     requestAnimationFrame(frame);
 
     // dt limitado: se a aba ficar em segundo plano, nada "teleporta"

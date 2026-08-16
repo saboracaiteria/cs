@@ -455,6 +455,7 @@ export const PRESETS = [
     dynamicLights: 0,
     fogFar: 1400,
     envUpdate: 12,
+    frameCap: 60,    // [FPS] display 120Hz nao roda o jogo a 120 fps a toa
     leafDetail: 0,   // [FPS] copa das arvores com 1/4 dos triangulos
   },
   {
@@ -464,10 +465,11 @@ export const PRESETS = [
     // realmente se vê, e deixa o passe de sombra pequeno
     shadows: true, shadowMapSize: 1024, shadowRadius: 38,   // [FPS2] area de sombra -29% (menos casters no passe)
     shadowType: 'basic',     // [FPS] PCF basico (era PCFSoft): ~35% mais barato no passe de sombra
-    bloom: true, smaa: false, bloomScale: 0.4,
+    bloom: false, smaa: true, bloomScale: 0.4,   // [FPS] bloom off (caro) + SMAA on (barato e nitido)
     dynamicLights: 3,
     fogFar: 1900,
     envUpdate: 6,
+    frameCap: 60,           // [FPS] cap 60 fps
     shadowTickEvery: 3,     // [FPS] sombra a cada 3 frames (era 2): -33% de custo
     dynFloor: 0.62,         // [FPS] mais margem p/ a resolucao dinamica agir antes de travar
     leafDetail: 0,   // [FPS] copa das arvores com 1/4 dos triangulos (60 tris em vez de 240)
@@ -475,11 +477,12 @@ export const PRESETS = [
   {
     id: 'alta', label: 'ALTA',
     renderScale: 1.0,
-    shadows: true, shadowMapSize: 2048, shadowRadius: 85,
+    shadows: true, shadowMapSize: 2048, shadowRadius: 70,   // [FPS] 85 -> 70 (menos casters no passe)
     bloom: true, smaa: true, bloomScale: 0.55,
     dynamicLights: 6,
     fogFar: 2300,
     envUpdate: 3,
+    frameCap: 60,   // [FPS] cap 60 fps
     leafDetail: 1,   // copa cheia (240 tris/arvore) — maquina forte aguenta
   },
   {
@@ -495,6 +498,7 @@ export const PRESETS = [
     dynFloor: 0.55,
     targetMsHigh: 8.0,
     targetMsLow: 6.5,
+    frameCap: 120,   // [FPS] preset 120fps de verdade
     shadowTickEvery: 3,
     leafDetail: 0,   // [FPS] copa das arvores com 1/4 dos triangulos
   },

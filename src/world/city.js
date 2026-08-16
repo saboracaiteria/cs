@@ -342,27 +342,41 @@ export class City {
   // ------------------------------------------------------------------ [20] prédios
   _buildBuildings() {
     const rng = this.rng;
-    const wallsByVariant = Array.from({ length: FACADE_VARIANTS }, () => []);
-    const roofGeos = [];
-    const detailGeos = [];
-    const padGeos = [];
+    // [FPS-LOD] cidade dividida em REGIONSxREGIONS regioes (~150 m cada). Cada
+    // regiao vira um group proprio com meshes pequenos -> o frustum culling do
+    // Three.js funciona de verdade (antes: 1 mesh gigante por variante cujo
+    // bounding sphere cobria a cidade inteira = tudo sempre visivel).
+    const REGIONS = 3;
+    const R = (HALF * 2) / REGIONS;
+    const regIndex = (x, z) => {
+      const rx = Math.min(REGIONS - 1, Math.max(0, Math.floor((x + HALF) / R)));
+      const rz = Math.min(REGIONS - 1, Math.max(0, Math.floor((z + HALF) / R)));
+      return rz * REGIONS + rx;
+    };
+    const NREG = REGIONS * REGIONS;
+    const wallsByReg = Array.from({ length: NREG }, () => Array.from({ length: FACADE_VARIANTS }, () => []));
+    const roofGeos = Array.from({ length: NREG }, () => []);
+    const detailGeos = Array.from({ length: NREG }, () => []);
+    const padGeos = Array.from({ length: NREG }, () => []);
+    const lowGeos = Array.from({ length: NREG }, () => []);   // [FPS-LOD] caixas simples p/ longe
 
     for (const b of this.blocks) {
       if (b.type !== 'urban') continue;
 
       const lots = this._splitBlock(b, rng);
       for (const lot of lots) {
+        const ri = regIndex(lot.x, lot.z);
         const variant = rngInt(rng, 0, FACADE_VARIANTS - 1);
         const maxH = 16 + b.density * b.density * 68 + rngRange(rng, -6, 16);
         let h = Math.max(9, maxH);
 
-        // torres altas ganham recuos (setbacks) — silhueta muito mais interessante
+
         const tiers = h > 46 && rng() < 0.65 ? rngInt(rng, 2, 3) : 1;
         let cw = lot.w, cd = lot.d, base = CURB_H;
 
         for (let t = 0; t < tiers; t++) {
           const th = t === tiers - 1 ? h : h * rngRange(rng, 0.42, 0.62);
-          this._addBox(wallsByVariant[variant], roofGeos, lot.x, base, lot.z, cw, th, cd, variant);
+          this._addBox(wallsByReg[ri][variant], roofGeos[ri], lot.x, base, lot.z, cw, th, cd, variant);
           base += th;
           h -= th;
           cw *= rngRange(rng, 0.66, 0.82);
@@ -373,61 +387,106 @@ export class City {
         const totalH = base;
         this.buildings.push({ x: lot.x, z: lot.z, w: lot.w, d: lot.d, h: totalH });
 
-        // [31][45] colisão + footprint que impede spawn dentro do prédio
+
         this.col.addBox(lot.x, lot.z, lot.w / 2, lot.d / 2, totalH, 'building');
 
-        this._roofDetails(detailGeos, padGeos, lot.x, lot.z, cw, cd, totalH, totalH > 52, rng);
+        this._roofDetails(detailGeos[ri], padGeos[ri], lot.x, lot.z, cw, cd, totalH, totalH > 52, rng);
+
+        // [FPS-LOD] versao distante: 1 caixa de 12 tris no lugar da fachada texturizada
+        const box = new THREE.BoxGeometry(lot.w, totalH, lot.d);
+        box.translate(lot.x, CURB_H + totalH / 2, lot.z);
+        lowGeos[ri].push(box);
       }
     }
 
-    // paredes: uma malha por variante de fachada (6 draw calls para a cidade toda)
-    for (let v = 0; v < FACADE_VARIANTS; v++) {
-      if (!wallsByVariant[v].length) continue;
-      const tex = facadeTextures(v);
-      const mat = new THREE.MeshStandardMaterial({
-        map: tex.map,
-        emissiveMap: tex.emissive,          // [13] janelas acendem à noite
-        emissive: 0xffffff,
-        emissiveIntensity: 0,
-        roughnessMap: tex.roughness,
-        roughness: 1.0,
-        metalness: 0.22,
-        envMapIntensity: 1.1,
-      });
-      this.facadeMaterials.push(mat);
-      const mesh = new THREE.Mesh(mergeGeometries(wallsByVariant[v], false), mat);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      mesh.name = 'facades-' + v;
-      this.group.add(mesh);
-    }
 
-    const roofMat = new THREE.MeshStandardMaterial({
-      color: 0x51565e, roughness: 0.93, metalness: 0.06,
-    });
-    const roofs = new THREE.Mesh(mergeGeometries(roofGeos, false), roofMat);
-    roofs.castShadow = true; roofs.receiveShadow = true; roofs.name = 'roofs';
-    this.group.add(roofs);
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0x51565e, roughness: 0.93, metalness: 0.06 });
+    const detMat = new THREE.MeshStandardMaterial({ color: 0x6b7078, roughness: 0.72, metalness: 0.45 });
+    this.lodRegions = [];
 
-    const detMat = new THREE.MeshStandardMaterial({
-      color: 0x6b7078, roughness: 0.72, metalness: 0.45,
-    });
-    const dets = new THREE.Mesh(mergeGeometries(detailGeos, false), detMat);
-    dets.castShadow = true; dets.receiveShadow = true; dets.name = 'roof-details';
-    this.group.add(dets);
+    for (let ri = 0; ri < NREG; ri++) {
+      const high = new THREE.Group();
+      high.name = 'region-high-' + ri;
 
-    // [46] helipontos de laje
-    if (padGeos.length) {
-      const padMat = new THREE.MeshStandardMaterial({
-        map: helipadTexture(), roughness: 0.85, metalness: 0.05,
-      });
-      const pads = new THREE.Mesh(mergeGeometries(padGeos, false), padMat);
-      pads.receiveShadow = true; pads.name = 'rooftop-pads';
-      this.group.add(pads);
+      for (let v = 0; v < FACADE_VARIANTS; v++) {
+        if (!wallsByReg[ri][v].length) continue;
+        const tex = facadeTextures(v);
+        const mat = new THREE.MeshStandardMaterial({
+          map: tex.map,
+          emissiveMap: tex.emissive,          // [13] janelas acendem à noite
+          emissive: 0xffffff,
+          emissiveIntensity: 0,
+          roughnessMap: tex.roughness,
+          roughness: 1.0,
+          metalness: 0.22,
+          envMapIntensity: 1.1,
+        });
+        this.facadeMaterials.push(mat);
+        const mesh = new THREE.Mesh(mergeGeometries(wallsByReg[ri][v], false), mat);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.name = 'facades-' + v;
+        high.add(mesh);
+      }
+
+      if (roofGeos[ri].length) {
+        const roofs = new THREE.Mesh(mergeGeometries(roofGeos[ri], false), roofMat);
+        roofs.castShadow = true; roofs.receiveShadow = true;
+        high.add(roofs);
+      }
+
+      if (detailGeos[ri].length) {
+        const dets = new THREE.Mesh(mergeGeometries(detailGeos[ri], false), detMat);
+        dets.castShadow = true; dets.receiveShadow = true;
+        high.add(dets);
+      }
+
+      if (padGeos[ri].length) {
+        const padMat = new THREE.MeshStandardMaterial({
+          map: helipadTexture(), roughness: 0.85, metalness: 0.05,
+        });
+        const pads = new THREE.Mesh(mergeGeometries(padGeos[ri], false), padMat);
+        pads.receiveShadow = true;
+        high.add(pads);
+      }
+
+      this.group.add(high);
+
+      // [FPS-LOD] versao low: caixas simples, sem textura, sem sombra, invisivel ate longe
+      if (lowGeos[ri].length) {
+        const lowMat = new THREE.MeshStandardMaterial({ color: 0x8b8f96, roughness: 0.95, metalness: 0.05 });
+        const low = new THREE.Mesh(mergeGeometries(lowGeos[ri], false), lowMat);
+        low.castShadow = false;
+        low.receiveShadow = false;
+        low.visible = false;
+        low.name = 'region-low-' + ri;
+        this.group.add(low);
+
+        const rcx = -HALF + R * ((ri % REGIONS) + 0.5);
+        const rcz = -HALF + R * (Math.floor(ri / REGIONS) + 0.5);
+        this.lodRegions.push({ high, low, cx: rcx, cz: rcz, far: false });
+      }
     }
   }
 
-  /** Divide a área construível do quarteirão em 1..4 lotes. */
+  // [FPS-LOD] alterna cada regiao entre fachadas completas e caixas simples,
+  // com histerese para nao ficar piscando na borda.
+  updateLOD(px, pz) {
+    const FAR2 = 240 * 240;    // ativa low alem de 240 m
+    const NEAR2 = 165 * 165;   // volta ao high abaixo de 165 m
+    for (const r of this.lodRegions) {
+      const dx = r.cx - px, dz = r.cz - pz;
+      const d2 = dx * dx + dz * dz;
+      const wantFar = r.far ? d2 > NEAR2 : d2 > FAR2;
+      if (wantFar !== r.far) {
+        r.far = wantFar;
+        r.high.visible = !wantFar;
+        r.low.visible = wantFar;
+      }
+    }
+  }
+
+
   _splitBlock(b, rng) {
     const S = BLOCK_INNER;
     const r = rng();

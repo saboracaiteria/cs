@@ -331,7 +331,17 @@ export class CarSystem {
   update(dt, refPos = null) {
     for (const car of this.cars) {
       if (!car.alive || car.isPlayer || car.state === 'parked') continue;
-      this._updateAI(car, dt, refPos);
+      // [FPS] carro a >100m do jogador: IA a 30Hz (metade dos frames) e sem gap frontal
+      const far = !!refPos && dist2Sq(car.root.position.x, car.root.position.z, refPos.x, refPos.z) > 100 * 100;
+      if (far) {
+        car._farAcc = (car._farAcc || 0) + dt;
+        if (car._farAcc < 1 / 30) continue;
+        const acc = car._farAcc;   // [FPS] usa o tempo ACUMULADO (senao anda em camera lenta)
+        car._farAcc = 0;
+        this._updateAI(car, acc, refPos, far);
+        continue;
+      }
+      this._updateAI(car, dt, refPos, far);
     }
     // acende/apaga faróis conforme a noite
     for (const car of this.cars) {
@@ -342,7 +352,7 @@ export class CarSystem {
 
   setNight(night) { this.nightOn = night > 0.35; }
 
-  _updateAI(car, dt, refPos) {
+  _updateAI(car, dt, refPos, far = false) {
     if (car.state === 'cross') {
       // atravessando o cruzamento por um arco
       const b = car.bez;
@@ -391,7 +401,7 @@ export class CarSystem {
     }
 
     // não encosta no carro da frente
-    const gap = this._frontGap(car);
+    const gap = far ? 999 : this._frontGap(car);
     if (gap < 13) target = Math.min(target, Math.max(0, (gap - 5.2) * 2.4));
 
     const accel = target > car.speed ? 7.5 : 15;

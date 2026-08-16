@@ -1074,6 +1074,7 @@ export class Game {
     }
 
     this.gfx.applyPreset(p, this.gfx.scene);
+    this.frameCapMs = p.frameCap ? 1000 / p.frameCap : 0;   // [FPS] cap: 60 -> 16.7ms, 120 -> 8.3ms
     this.sky.setShadowQuality(p.shadowMapSize, p.shadowRadius);
     this.sky.envUpdateInterval = p.envUpdate;
     this.props.setMaxLights(p.dynamicLights);
@@ -1958,6 +1959,13 @@ export class Game {
         emFase: !!this.emFase,
         deus: this.god,
       });
+    }
+
+    // [FPS-LOD] alterna as regioes da cidade (fachadas completas x caixas) a cada 0.3s
+    this._lodAcc = (this._lodAcc || 0) + dt;
+    if (this._lodAcc > 0.3) {
+      this._lodAcc = 0;
+      if (this.city && this.city.updateLOD) this.city.updateLOD(this._focus.x, this._focus.z);
     }
 
     this._somContinuo();

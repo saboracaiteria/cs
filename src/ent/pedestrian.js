@@ -184,8 +184,19 @@ export class PedestrianSystem {
   update(dt, refX = null, refZ = null) {
     const A = _A;
     const FAR2 = 60 * 60;   // [perf F3-4] LOD animacao: >60 m -> 30 Hz
+    const VFAR2 = 140 * 140; // [FPS] >140 m -> 15 Hz (salta frames inteiros)
     for (const ped of this.peds) {
       if (!ped.alive) continue;
+
+      // [FPS] muito longe do jogador: atualiza em 15 Hz (metade/terco dos frames)
+      const pd2 = refX != null ? dist2Sq(ped.human.root.position.x, ped.human.root.position.z, refX, refZ) : 0;
+      let ef = dt;   // [FPS] dt efetivo (acumulado quando em modo lento)
+      if (pd2 > VFAR2) {
+        ped._vfarAcc = (ped._vfarAcc || 0) + dt;
+        if (ped._vfarAcc < 1 / 15) continue;
+        ef = ped._vfarAcc;   // usa o tempo ACUMULADO (senao anda em camera lenta)
+        ped._vfarAcc = 0;
+      }
 
       if (ped.waiting) {
         const e = ped.pendingEdge;
@@ -198,7 +209,7 @@ export class PedestrianSystem {
           ped.pendingEdge = null;
         } else {
           // parado na esquina, olhando o semáforo
-          this._anim(ped, dt, 0, refX != null && dist2Sq(ped.human.root.position.x, ped.human.root.position.z, refX, refZ) > FAR2);
+          this._anim(ped, ef, 0, refX != null && dist2Sq(ped.human.root.position.x, ped.human.root.position.z, refX, refZ) > FAR2);
           continue;
         }
       }
@@ -209,7 +220,7 @@ export class PedestrianSystem {
       const to = this.nodes[ped.next];
       // atravessa mais rápido (ninguém passeia no meio da rua)
       const spd = ped.edge.cross ? ped.speed * 1.7 : ped.speed;
-      ped.t += (spd / ped.edge.len) * dt;
+      ped.t += (spd / ped.edge.len) * ef;
 
       if (ped.t >= 1) {
         ped.prev = ped.node;
@@ -237,7 +248,7 @@ export class PedestrianSystem {
       A.set(px, py, pz);
       ped.human.root.position.copy(A);
       ped.human.root.rotation.y = Math.atan2(dx, dz);
-      this._anim(ped, dt, spd, refX != null && dist2Sq(px, pz, refX, refZ) > FAR2);
+      this._anim(ped, ef, spd, refX != null && dist2Sq(px, pz, refX, refZ) > FAR2);
     }
   }
 
