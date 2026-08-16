@@ -1961,11 +1961,18 @@ export class Game {
       });
     }
 
-    // [FPS-LOD] alterna as regioes da cidade (fachadas completas x caixas) a cada 0.3s
+    // [FPS-LOD] alterna as regioes da cidade (fachadas completas x caixas) a cada 0.3s.
+    // Segue a CAMERA (observador real): no titulo a camera orbita a 330m, entao
+    // as regioes do lado oposto viram low; no jogo ela esta colada no jogador.
     this._lodAcc = (this._lodAcc || 0) + dt;
     if (this._lodAcc > 0.3) {
       this._lodAcc = 0;
-      if (this.city && this.city.updateLOD) this.city.updateLOD(this._focus.x, this._focus.z);
+      if (this.city && this.city.updateLOD) {
+        const cam = this.gfx.camera.position;
+        // menu/cutscene: camera longe (330m) -> tudo low = menu liso
+        const farDist = this.state === 'playing' ? 260 : 100; // menu: tudo low (9 caixas) = menu liso
+        this.city.updateLOD(cam.x, cam.z, farDist);
+      }
     }
 
     this._somContinuo();

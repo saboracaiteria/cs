@@ -11,6 +11,8 @@ import {
 } from '../gfx/textures.js';
 
 const FACADE_VARIANTS = 6;
+// [FPS-LOD] cor aproximada de cada variante de fachada p/ as caixas low
+const LOW_COLORS = [0xb0aaa0, 0x2b4a63, 0x8c4a35, 0x9b958a, 0xa4a49e, 0x33566b];
 
 /** Plano deitado no chão (XZ) com UV escalado em metros. */
 function groundQuad(w, d, uvScale = 1) {
@@ -359,6 +361,7 @@ export class City {
     const detailGeos = Array.from({ length: NREG }, () => []);
     const padGeos = Array.from({ length: NREG }, () => []);
     const lowGeos = Array.from({ length: NREG }, () => []);   // [FPS-LOD] caixas simples p/ longe
+    const lowVarCount = Array.from({ length: NREG }, () => Array(FACADE_VARIANTS).fill(0));
 
     for (const b of this.blocks) {
       if (b.type !== 'urban') continue;
@@ -396,12 +399,32 @@ export class City {
         const box = new THREE.BoxGeometry(lot.w, totalH, lot.d);
         box.translate(lot.x, CURB_H + totalH / 2, lot.z);
         lowGeos[ri].push(box);
+        lowVarCount[ri][variant]++;
       }
     }
 
 
+    // [FPS-LOD] materiais COMPARTILHADOS (10 no total, como antes do chunking).
+    // Nunca criar material por regiao x variante: dobrava state changes/shaders.
+    const facadeMats = [];
+    for (let v = 0; v < FACADE_VARIANTS; v++) {
+      const tex = facadeTextures(v);
+      const mat = new THREE.MeshStandardMaterial({
+        map: tex.map,
+        emissiveMap: tex.emissive,          // [13] janelas acendem à noite
+        emissive: 0xffffff,
+        emissiveIntensity: 0,
+        roughnessMap: tex.roughness,
+        roughness: 1.0,
+        metalness: 0.22,
+        envMapIntensity: 1.1,
+      });
+      facadeMats.push(mat);
+      this.facadeMaterials.push(mat);
+    }
     const roofMat = new THREE.MeshStandardMaterial({ color: 0x51565e, roughness: 0.93, metalness: 0.06 });
     const detMat = new THREE.MeshStandardMaterial({ color: 0x6b7078, roughness: 0.72, metalness: 0.45 });
+    const padMat = new THREE.MeshStandardMaterial({ map: helipadTexture(), roughness: 0.85, metalness: 0.05 });
     this.lodRegions = [];
 
     for (let ri = 0; ri < NREG; ri++) {
@@ -410,19 +433,7 @@ export class City {
 
       for (let v = 0; v < FACADE_VARIANTS; v++) {
         if (!wallsByReg[ri][v].length) continue;
-        const tex = facadeTextures(v);
-        const mat = new THREE.MeshStandardMaterial({
-          map: tex.map,
-          emissiveMap: tex.emissive,          // [13] janelas acendem à noite
-          emissive: 0xffffff,
-          emissiveIntensity: 0,
-          roughnessMap: tex.roughness,
-          roughness: 1.0,
-          metalness: 0.22,
-          envMapIntensity: 1.1,
-        });
-        this.facadeMaterials.push(mat);
-        const mesh = new THREE.Mesh(mergeGeometries(wallsByReg[ri][v], false), mat);
+        const mesh = new THREE.Mesh(mergeGeometries(wallsByReg[ri][v], false), facadeMats[v]);
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         mesh.name = 'facades-' + v;
@@ -442,9 +453,6 @@ export class City {
       }
 
       if (padGeos[ri].length) {
-        const padMat = new THREE.MeshStandardMaterial({
-          map: helipadTexture(), roughness: 0.85, metalness: 0.05,
-        });
         const pads = new THREE.Mesh(mergeGeometries(padGeos[ri], false), padMat);
         pads.receiveShadow = true;
         high.add(pads);
@@ -454,7 +462,9 @@ export class City {
 
       // [FPS-LOD] versao low: caixas simples, sem textura, sem sombra, invisivel ate longe
       if (lowGeos[ri].length) {
-        const lowMat = new THREE.MeshStandardMaterial({ color: 0x8b8f96, roughness: 0.95, metalness: 0.05 });
+        let domV = 0;
+        for (let v = 1; v < FACADE_VARIANTS; v++) if (lowVarCount[ri][v] > lowVarCount[ri][domV]) domV = v;
+        const lowMat = new THREE.MeshStandardMaterial({ color: LOW_COLORS[domV], roughness: 0.95, metalness: 0.05 });
         const low = new THREE.Mesh(mergeGeometries(lowGeos[ri], false), lowMat);
         low.castShadow = false;
         low.receiveShadow = false;
@@ -464,18 +474,22 @@ export class City {
 
         const rcx = -HALF + R * ((ri % REGIONS) + 0.5);
         const rcz = -HALF + R * (Math.floor(ri / REGIONS) + 0.5);
-        this.lodRegions.push({ high, low, cx: rcx, cz: rcz, far: false });
+        this.lodRegions.push({ high, low, cx: rcx, cz: rcz, half: R * 0.5, far: false });
       }
     }
   }
 
   // [FPS-LOD] alterna cada regiao entre fachadas completas e caixas simples,
   // com histerese para nao ficar piscando na borda.
-  updateLOD(px, pz) {
-    const FAR2 = 240 * 240;    // ativa low alem de 240 m
-    const NEAR2 = 165 * 165;   // volta ao high abaixo de 165 m
+  updateLOD(px, pz, farDist = 260) {
+    // [FPS-LOD] distancia ao ponto MAIS PROXIMO da regiao (borda), nao ao
+    // centro: regiao de 149m de lado tem borda a ~105m do centro. Medir pelo
+    // centro fazia predios a 60-135m virarem caixa cinza!
+    const FAR2 = farDist * farDist;
+    const NEAR2 = Math.min(farDist * 0.68, 200) ** 2;
     for (const r of this.lodRegions) {
-      const dx = r.cx - px, dz = r.cz - pz;
+      const dx = Math.max(0, Math.abs(r.cx - px) - r.half);
+      const dz = Math.max(0, Math.abs(r.cz - pz) - r.half);
       const d2 = dx * dx + dz * dz;
       const wantFar = r.far ? d2 > NEAR2 : d2 > FAR2;
       if (wantFar !== r.far) {
