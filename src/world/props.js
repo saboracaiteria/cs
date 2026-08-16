@@ -202,41 +202,36 @@ export class Props {
   _buildTrees() {
     const rng = this.rng;
 
-    const trunkGeo = new THREE.CylinderGeometry(0.16, 0.30, 3.1, 7);
-    trunkGeo.translate(0, 1.55, 0);
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5a4632, roughness: 0.95 });
+    // [PINHEIRO] tronco fino e alto
+    const trunkGeo = new THREE.CylinderGeometry(0.10, 0.20, 3.6, 6);
+    trunkGeo.translate(0, 1.8, 0);
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3426, roughness: 0.95 });
 
-    // copa: três massas irregulares dão volume sem custo
-    const blobs = [];
-    // [NUVEM] copa com formato de nuvem: esferas suaves sobrepostas (puffs).
-    // baixa/media/120fps: 6 puffs de 20 tris = 120 tris (-50% vs os 240 do antigo).
+
+    // [PINHEIRO] copa = 5 camadas de cones empilhadas (leve: 90-120 tris)
     const d = this.leafDetail;
-    const jit = 0.08;   // quase sem jitter — a forma fica lisa e arredondada (nuvem de verdade)
-    if (d === 0) {
-      const b1 = new THREE.IcosahedronGeometry(1.8, 0); b1.translate(0, 3.85, 0); blobs.push(b1);
-      const b2 = new THREE.IcosahedronGeometry(1.35, 0); b2.translate(0.95, 3.25, 0.35); blobs.push(b2);
-      const b3 = new THREE.IcosahedronGeometry(1.25, 0); b3.translate(-0.9, 3.45, -0.5); blobs.push(b3);
-      const b4 = new THREE.IcosahedronGeometry(0.9, 0); b4.translate(0.3, 4.7, 0.2); blobs.push(b4);
-      const b5 = new THREE.IcosahedronGeometry(0.75, 0); b5.translate(-0.45, 4.15, 0.8); blobs.push(b5);
-      const b6 = new THREE.IcosahedronGeometry(0.7, 0); b6.translate(0.8, 4.3, -0.65); blobs.push(b6);
-    } else {
-      const b1 = new THREE.IcosahedronGeometry(1.75, 1); b1.translate(0, 3.9, 0); blobs.push(b1);
-      const b2 = new THREE.IcosahedronGeometry(1.25, 1); b2.translate(0.95, 3.25, 0.4); blobs.push(b2);
-      const b3 = new THREE.IcosahedronGeometry(1.15, 1); b3.translate(-0.8, 3.45, -0.55); blobs.push(b3);
-      const b4 = new THREE.IcosahedronGeometry(0.75, 1); b4.translate(0.25, 4.7, 0.15); blobs.push(b4);
+    const seg = d === 0 ? 6 : 8;
+    const cones = [];
+    const N = 5;
+    const top = 4.6;
+    for (let i = 0; i < N; i++) {
+      const t = i / (N - 1);
+      const cone = new THREE.ConeGeometry((1 - t) * 1.5 + 0.15, 1.3, seg);
+      cone.translate(0, top * (0.42 + t * 0.58), 0);
+      cones.push(cone);
     }
-    const leafGeo = mergeGeometries(blobs, false);
-    // deforma um pouco os vértices para tirar a cara de esfera
+    const leafGeo = mergeGeometries(cones, false);
+
     const lp = leafGeo.attributes.position;
     for (let i = 0; i < lp.count; i++) {
       lp.setXYZ(i,
-        lp.getX(i) + (rng() - 0.5) * jit,
-        lp.getY(i) + (rng() - 0.5) * jit,
-        lp.getZ(i) + (rng() - 0.5) * jit);
+        lp.getX(i) + (rng() - 0.5) * 0.06,
+        lp.getY(i) + (rng() - 0.5) * 0.06,
+        lp.getZ(i) + (rng() - 0.5) * 0.06);
     }
     leafGeo.computeVertexNormals();
     const leafMat = new THREE.MeshStandardMaterial({
-      color: 0x4f7a34, roughness: 0.88, metalness: 0,
+      color: 0x2e5d2a, roughness: 0.92, metalness: 0,
     });
 
     const n = this.treeSpots.length;
@@ -258,7 +253,7 @@ export class Props {
       trunks.setMatrixAt(i, m);
       leaves.setMatrixAt(i, m);
       // variação de verde por instância
-      colorLeaf.setHSL(0.26 + rng() * 0.07, 0.42 + rng() * 0.2, 0.24 + rng() * 0.12);
+      colorLeaf.setHSL(0.31 + rng() * 0.05, 0.38 + rng() * 0.16, 0.19 + rng() * 0.08);   // [PINHEIRO] verde escuro
       leaves.setColorAt(i, colorLeaf);
 
       // [31] tronco colide

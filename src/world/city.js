@@ -7,7 +7,7 @@ import {
 import { nodeCoord, makeRng, rngRange, rngInt, rngPick } from '../utils.js';
 import {
   asphaltTexture, asphaltRoughness, sidewalkTexture, facadeTextures,
-  FACADE_CELL_W, FACADE_CELL_H, helipadTexture,
+  FACADE_CELL_W, FACADE_CELL_H, helipadTexture, grassTexture,
 } from '../gfx/textures.js';
 
 const FACADE_VARIANTS = 6;
@@ -49,6 +49,7 @@ export class City {
     this._layout();
     this._buildRoads();
     this._buildSidewalks();
+    this._buildParkGrass();
     this._buildMarkings();
     this._buildBuildings();
   }
@@ -184,6 +185,33 @@ export class City {
     mesh.receiveShadow = true;
     mesh.castShadow = false;
     mesh.name = 'sidewalks';
+    this.group.add(mesh);
+  }
+
+
+  // [PINHEIRO] grama no piso dos parques (onde antes era só calçada)
+  _buildParkGrass() {
+    if (!this.parkBlocks.length) return;
+    const size = BLOCK_INNER;          // 36 -> área interna do quarteirão
+    const geos = [];
+    for (const b of this.parkBlocks) {
+      const g = new THREE.PlaneGeometry(size, size);
+      g.rotateX(-Math.PI / 2);
+      g.translate(b.cx, CURB_H + 0.02, b.cz);   // 2cm acima da calçada (sem z-fight)
+      const uv = g.attributes.uv;
+      for (let i = 0; i < uv.count; i++) {
+        uv.setXY(i, uv.getX(i) * (size / 6), uv.getY(i) * (size / 6));   // textura repete a cada 6m
+      }
+      geos.push(g);
+    }
+    const mat = new THREE.MeshStandardMaterial({
+      map: grassTexture(),
+      roughness: 0.95,
+      metalness: 0,
+    });
+    const mesh = new THREE.Mesh(mergeGeometries(geos, false), mat);
+    mesh.receiveShadow = true;
+    mesh.name = 'park-grass';
     this.group.add(mesh);
   }
 
