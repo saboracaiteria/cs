@@ -610,8 +610,17 @@ export class Match {
   _update(dt) {
     if (this._pausado) return;   // pausa: congela o cliente (não envia input)
 
-
-
+    // [FPS-LOD] mantém as regiões da cidade em detalhe perto do jogador.
+    // O laço do single player está PARADO no MP (match roda seu próprio loop),
+    // então o updateLOD do game.update() nunca dispara aqui — sem este bloco
+    // a cidade fica presa no estado low do menu = caixas cinzas em tudo.
+    this._lodAcc = (this._lodAcc || 0) + dt;
+    if (this._lodAcc > 0.3) {
+      this._lodAcc = 0;
+      if (this.game && this.game.city && this.game.city.updateLOD) {
+        this.game.city.updateLOD(this.camera.position.x, this.camera.position.z, 260);
+      }
+    }
 
     // HUD do solo vivo no MP: FPS e relógio (o laço do single está parado)
     if (this.game && this.game.hud) {

@@ -1970,7 +1970,7 @@ export class Game {
       if (this.city && this.city.updateLOD) {
         const cam = this.gfx.camera.position;
         // menu/cutscene: camera longe (330m) -> tudo low = menu liso
-        const farDist = this.state === 'playing' ? 260 : 100; // menu: tudo low (9 caixas) = menu liso
+        const farDist = this.state === 'title' ? 100 : 260; // so no menu tudo low; paused/over mantem detalhe
         this.city.updateLOD(cam.x, cam.z, farDist);
       }
     }
