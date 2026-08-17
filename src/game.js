@@ -133,7 +133,7 @@ export class Game {
     const step = async (label, fn) => {
       onProgress(label);
       await new Promise((r) => setTimeout(r, 0));   // deixa a UI respirar
-      fn();
+      await fn();
     };
 
     await step('gerando terreno...', () => {
@@ -284,6 +284,28 @@ export class Game {
         this.hud.toast('SACI-BOT!', 'good');
       };
       this._atualizarCompanheiros();
+    });
+
+    // [FPS] WARMUP DE SHADERS: compila tudo AGORA (na tela de loading),
+    // em vez de compilar lazy quando cada material aparecer no jogo.
+    // Sem isto, a primeira partida tem um pico de CPU quando a cidade
+    // high entra na tela (materiais de fachada compilando de uma vez).
+    // best-effort: se falhar, o Three compila lazy depois de qualquer forma.
+    await step('compilando shaders...', async () => {
+      try {
+        const rdr = this.gfx && this.gfx.renderer;
+        if (!rdr || !this.city || !this.city.lodRegions) return;
+        const restaura = [];
+        for (const r of this.city.lodRegions) {
+          if (r.high && r.high.visible === false) { restaura.push([r.high, false]); r.high.visible = true; }
+          if (r.low && r.low.visible === false) { restaura.push([r.low, false]); r.low.visible = true; }
+        }
+        // compile síncrono: compila e RETORNA na hora.
+        // (compileAsync penduraria: exige uniforms['modelViewMatrix'] em
+        //  todo material, e os ShaderMaterial custom do jogo não têm)
+        rdr.compile(this.gfx.scene, this.gfx.camera);
+        for (const [obj, v] of restaura) obj.visible = v;
+      } catch (e) { /* warmup e best-effort */ }
     });
   }
 
