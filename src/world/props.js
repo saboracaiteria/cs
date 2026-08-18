@@ -16,6 +16,66 @@ const BAND = CELL / 2 - PROP_OFF;            // 22.1
  * [22] Postes de iluminação e [16] plantas (árvores, arbustos, canteiros),
  * além de bancos e lixeiras. Tudo instanciado para manter o custo baixo.
  */
+// Gerador de textura 2D de alta definição para árvore (carregada 1x na memória)
+function makeTreeTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 384;
+  const ctx = canvas.getContext('2d');
+
+  // Tronco com gradiente de madeira 3D
+  const trunkG = ctx.createLinearGradient(115, 0, 141, 0);
+  trunkG.addColorStop(0, '#2b1a0c');
+  trunkG.addColorStop(0.4, '#4e331b');
+  trunkG.addColorStop(1, '#180d04');
+  ctx.fillStyle = trunkG;
+  ctx.beginPath();
+  ctx.moveTo(116, 384);
+  ctx.lineTo(122, 170);
+  ctx.lineTo(134, 170);
+  ctx.lineTo(140, 384);
+  ctx.fill();
+
+  // Função auxiliar para desenhar folhagem volumétrica com sombra/brilho
+  const drawFoliageBlob = (cx, cy, rx, ry, color1, color2) => {
+    const g = ctx.createRadialGradient(cx - rx * 0.3, cy - ry * 0.3, 5, cx, cy, rx);
+    g.addColorStop(0, color1);
+    g.addColorStop(0.85, color2);
+    g.addColorStop(1, 'rgba(12,28,10,0.95)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  // Camadas de copa (orgânica e densa)
+  drawFoliageBlob(128, 220, 95, 75, '#3b7a32', '#1b4215');
+  drawFoliageBlob(78, 200, 70, 60, '#4a943f', '#22501a');
+  drawFoliageBlob(178, 200, 70, 60, '#38732e', '#193f14');
+
+  drawFoliageBlob(128, 150, 85, 70, '#58ab4a', '#275d1f');
+  drawFoliageBlob(85, 135, 65, 55, '#48963c', '#204d19');
+  drawFoliageBlob(171, 135, 65, 55, '#438e37', '#1c4716');
+
+  drawFoliageBlob(128, 90, 70, 60, '#6bc45a', '#2e7025');
+  drawFoliageBlob(128, 55, 50, 45, '#7ee06b', '#398b2e');
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// Geometria Cruzada de 2 Planos (Cross Billboard) = 4 triângulos por árvore!
+function makeCrossTreeGeometry() {
+  const g1 = new THREE.PlaneGeometry(3.6, 5.4);
+  g1.translate(0, 2.7, 0);
+
+  const g2 = new THREE.PlaneGeometry(3.6, 5.4);
+  g2.rotateY(Math.PI / 2);
+  g2.translate(0, 2.7, 0);
+
+  return mergeGeometries([g1, g2], false);
+}
+
 export class Props {
   constructor(scene, collision, seed = 777, leafDetail = 1) {
     this.scene = scene;
@@ -198,47 +258,27 @@ export class Props {
     this._selTimer = 0;
   }
 
-  // ------------------------------------------------------------------ [16] árvores
+  // ------------------------------------------------------------------ [16] árvores (Texturizadas + Clonadas)
   _buildTrees() {
     const rng = this.rng;
 
-    // [PINHEIRO] tronco fino e alto
-    const trunkGeo = new THREE.CylinderGeometry(0.10, 0.20, 3.6, 6);
-    trunkGeo.translate(0, 1.8, 0);
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x4a3426, roughness: 0.95 });
-
-
-    // [PINHEIRO] copa = 5 camadas de cones empilhadas (leve: 90-120 tris)
-    const d = this.leafDetail;
-    const seg = d === 0 ? 6 : 8;
-    const cones = [];
-    const N = 5;
-    const top = 4.6;
-    for (let i = 0; i < N; i++) {
-      const t = i / (N - 1);
-      const cone = new THREE.ConeGeometry((1 - t) * 1.5 + 0.15, 1.3, seg);
-      cone.translate(0, top * (0.42 + t * 0.58), 0);
-      cones.push(cone);
+    if (!Props._treeTex) {
+      Props._treeTex = makeTreeTexture();
+      Props._treeGeo = makeCrossTreeGeometry();
     }
-    const leafGeo = mergeGeometries(cones, false);
 
-    const lp = leafGeo.attributes.position;
-    for (let i = 0; i < lp.count; i++) {
-      lp.setXYZ(i,
-        lp.getX(i) + (rng() - 0.5) * 0.06,
-        lp.getY(i) + (rng() - 0.5) * 0.06,
-        lp.getZ(i) + (rng() - 0.5) * 0.06);
-    }
-    leafGeo.computeVertexNormals();
     const leafMat = new THREE.MeshStandardMaterial({
-      color: 0x2e5d2a, roughness: 0.92, metalness: 0,
+      map: Props._treeTex,
+      transparent: true,
+      alphaTest: 0.2, // Recorta fundo transparente com zero z-fighting
+      roughness: 0.82,
+      side: THREE.DoubleSide,
     });
 
     const n = this.treeSpots.length;
-    const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, n);
-    const leaves = new THREE.InstancedMesh(leafGeo, leafMat, n);
-    trunks.castShadow = true; leaves.castShadow = false;      // [FPS] folhas nao projetam sombra (so o tronco)
-    trunks.receiveShadow = true; leaves.receiveShadow = true;
+    const trees = new THREE.InstancedMesh(Props._treeGeo, leafMat, n);
+    trees.castShadow = true;
+    trees.receiveShadow = true;
 
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
@@ -247,26 +287,25 @@ export class Props {
 
     for (let i = 0; i < n; i++) {
       const s = this.treeSpots[i];
-      const sc = rngRange(rng, 0.78, 1.35);
+      const sc = rngRange(rng, 0.85, 1.45);
       q.setFromAxisAngle(up, rngRange(rng, 0, Math.PI * 2));
-      m.compose(new THREE.Vector3(s.x, CURB_H, s.z), q, new THREE.Vector3(sc, sc * rngRange(rng, 0.9, 1.2), sc));
-      trunks.setMatrixAt(i, m);
-      leaves.setMatrixAt(i, m);
-      // variação de verde por instância
-      colorLeaf.setHSL(0.31 + rng() * 0.05, 0.38 + rng() * 0.16, 0.19 + rng() * 0.08);   // [PINHEIRO] verde escuro
-      leaves.setColorAt(i, colorLeaf);
+      m.compose(new THREE.Vector3(s.x, CURB_H, s.z), q, new THREE.Vector3(sc, sc * rngRange(rng, 0.95, 1.25), sc));
+      trees.setMatrixAt(i, m);
 
-      // [31] tronco colide
+      // Variação de verde por instância
+      colorLeaf.setHSL(0.30 + rng() * 0.06, 0.45 + rng() * 0.2, 0.8 + rng() * 0.15);
+      trees.setColorAt(i, colorLeaf);
+
+      // [31] colisão física do tronco
       this.col.addCircle(s.x, s.z, 0.42 * sc, CURB_H + 3, 'tree');
     }
-    trunks.instanceMatrix.needsUpdate = true;
-    leaves.instanceMatrix.needsUpdate = true;
-    if (leaves.instanceColor) leaves.instanceColor.needsUpdate = true;
-    this.group.add(trunks, leaves);
+    trees.instanceMatrix.needsUpdate = true;
+    if (trees.instanceColor) trees.instanceColor.needsUpdate = true;
+    this.group.add(trees);
 
     // arbustos das praças
     if (this.bushSpots.length) {
-      const bushGeo = new THREE.IcosahedronGeometry(0.85, d);   // [FPS] arbusto segue a qualidade da copa
+      const bushGeo = new THREE.IcosahedronGeometry(0.85, this.leafDetail);
       const bushMat = new THREE.MeshStandardMaterial({ color: 0x3f6b2d, roughness: 0.92 });
       const bushes = new THREE.InstancedMesh(bushGeo, bushMat, this.bushSpots.length);
       bushes.castShadow = true; bushes.receiveShadow = true;
