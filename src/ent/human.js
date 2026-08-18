@@ -86,14 +86,38 @@ export class Human {
       calf.position.y = -SHIN_L / 2; calf.scale.set(1, 1, 1.18); calf.castShadow = this.fullShadow;
       shinGroup.add(calf);
 
-      const sole = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.04, 0.26), mat.shoeSole);
-      sole.position.set(0, -0.02, 0.04);
-      const shoeBody = new THREE.Mesh(new THREE.BoxGeometry(0.108, 0.075, 0.24), mat.shoe);
-      shoeBody.position.set(0, 0.005, 0.035);
-
+      // --- MODELAGEM ANATÔMICA DO TÊNIS (Calcanhar arredondado e bico curvo esportivo) ---
       const footGroup = new THREE.Group();
       footGroup.position.set(0, -SHIN_L - 0.025, 0);
-      footGroup.add(sole, shoeBody);
+      footGroup.scale.set(1.15, 1.10, 1.18); // Sapato ligeiramente maior e melhor proporcionalizado
+
+      // 1. Sola Anatômica (Traseira arredondada + Bico erguido)
+      const soleHeel = new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.048, 0.04, 14), mat.shoeSole);
+      soleHeel.position.set(0, -0.02, -0.035);
+      soleHeel.scale.set(1.0, 1.0, 1.35);
+
+      const soleFront = new THREE.Mesh(new THREE.CylinderGeometry(0.054, 0.040, 0.04, 14), mat.shoeSole);
+      soleFront.position.set(0, -0.017, 0.075);
+      soleFront.rotation.x = -0.08; // Elevação sutil no bico do tênis (toe spring)
+      soleFront.scale.set(0.95, 1.0, 1.35);
+
+      const soleMid = new THREE.Mesh(new THREE.BoxGeometry(0.102, 0.04, 0.11), mat.shoeSole);
+      soleMid.position.set(0, -0.02, 0.02);
+
+      // 2. Cabedal / Corpo do Tênis (Calcanhar curvo e bico anatômico)
+      const shoeHeel = new THREE.Mesh(new THREE.CylinderGeometry(0.050, 0.046, 0.075, 14), mat.shoe);
+      shoeHeel.position.set(0, 0.005, -0.032);
+      shoeHeel.scale.set(0.98, 1.0, 1.3);
+
+      const shoeToe = new THREE.Mesh(new THREE.CylinderGeometry(0.051, 0.034, 0.07, 14), mat.shoe);
+      shoeToe.position.set(0, 0.003, 0.078);
+      shoeToe.rotation.x = -0.06;
+      shoeToe.scale.set(0.90, 1.0, 1.3);
+
+      const shoeBody = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.072, 0.105), mat.shoe);
+      shoeBody.position.set(0, 0.005, 0.022);
+
+      footGroup.add(soleHeel, soleFront, soleMid, shoeHeel, shoeToe, shoeBody);
       shinGroup.add(footGroup);
 
       legRoot.add(shinGroup);
@@ -280,17 +304,17 @@ export class Human {
 
       const isLeftLeading = this._jumpSide === 1;
       this.pivot.position.y = 0.07 + ar * 0.03;
-      this.pivot.rotation.x = -0.1;
+      this.pivot.rotation.x = -0.03;
 
       // Perna da frente flexiona o joelho; perna de trás empurra/estica
-      this.legL.root.rotation.x = isLeftLeading ? -0.5 : 0.35;
-      this.legR.root.rotation.x = isLeftLeading ? 0.35 : -0.5;
-      this.legL.shin.rotation.x = isLeftLeading ? 0.8 : 0.25;
-      this.legR.shin.rotation.x = isLeftLeading ? 0.25 : 0.8;
+      this.legL.root.rotation.x = isLeftLeading ? -0.4 : 0.3;
+      this.legR.root.rotation.x = isLeftLeading ? 0.3 : -0.4;
+      this.legL.shin.rotation.x = isLeftLeading ? 0.7 : 0.2;
+      this.legR.shin.rotation.x = isLeftLeading ? 0.2 : 0.7;
 
-      // Tornozelo estica levemente no ar para apontar o pé para baixo de forma natural
-      this.legL.foot.rotation.x = isLeftLeading ? 0.1 : 0.35;
-      this.legR.foot.rotation.x = isLeftLeading ? 0.35 : 0.1;
+      // Tornozelo mantém o pé natural no ar
+      this.legL.foot.rotation.x = -(this.legL.root.rotation.x + this.legL.shin.rotation.x) + 0.1;
+      this.legR.foot.rotation.x = -(this.legR.root.rotation.x + this.legR.shin.rotation.x) + 0.1;
 
       if (!this.aiming && !this.carrying) {
         const jumpArmY = (opts.vy || 0) * 0.04;
@@ -300,8 +324,8 @@ export class Human {
         this.armR.fore.rotation.x = -0.4;
       }
     } else {
-      // --- POSE NO CHÃO (Biomecânica de Ponta do Pé e Empurrão de Solo) ---
-      const leanTarget = (isRun && isMoving) ? 0.12 : 0;
+      // --- POSE NO CHÃO (Biomecânica de Planta do Pé e Postura Ereta) ---
+      const leanTarget = (isRun && isMoving) ? 0.04 : 0;
       this._lean = damp(this._lean, leanTarget, 8, dt);
       this.pivot.rotation.x = this._lean;
 
@@ -313,17 +337,24 @@ export class Human {
       this.legR.root.rotation.x = legRSweep;
 
       // Flexão natural de joelho na passada
-      this.legL.shin.rotation.x = Math.max(0, s) * amp * 1.2 + 0.12;
-      this.legR.shin.rotation.x = Math.max(0, -s) * amp * 1.2 + 0.12;
+      this.legL.shin.rotation.x = Math.max(0, s) * amp * 1.1 + 0.10;
+      this.legR.shin.rotation.x = Math.max(0, -s) * amp * 1.1 + 0.10;
 
-      // --- ARTICULAÇÃO DO PÉ / TORNOZELO ---
-      // Quando a perna vai para trás empurrando o solo, a ponta do pé apoia no chão
-      // e o calcanhar se ergue (flexão plantar). Na frente, o pé compensa a inclinação.
-      const pushL = Math.max(0, -s) * amp; // Fase de empurrão (perna esquerda atrás)
-      const pushR = Math.max(0, s) * amp;  // Fase de empurrão (perna direita atrás)
+      // --- ARTICULAÇÃO DO PÉ / TORNOZELO (Leve elevação de calcanhar + rolagem dinâmica) ---
+      // heelPitch (+0.08) garante uma leve e elegante inclinação de calcanhar (postura atlética).
+      // O fator 0.82 remove a trava horizontal rígida para o pé não parecer "colado" no chão.
+      const heelPitch = 0.08;
+      const heelStrikeL = Math.max(0, s) * amp * -0.12; // Toque suave à frente
+      const pushL = Math.max(0, -s) * amp * 0.38;        // Elevação de calcanhar no empurrão
 
-      this.legL.foot.rotation.x = pushL * 0.85 - (s * amp * 0.35);
-      this.legR.foot.rotation.x = pushR * 0.85 - (-s * amp * 0.35);
+      const heelStrikeR = Math.max(0, -s) * amp * -0.12;
+      const pushR = Math.max(0, s) * amp * 0.38;
+
+      const footL_base = -(this.legL.root.rotation.x + this.legL.shin.rotation.x) * 0.82;
+      const footR_base = -(this.legR.root.rotation.x + this.legR.shin.rotation.x) * 0.82;
+
+      this.legL.foot.rotation.x = footL_base + heelPitch + heelStrikeL + pushL;
+      this.legR.foot.rotation.x = footR_base + heelPitch + heelStrikeR + pushR;
 
       // Bobbing vertical
       const bob = isMoving ? Math.abs(c) * (isRun ? 0.055 : 0.035) * amp : Math.sin(this.phase) * 0.01;
