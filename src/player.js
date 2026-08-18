@@ -204,11 +204,13 @@ export class Player {
     const wanted = maxSpeed * Math.min(1, mag);
     this.speed = damp(this.speed, wanted, PLAYER.accel / Math.max(1, maxSpeed), dt);
 
-    // [FPS] O CORPO gira com o mouse (estilo GTA): parado ou andando, o
-    // boneco vira para a MESMA direção da câmera (viewYaw = centro da
-    // tela). O movimento usa a mesma direção — nunca fica torto/diagonal,
-    // e olhar ao redor vira o corpo junto com a câmera.
-    this.yaw = dampAngle(this.yaw, camYaw + Math.PI, PLAYER.turnSmooth, dt);
+    // ------------------------------------------------ direção de movimento real (Estilo HTML Orbital)
+    if (mag > 0.08) {
+      const moveAngle = Math.atan2(dx, dz);
+      this.yaw = dampAngle(this.yaw, moveAngle, PLAYER.turnSmooth, dt);
+    } else {
+      // Quando parado, mantém a orientação frontal
+    }
     if (mag > 0.001) this._move.set(dx, 0, dz);
 
     // ------------------------------------------------ [36] pulo e gravidade
@@ -287,8 +289,16 @@ export class Player {
 
     // ------------------------------------------------ malha
     this.human.root.position.copy(this.pos);
-    this.human.root.rotation.y = this.yaw;
-    this.human.update(dt, this.grounded ? this.speed : this.speed * 0.35, { air: this.grounded ? 0 : 1, run: !!input.running });
+    const analogLocalAngle = Math.atan2(-input.axes.strafe, -input.axes.forward);
+    const moveAngle = mag > 0.001 ? Math.atan2(dx, dz) : this.yaw;
+    this.human.update(dt, this.grounded ? this.speed : this.speed * 0.35, { 
+      air: this.grounded ? 0 : 1, 
+      run: !!input.running,
+      vy: this.vy,
+      camYaw: camYaw,
+      analogLocalAngle: analogLocalAngle,
+      moveAngle: moveAngle
+    });
     this.loro.update(dt, this.pos, this.yaw, this.speed);
     this.saci.update(dt, this.pos, this.yaw);
 

@@ -554,6 +554,14 @@ export class Game {
       btn.addEventListener('click', () => this.applyToque(btn.dataset.toque));
     }
 
+    // ---------------------------------------------------- [SKIN] Personalização de Cores
+    const hexNum = (v) => parseInt(v.replace('#', '0x'));
+    $('colSkin')?.addEventListener('input', (e) => this.player.human.setColors({ skin: hexNum(e.target.value) }));
+    $('colShirt')?.addEventListener('input', (e) => this.player.human.setColors({ shirt: hexNum(e.target.value) }));
+    $('colPants')?.addEventListener('input', (e) => this.player.human.setColors({ pants: hexNum(e.target.value) }));
+    $('colShoe')?.addEventListener('input', (e) => this.player.human.setColors({ shoe: hexNum(e.target.value) }));
+    $('colHair')?.addEventListener('input', (e) => this.player.human.setColors({ hair: hexNum(e.target.value) }));
+
     // ---------------------------------------------------- [8] limite de tempo
     $('timer-enabled').addEventListener('change', (e) => {
       this.settings.set('timerEnabled', e.target.checked);

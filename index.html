@@ -253,6 +253,18 @@
     <h2>OPÇÕES</h2>
     <button type="button" id="options-x" class="card-x" title="Fechar">✕</button>
 
+    <!-- [SKIN] Personalização de Aparência do Personagem -->
+    <div id="skin-choice" style="margin-bottom:12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+      <span class="choice-label" style="color:#60a5fa; font-weight:700;">🎨 APARÊNCIA DO PERSONAGEM</span>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:6px; font-size:12px;">
+        <label style="display:flex; align-items:center; justify-content:space-between;">Pele <input id="colSkin" type="color" value="#d9a066"></label>
+        <label style="display:flex; align-items:center; justify-content:space-between;">Jaqueta <input id="colShirt" type="color" value="#6b4423"></label>
+        <label style="display:flex; align-items:center; justify-content:space-between;">Calças <input id="colPants" type="color" value="#3d4a5c"></label>
+        <label style="display:flex; align-items:center; justify-content:space-between;">Cabelo <input id="colHair" type="color" value="#2a1f14"></label>
+        <label style="display:flex; align-items:center; justify-content:space-between; grid-column: span 2;">Calçado <input id="colShoe" type="color" value="#1a1d24"></label>
+      </div>
+    </div>
+
     <!-- [8] desmarcado por padrão: o jogo começa sem limite de tempo -->
     <label id="timer-toggle">
       <input type="checkbox" id="timer-enabled">
