@@ -15,6 +15,7 @@ import { Props } from './world/props.js';
 import { Landmarks } from './world/landmarks.js';
 import { BrazilLandmarks } from './world/brasil.js';
 import { IMGBuildings } from './world/imgbuildings.js';
+import { buildPrefeitura } from './world/prefeitura.js';
 import { TrafficSystem } from './sys/traffic.js';
 import { PedestrianSystem } from './ent/pedestrian.js';
 import { CarSystem } from './ent/car.js';
@@ -166,6 +167,7 @@ export class Game {
     await step('erguendo o Estúdio e o Labs IMG...', () => {
       this.imgBuildings = new IMGBuildings(this.gfx.scene, this.col);
       this.imgBuildings.build(this.city);
+      buildPrefeitura(this.gfx.scene, this.col, this.city);
     });
 
     await step('trazendo Floripa, Curitiba e Salvador...', () => {
