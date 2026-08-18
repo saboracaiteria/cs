@@ -208,15 +208,27 @@ export class RemotePlayer {
       this.tag.visible = this.vivo;
     }
 
-    this.root.rotation.y = this.yaw + Math.PI + (this.local ? CAMERA.bodyTurn : 0);
+    // Rotação controlada pela mecânica estagiada (0.2s) do Human.js
+    if (!this.local) {
+      this.root.rotation.y = this.yaw + Math.PI;
+    }
 
     if (!animar) return;   // posicao segue; passos/asa em camera lenta
-
 
     if (!this.local) this.human.aiming = this.firing && this.vivo;
     this.human.lookYaw = 0;
     this.human.lookPitch = this.pitch;
-    this.human.update(dt, speed, { air, run: this._run });
+    
+    // Passa parâmetros de movimento e câmera para ativar os giros de 0.2s no MP
+    const camYaw = this.yaw;
+    const moveAngle = speed > 0.1 ? (this.yaw + Math.PI) : this.root.rotation.y;
+    this.human.update(dt, speed, { 
+      air, 
+      run: this._run,
+      camYaw: camYaw,
+      analogLocalAngle: 0,
+      moveAngle: moveAngle
+    });
     if (!this.local) this.root.visible = this.vivo;
     if (this.loro) {   // [MP-LIMPO] papagaio do MP removido (this.loro fica undefined)
       this.loro.visible = this.vivo && !this._loroSkip;
