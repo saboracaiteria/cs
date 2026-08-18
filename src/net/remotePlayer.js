@@ -209,24 +209,28 @@ export class RemotePlayer {
     }
 
     // Rotação controlada pela mecânica estagiada (0.2s) do Human.js
-    if (!this.local) {
-      this.root.rotation.y = this.yaw + Math.PI;
-    }
-
     if (!animar) return;   // posicao segue; passos/asa em camera lenta
 
     if (!this.local) this.human.aiming = this.firing && this.vivo;
     this.human.lookYaw = 0;
     this.human.lookPitch = this.pitch;
     
-    // Passa parâmetros de movimento e câmera para ativar os giros de 0.2s no MP
+    // Passa os vetores exatos de movimento do analógico e câmera no MP
     const camYaw = this.yaw;
-    const moveAngle = speed > 0.1 ? (this.yaw + Math.PI) : this.root.rotation.y;
+    let moveAngle = this.root.rotation.y;
+    let analogLocalAngle = 0;
+
+    if (Math.abs(this._vx || 0) > 0.05 || Math.abs(this._vz || 0) > 0.05) {
+      moveAngle = Math.atan2(this._vx, this._vz);
+      let diff = moveAngle - (camYaw + Math.PI);
+      analogLocalAngle = Math.atan2(Math.sin(diff), Math.cos(diff));
+    }
+
     this.human.update(dt, speed, { 
       air, 
       run: this._run,
       camYaw: camYaw,
-      analogLocalAngle: 0,
+      analogLocalAngle: analogLocalAngle,
       moveAngle: moveAngle
     });
     if (!this.local) this.root.visible = this.vivo;
