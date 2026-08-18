@@ -19,6 +19,8 @@ import { SaciBot } from './ent/sacibot.js';
  * direito: quando o braço ergue para mirar, o cano aponta para a frente.
  * Exportada para o multiplayer reusar (arma na mão dos avatares).
  */
+import { muzzleFlashTexture } from './gfx/textures.js';
+
 export function makePistola() {
   const g = new THREE.Group();
   const mat = (hex, m, r) => new THREE.MeshStandardMaterial({ color: hex, metalness: m, roughness: r });
@@ -42,6 +44,20 @@ export function makePistola() {
   bloco(0.075, 0.05, 0.09, 0, -0.30, 0, dourado);
   // guarda-mato
   bloco(0.06, 0.05, 0.07, 0, -0.19, 0.02, escuro);
+
+  // Sprite 2D de Muzzle Flash na ponta do cano
+  const flashMat = new THREE.SpriteMaterial({
+    map: muzzleFlashTexture(),
+    blending: THREE.AdditiveBlending,
+    transparent: true,
+  });
+  const flashSprite = new THREE.Sprite(flashMat);
+  flashSprite.position.set(0, -0.62, 0);
+  flashSprite.scale.set(0.45, 0.45, 0.45);
+  flashSprite.visible = false;
+  g.add(flashSprite);
+  g.flashSprite = flashSprite;
+
   return g;
 }
 

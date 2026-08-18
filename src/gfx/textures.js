@@ -315,6 +315,34 @@ export function puffTexture() {
   });
 }
 
+/** Sprite de disparo do cano da arma (Muzzle Flash). */
+export function muzzleFlashTexture() {
+  return cached('muzzleFlash', () => {
+    const S = 128, c = makeCanvas(S, S), x = c.getContext('2d');
+    const g = x.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+    g.addColorStop(0, 'rgba(255, 245, 190, 1.0)');
+    g.addColorStop(0.2, 'rgba(255, 180, 50, 0.9)');
+    g.addColorStop(0.55, 'rgba(255, 80, 20, 0.4)');
+    g.addColorStop(1, 'rgba(200, 30, 0, 0)');
+    x.fillStyle = g;
+    x.beginPath(); x.arc(S / 2, S / 2, S / 2, 0, Math.PI * 2); x.fill();
+
+    // Raios de fogo estrelados
+    x.strokeStyle = 'rgba(255, 230, 140, 0.8)';
+    x.lineWidth = 4;
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      x.beginPath();
+      x.moveTo(S / 2, S / 2);
+      x.lineTo(S / 2 + Math.cos(a) * (S * 0.48), S / 2 + Math.sin(a) * (S * 0.48));
+      x.stroke();
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  });
+}
+
 /** Halo usado nos postes e faróis à noite. */
 export function glowTexture() {
   return cached('glow', () => {

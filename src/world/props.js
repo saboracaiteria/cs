@@ -16,50 +16,10 @@ const BAND = CELL / 2 - PROP_OFF;            // 22.1
  * [22] Postes de iluminação e [16] plantas (árvores, arbustos, canteiros),
  * além de bancos e lixeiras. Tudo instanciado para manter o custo baixo.
  */
-// Gerador de textura 2D de alta definição para árvore (carregada 1x na memória)
+const textureLoader = new THREE.TextureLoader();
+
 function makeTreeTexture() {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256; canvas.height = 384;
-  const ctx = canvas.getContext('2d');
-
-  // Tronco com gradiente de madeira 3D
-  const trunkG = ctx.createLinearGradient(115, 0, 141, 0);
-  trunkG.addColorStop(0, '#2b1a0c');
-  trunkG.addColorStop(0.4, '#4e331b');
-  trunkG.addColorStop(1, '#180d04');
-  ctx.fillStyle = trunkG;
-  ctx.beginPath();
-  ctx.moveTo(116, 384);
-  ctx.lineTo(122, 170);
-  ctx.lineTo(134, 170);
-  ctx.lineTo(140, 384);
-  ctx.fill();
-
-  // Função auxiliar para desenhar folhagem volumétrica com sombra/brilho
-  const drawFoliageBlob = (cx, cy, rx, ry, color1, color2) => {
-    const g = ctx.createRadialGradient(cx - rx * 0.3, cy - ry * 0.3, 5, cx, cy, rx);
-    g.addColorStop(0, color1);
-    g.addColorStop(0.85, color2);
-    g.addColorStop(1, 'rgba(12,28,10,0.95)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-    ctx.fill();
-  };
-
-  // Camadas de copa (orgânica e densa)
-  drawFoliageBlob(128, 220, 95, 75, '#3b7a32', '#1b4215');
-  drawFoliageBlob(78, 200, 70, 60, '#4a943f', '#22501a');
-  drawFoliageBlob(178, 200, 70, 60, '#38732e', '#193f14');
-
-  drawFoliageBlob(128, 150, 85, 70, '#58ab4a', '#275d1f');
-  drawFoliageBlob(85, 135, 65, 55, '#48963c', '#204d19');
-  drawFoliageBlob(171, 135, 65, 55, '#438e37', '#1c4716');
-
-  drawFoliageBlob(128, 90, 70, 60, '#6bc45a', '#2e7025');
-  drawFoliageBlob(128, 55, 50, 45, '#7ee06b', '#398b2e');
-
-  const tex = new THREE.CanvasTexture(canvas);
+  const tex = textureLoader.load('assets/textures/tree_billboard.png');
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
