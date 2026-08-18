@@ -96,8 +96,8 @@ export class SkySystem {
 
     this.sunDir = new THREE.Vector3(0, 1, 0);
 
-    // Sol amarelado quente/dourado de dia radiante
-    this.sun = new THREE.DirectionalLight(0xffe89e, 3.8);
+    // Sol branco natural radiante
+    this.sun = new THREE.DirectionalLight(0xfff5e6, 3.8);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(QUALITY.shadowMapSize, QUALITY.shadowMapSize);
     this.sun.shadow.camera.near = 1;
@@ -113,12 +113,8 @@ export class SkySystem {
     this.scene.add(this.sun);
     this.scene.add(this.sun.target);
 
-    this.hemi = new THREE.HemisphereLight(0x3a88ff, 0x8a7f6c, QUALITY.hemiIntensity * 1.1);
+    this.hemi = new THREE.HemisphereLight(0x70b0ff, 0x8a7f6c, QUALITY.hemiIntensity * 1.35);
     this.scene.add(this.hemi);
-
-    // ---------------------------------------------------------- NUVENS (Canvas Procedural)
-    this.clouds = this._makeClouds();
-    this.scene.add(this.clouds);
 
     // ---------------------------------------------------------- estrelas
     this.stars = this._makeStars();
@@ -134,7 +130,7 @@ export class SkySystem {
     this.scene.add(this.moon);
 
     // ---------------------------------------------------------- névoa
-    this.scene.fog = new THREE.Fog(0x3a88ff, QUALITY.fogNear, QUALITY.fogFar);
+    this.scene.fog = new THREE.Fog(0x6aa8ff, QUALITY.fogNear, QUALITY.fogFar);
 
     /** Distância de renderização em vigor (ver `setRenderDistance`). */
     this.distMax = CAMERA.far;
@@ -143,43 +139,6 @@ export class SkySystem {
     console.log('[sky] construtor fim, chamando update inicial');
     this.update(0, new THREE.Vector3());
     console.log('[sky] construtor completo OK');
-  }
-
-  _makeClouds() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512; canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, 512, 512);
-    // desenha formas de nuvens fofas no canvas
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-    for (let i = 0; i < 45; i++) {
-      const x = Math.random() * 512;
-      const y = Math.random() * 512;
-      const r = 25 + Math.random() * 45;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(4, 4);
-
-    const geo = new THREE.PlaneGeometry(3500, 3500);
-    const mat = new THREE.MeshBasicMaterial({
-      map: tex,
-      transparent: true,
-      opacity: 0.75,
-      depthWrite: false,
-      depthTest: true,
-      fog: false,
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.rotation.x = Math.PI / 2;
-    mesh.position.y = 450;
-    mesh.renderOrder = -999;
-    this.cloudTex = tex;
-    return mesh;
   }
 
   /**
@@ -313,15 +272,6 @@ export class SkySystem {
 
     this.sky.position.copy(focus);
     this.stars.position.copy(focus);
-
-    if (this.clouds) {
-      this.clouds.position.x = focus.x;
-      this.clouds.position.z = focus.z;
-      if (this.cloudTex) {
-        this.cloudTex.offset.x += dt * 0.002;
-        this.cloudTex.offset.y += dt * 0.001;
-      }
-    }
 
     // ------------------------------------------------ luz principal
     const above = elev > -0.05;
