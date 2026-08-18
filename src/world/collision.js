@@ -225,6 +225,13 @@ export class CollisionWorld {
         if (y !== null && y !== undefined) return y;
       }
     }
+    // [46] Permite andar no topo dos prédios se refY estiver na altura da laje
+    if (refY !== null && refY !== undefined) {
+      const roof = this.roofHeightAt(x, z);
+      if (roof > 0 && refY >= roof - 0.5) {
+        return roof;
+      }
+    }
     for (const w of this.waterZones) {
       if (x >= w.minX && x <= w.maxX && z >= w.minZ && z <= w.maxZ) {
         return w.surfaceY - 0.85;      // o jogador entra na água até a cintura

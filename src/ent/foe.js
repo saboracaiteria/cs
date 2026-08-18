@@ -288,31 +288,31 @@ export class Foe {
       // está livre. Bloqueado, desliza pela tangente com LADO MEMORIZADO
       // (this.ladoDesvio) — nunca alterna o lado por frame, então o bot não
       // vibra de um lado para o outro contra a parede.
-      const ux = dx / distH, uz = dz / distH;
+      // Flanqueamento tático e esquiva lateral
+      const shiftAngle = (this.ladoDesvio || 1) * 0.45;
+      const finalAngle = rumo + (distH < 15 ? shiftAngle : 0);
+      const ux = Math.sin(finalAngle), uz = Math.cos(finalAngle);
       const nx0 = p.x + ux * passo;
       const nz0 = p.z + uz * passo;
 
-      if (col && !this.ficha.colossal && col.isBlocked(nx0, nz0, 0.72, 0.5)) {
+      if (col && !this.ficha.colossal && col.isBlocked(nx0, nz0, 0.72, 0.5, p.y)) {
         // bloqueado por prédio: desliza pela tangente no lado memorizado
         const raio = 0.72;
         const tx = uz, tz = -ux;
         if (!this.ladoDesvio) {
-          const livreA = !col.isBlocked(p.x + tx * passo * 2, p.z + tz * passo * 2, raio, 0.5);
-          const livreB = !col.isBlocked(p.x - tx * passo * 2, p.z - tz * passo * 2, raio, 0.5);
+          const livreA = !col.isBlocked(p.x + tx * passo * 2, p.z + tz * passo * 2, raio, 0.5, p.y);
+          const livreB = !col.isBlocked(p.x - tx * passo * 2, p.z - tz * passo * 2, raio, 0.5, p.y);
           this.ladoDesvio = livreA && !livreB ? 1 : !livreA && livreB ? -1 : (Math.random() < 0.5 ? 1 : -1);
         }
         let nx = p.x + tx * passo * this.ladoDesvio;
         let nz = p.z + tz * passo * this.ladoDesvio;
-        if (col.isBlocked(nx, nz, raio, 0.5)) {
+        if (col.isBlocked(nx, nz, raio, 0.5, p.y)) {
           // lado travado: tenta o oposto (e memoriza)
           nx = p.x - tx * passo * this.ladoDesvio;
           nz = p.z - tz * passo * this.ladoDesvio;
-          if (!col.isBlocked(nx, nz, raio, 0.5)) {
+          if (!col.isBlocked(nx, nz, raio, 0.5, p.y)) {
             this.ladoDesvio = -this.ladoDesvio;
           } else {
-            // beco/canto: tenta reto mesmo assim (resolveCircle empurra p/ a
-            // direção de menor resistência e o bot escapa) — troca de lado só
-            // a cada 1.2s, nunca por frame (sem vibração)
             this.ladoT = (this.ladoT || 0) + dt;
             if (this.ladoT > 1.2) { this.ladoDesvio = Math.random() < 0.5 ? 1 : -1; this.ladoT = 0; }
             nx = nx0; nz = nz0;
@@ -321,7 +321,7 @@ export class Foe {
         p.x = nx; p.z = nz;
         col.resolveCircle(p, raio, this.altura + 0.6);
       } else {
-        // caminho livre: anda reto
+        // caminho livre: anda com angulação tática de flanqueamento
         p.x = nx0; p.z = nz0;
         if (col && !this.ficha.colossal) col.resolveCircle(p, 0.72, this.altura + 0.6);
       }
