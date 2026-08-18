@@ -143,9 +143,9 @@ export class City {
     const mat = new THREE.MeshStandardMaterial({
       map: asphaltTexture(),
       roughnessMap: asphaltRoughness(),
-      roughness: 0.94,
-      metalness: 0.02,
-      color: 0xffffff,
+      roughness: 0.82,
+      metalness: 0.1,
+      color: 0x333333,
     });
     mat.map.repeat.set(1, 1);
 

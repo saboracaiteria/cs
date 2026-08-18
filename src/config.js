@@ -354,13 +354,13 @@ export const DAY = {
 
 // ---------------------------------------------------------------- paletas
 export const PALETTE = {
-  building: [0xb9b3a8, 0xa8a49c, 0xcfc8bb, 0x8e8a84, 0xd6d2c8, 0x9aa3ab, 0xc0b6a6, 0x7f8890],
-  buildingGlass: [0x2c4356, 0x1f3a4d, 0x38505f, 0x24404f],
-  car: [0xd42a2a, 0x1a5fd6, 0xe8e8e8, 0x1b1b1e, 0xf0b400, 0x2f9e58, 0x8b8f96, 0xe06a1f, 0x6d3fbe, 0x14b0c4],
-  shirt: [0xd94f4f, 0x3f7fd9, 0x4fbf74, 0xe0b23a, 0xb562d6, 0xe8e8e8, 0x2f3540, 0xe07a3f, 0x35b5b0, 0xd96fa8],
-  pants: [0x2b3648, 0x3a3f4a, 0x1f2430, 0x5a4636, 0x2e2e33, 0x44506b],
-  skin: [0xf1c8a0, 0xd9a877, 0xa9713f, 0x7a4a25, 0x54301a, 0xf6d9be],
-  hair: [0x1d1512, 0x3b2415, 0x6b4423, 0xa8763c, 0x111111, 0x8a8a8a],
+  building: [0x8c867c, 0x7a7770, 0x9e988c, 0x6e6b66, 0xa39f96, 0x6f777e, 0x918879, 0x5a6167],
+  buildingGlass: [0x1e2f3d, 0x142836, 0x273b47, 0x182c38],
+  car: [0xd11515, 0x0f4ec7, 0xcccccc, 0x111114, 0xe6a100, 0x1e8a46, 0x696d75, 0xd4550c, 0x5b2db0, 0x099bb0],
+  shirt: [0xc93636, 0x2869c7, 0x36a85a, 0xc99c22, 0xa144c4, 0xd0d0d0, 0x1e232d, 0xc75d20, 0x209e99, 0xc44f8e],
+  pants: [0x1c2430, 0x262a33, 0x131721, 0x423225, 0x1e1e21, 0x2b3447],
+  skin: [0xdfae82, 0xc28f5b, 0x915828, 0x613413, 0x3d1d0c, 0xe6bd9e],
+  hair: [0x120c0a, 0x29170b, 0x4a2d15, 0x785125, 0x0a0a0a, 0x616161],
 };
 
 // ---------------------------------------------------------------- qualidade gráfica
@@ -372,35 +372,17 @@ export const QUALITY = {
    * iluminado da cena, então o número é baixo de propósito.
    */
   maxDynamicLights: 6,
-  /**
-   * O bloom roda ANTES do tone mapping, ou seja, sobre valores HDR lineares.
-   * Uma superfície branca sob sol forte já fica perto de 1.0, então o limiar
-   * precisa ficar acima disso: assim só as fontes de luz de verdade brilham
-   * (janelas acesas, postes, faróis, semáforos, traçantes e explosões) e o
-   * céu não vira uma névoa leitosa em cima da cena.
-   */
   bloomStrength: 0.5,   // [FPS2] bloom mais leve (era 0.62)
   bloomRadius: 0.6,
   bloomThreshold: 1.55,
   leafDetail: 1,   // [FPS] subdivisao da copa das arvores (1 = 240 tris/arvore, 0 = 60 tris)
-  exposure: 1.12,
-  /**
-   * Névoa só para dar profundidade atmosférica. Precisa ser fraca o bastante
-   * para o Corcovado e o Pão de Açúcar continuarem visíveis da cidade
-   * (ficam a ~700 m do centro).
-   */
+  exposure: 0.82,
   fogNear: 380,
   fogFar: 2300,
-  /**
-   * Intensidade do mapa de ambiente (IBL) gerado a partir do céu.
-   * O céu de Preetham tem radiância ~7 em espaço linear, então esse fator
-   * precisa ser baixo: com valores altos a luz ambiente sozinha estoura
-   * todas as superfícies e o sol deixa de definir a iluminação.
-   */
-  envIntensity: 1.0,
-  hemiIntensity: 0.16,
+  envIntensity: 0.8,
+  hemiIntensity: 0.12,
   /** Pico de intensidade do sol ao meio-dia. */
-  sunIntensity: 4.0,
+  sunIntensity: 2.8,
 };
 
 /**
