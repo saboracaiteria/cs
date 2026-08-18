@@ -241,10 +241,10 @@ export const PED = {
  * cada carro tem rodas próprias. Por isso o aviso de FPS está no menu.
  */
 export const POPULATIONS = [
-  { id: 'pouca',  label: 'POUCA',       peds: 18,  cars: 12 },
-  { id: 'normal', label: 'NORMAL',      peds: 46,  cars: 28 },
-  { id: 'muita',  label: 'MOVIMENTADA', peds: 85,  cars: 48 },
-  { id: 'cheia',  label: 'CIDADE CHEIA', peds: 140, cars: 78 },
+  { id: 'pouca',  label: 'POUCA',       peds: 35,  cars: 25 },
+  { id: 'normal', label: 'NORMAL',      peds: 80,  cars: 55 },
+  { id: 'muita',  label: 'MOVIMENTADA', peds: 140, cars: 95 },
+  { id: 'cheia',  label: 'CIDADE CHEIA', peds: 220, cars: 150 },
 ];
 
 /** [61] População inicial: MOVIMENTADA — a cidade parece viva sem pesar demais. */

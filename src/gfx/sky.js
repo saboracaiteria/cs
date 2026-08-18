@@ -15,7 +15,7 @@ import { starTexture } from './textures.js';
  * intensidade do sol e mapa de ambiente voltam a ter valores naturais, e o
  * azul do céu é preservado porque a escala é linear.
  */
-const SKY_SCALE = 0.16;
+const SKY_SCALE = 0.42;
 const SKY_PATCH_TARGET = 'gl_FragColor = vec4( retColor, 1.0 );';
 
 function makeSky() {
@@ -26,10 +26,6 @@ function makeSky() {
       console.warn('[sky] shader do Sky mudou; brilho do céu não foi reescalado');
       return;
     }
-    // [S23-FIX] Preetham tem pow() com base que pode ficar NEGATIVA por
-    // precisao float no Chrome/ANGLE do Exynos RDNA2 -> pow(neg, frac) = NaN
-    // -> gl_FragColor NaN -> o ceu inteiro vira verde/lixo (flicks). Clamps
-    // de custo zero: em caso normal a base ja e >= 0, nada muda.
     let frag = shader.fragmentShader;
     frag = frag.replaceAll('pow( 93.885 - ( ( zenithAngle * 180.0 ) / pi ), -1.253 )',
       'pow( max( 93.885 - ( ( zenithAngle * 180.0 ) / pi ), 0.0 ), -1.253 )');
@@ -60,41 +56,32 @@ export class SkySystem {
     this.hour = DAY.startHour;
     this.nightFactor = 0;
     this._envTimer = 99;
-    this._lastEnvHour = -999;   // [perf F2] PMREM por evento
+    this._lastEnvHour = -999;
     this._clockMin = -1;
-    this._clockCache = '';   // [perf F3-4] relogio: 1 formatacao por minuto
+    this._clockCache = '';
     this._paused = false;
-    /** [13] 'ciclo' | 'dia' | 'noite' */
     this.cycleMode = 'ciclo';
-    /** Segundos entre regenerações do mapa de ambiente (perfil de qualidade). */
-    this.envUpdateInterval = 8;   // [perf] 4 -> 8 s: os reflexos mudam devagar
+    this.envUpdateInterval = 4;
 
-    // [perf] cores reutilizaveis do ciclo dia/noite — antes cada quadro
-    // criava 5+ objetos Color novos e o GC atuava no meio do frame
     this._c = {
-      warm: new THREE.Color(0xff9a4d),
-      white: new THREE.Color(0xfff6e8),
-      day: new THREE.Color(0xbdd6ee),
-      dusk: new THREE.Color(0xd98a52),
-      night: new THREE.Color(0x1c2c4c),
-      hemiDay: new THREE.Color(0xa8ccff),
-      hemiNight: new THREE.Color(0x3c5278),
-      groundDay: new THREE.Color(0x6b6152),
-      groundNight: new THREE.Color(0x0d1018),
+      warm: new THREE.Color(0xffa852),
+      white: new THREE.Color(0xfffbf0),
+      day: new THREE.Color(0x4095ff),
+      dusk: new THREE.Color(0xff7733),
+      night: new THREE.Color(0x0e1b38),
+      hemiDay: new THREE.Color(0x70b0ff),
+      hemiNight: new THREE.Color(0x1c2e52),
+      groundDay: new THREE.Color(0x8a7f6c),
+      groundNight: new THREE.Color(0x0a0e14),
     };
     this._fogScratch = new THREE.Color();
-    // [perf] cena temporaria UNICA do PMREM: reusada a cada regeneracao
-    // para nao recompilar o shader do ceu a cada 4-8 s (ver _updateEnvironment)
     this._envTmp = new THREE.Scene();
     this._envSky = makeSky();
     this._envSky.scale.setScalar(1000);
     this._envTmp.add(this._envSky);
 
-    // ---------------------------------------------------------- domo do céu
-    // O domo precisa caber DENTRO do far plane da câmera (CAMERA.far), senão
-    // é recortado e o céu some. Ele acompanha a câmera e nunca escreve profundidade.
     this.sky = makeSky();
-    this.sky.scale.setScalar(2000);          // meia-extensão 1000 << far 2600
+    this.sky.scale.setScalar(2000);
     this.sky.material.depthTest = false;
     this.sky.material.depthWrite = false;
     this.sky.renderOrder = -1000;
@@ -102,16 +89,15 @@ export class SkySystem {
     this.scene.add(this.sky);
 
     const u = this.sky.material.uniforms;
-    u.turbidity.value = 5.5;
-    u.rayleigh.value = 2.0;
-    u.mieCoefficient.value = 0.006;
-    u.mieDirectionalG.value = 0.82;
+    u.turbidity.value = 2.2;
+    u.rayleigh.value = 4.2;
+    u.mieCoefficient.value = 0.003;
+    u.mieDirectionalG.value = 0.88;
 
     this.sunDir = new THREE.Vector3(0, 1, 0);
 
-    // ---------------------------------------------------------- luz do sol/lua
-    this.sun = new THREE.DirectionalLight(0xfff2e0, 3.2);
-    this.sun.castShadow = true;                       // [44]
+    this.sun = new THREE.DirectionalLight(0xfff5e6, 4.5);
+    this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(QUALITY.shadowMapSize, QUALITY.shadowMapSize);
     this.sun.shadow.camera.near = 1;
     this.sun.shadow.camera.far = 620;
@@ -126,10 +112,7 @@ export class SkySystem {
     this.scene.add(this.sun);
     this.scene.add(this.sun.target);
 
-    // Luz de preenchimento discreta: o grosso do ambiente vem do mapa de
-    // ambiente gerado a partir do próprio céu, então o hemisférico só
-    // completa o rebote do chão — mais que isso lava a cena.
-    this.hemi = new THREE.HemisphereLight(0xa8ccff, 0x6b6152, QUALITY.hemiIntensity);
+    this.hemi = new THREE.HemisphereLight(0x70b0ff, 0x8a7f6c, QUALITY.hemiIntensity * 1.35);
     this.scene.add(this.hemi);
 
     // ---------------------------------------------------------- estrelas
