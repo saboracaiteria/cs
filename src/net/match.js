@@ -1099,7 +1099,7 @@ export class Match {
         pitch: this.pitch,
         moveX: this._emCarro ? clamp(this.inp.mx + this._carSteer, -1, 1) : this.inp.mx,
         moveZ: this.inp.mz,
-        run: this.inp.run,
+        run: !!(this.inp.run || this._btnRunToggle || this._joyRun),
         jump: this.inp.jump,
         fire: !!(this._fire || this._dragOn || this._fireBtn),
         ads: !!(this._fire || this._dragOn || this._fireBtn),
