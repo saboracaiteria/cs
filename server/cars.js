@@ -76,8 +76,8 @@ export function createCars(world, count) {
     [nos[k], nos[m]] = [nos[m], nos[k]];
   }
 
-  for (let n = 0; n < count && n < nos.length; n++) {
-    const [i, j] = nos[n];
+  for (let n = 0; n < count; n++) {
+    const [i, j] = nos[n % nos.length];
     const cx = i * 64 - HALF, cz = j * 64 - HALF;
     // posição inicial numa faixa do cruzamento (mão direita, igual ao solo)
     const dir = Math.floor(rng() * 4);

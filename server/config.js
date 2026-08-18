@@ -50,7 +50,7 @@ export const CAR = {
   npcSpeed: 12.5,          // m/s do tráfego (~45 km/h, igual ao solo)
   stopDistance: 11,        // distância de parada no semáforo
 };
-export const NUM_CARS = 8;
+export const NUM_CARS = 45;
 
 // ---------------------------------------------------------------- helicopteros MP
 export const HELI = {
