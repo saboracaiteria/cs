@@ -227,7 +227,7 @@ export class Match {
       const k = e.key.toLowerCase();
       this._kSet.add(k);
       this._recalcInp();
-      if (k === 'shift') { this.inp.run = true; this.inp.down = true; }
+      if (k === 'shift') { this.inp.run = !this.inp.run; this.inp.down = this.inp.run; }
       if (k === ' ') { this.inp.jump = true; this.inp.up = true; e.preventDefault(); }
       if (k === 'tab') { e.preventDefault(); this.scoreboard.alternar(); }
       if (k === 'e') this._toggleCar = true;
@@ -241,7 +241,6 @@ export class Match {
       const k = e.key.toLowerCase();
       this._kSet.delete(k);
       this._recalcInp();
-      if (k === 'shift') { this.inp.run = false; this.inp.down = false; }
       if (k === ' ') { this.inp.jump = false; this.inp.up = false; }
       if (k === 'q' || k === 'r') { this._heliYaw = 0; this._carSteer = 0; }
       this._norm();
@@ -326,8 +325,10 @@ export class Match {
           let dx = t.clientX - cx, dy = t.clientY - cy;
           const d = Math.hypot(dx, dy), R = jr.width / 2 - 12;
           if (d > R) { dx = dx / d * R; dy = dy / d * R; }
+          const mag = Math.min(1, d / R);
           this.inp.mx = dx / R;
           this.inp.mz = -dy / R;
+          this._joyRun = mag > 0.93;
           const knob = this._joy.querySelector('.knob');
           if (knob) knob.style.transform = `translate(${dx}px, ${dy}px)`;
           e.preventDefault();
@@ -342,6 +343,7 @@ export class Match {
         if (this._joyTouch && t.identifier === this._joyTouch.id) {
           this._joyTouch = null;
           this.inp.mx = 0; this.inp.mz = 0;
+          this._joyRun = false;
           const knob = this._joy?.querySelector('.knob');
           if (knob) knob.style.transform = 'translate(0,0)';
         }
@@ -366,7 +368,11 @@ export class Match {
     ligaBtn('mp-atirar', () => { this._fireBtn = true; }, () => { this._fireBtn = false; });
     ligaBtn('mp-pular', () => { this.inp.jump = true; this.inp.up = true; }, () => { this.inp.jump = false; this.inp.up = false; });
     ligaBtn('mp-acao', () => { this._toggleCar = true; });
-    ligaBtn('mp-correr', () => { this.inp.run = true; }, () => { this.inp.run = false; });
+    ligaBtn('mp-correr', () => { 
+      this._btnRunToggle = !this._btnRunToggle; 
+      const btn = document.getElementById('mp-correr');
+      if (btn) btn.classList.toggle('active', this._btnRunToggle);
+    });
     // [heli] botão ▼ dedicado para descer (o PULAR vira ▲ para subir)
     ligaBtn('mp-descer', () => { this.inp.run = true; this.inp.down = true; }, () => { this.inp.run = false; this.inp.down = false; });
     // [heli] botões ◀ ▶ giram o aparelho no ar (alternativa ao olhar)
@@ -658,11 +664,12 @@ export class Match {
       const jEdge = this.inp.jump && !this._jumpEdge;
       this._jumpEdge = !!this.inp.jump;
       if (jEdge) rpPred.human._jumpT = 0.22;   // [ANIM] impulso do pulo no avatar local
+      const querCorrer = !!this.inp.run || !!this._btnRunToggle || !!this._joyRun;
       predictBody(rpPred, {
         moveX: this.inp.mx,
         moveZ: this.inp.mz,
         yaw: this.yaw,
-        run: !!this.inp.run,
+        run: querCorrer,
         jump: jEdge,
       }, dt, this.game.col);
     } else if (rpPred) {
