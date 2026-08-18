@@ -329,9 +329,9 @@ export class Human {
       this._lean = damp(this._lean, leanTarget, 8, dt);
       this.pivot.rotation.x = this._lean;
 
-      // Coxa alterna movimento (frente e trás sem expor a sola excessivamente)
-      const legLSweep = Math.max(-0.40, s * amp);
-      const legRSweep = Math.max(-0.40, -s * amp);
+      // Coxa alterna movimento (limitado a amplitude natural para não jogar os pés muito para trás)
+      const legLSweep = Math.max(-0.38, Math.min(0.36, s * amp));
+      const legRSweep = Math.max(-0.38, Math.min(0.36, -s * amp));
 
       this.legL.root.rotation.x = legLSweep;
       this.legR.root.rotation.x = legRSweep;
