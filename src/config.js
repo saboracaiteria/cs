@@ -269,7 +269,8 @@ export const DEFAULT_POPULATION = 2;
  * `brasil.js` já importa `terrain.js`: pôr no outro sentido faria ciclo.
  */
 export const PLATOS = [
-  // [CENARIO-LIMPO] platos do museu/pelourinho removidos junto com as construcoes
+  // Platô da Prefeitura e Lago de Canaã dos Carajás para manter o terreno 100% plano
+  { x: 310, z: 0, hx: 90, hz: 120, rot: 0, fade: 25 },
 ];
 
 // ---------------------------------------------------------------- [54] bondinho
