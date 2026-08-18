@@ -102,7 +102,6 @@ export class City {
     };
     this.labsBlock = reservar(3, 3, 'labs');       // centro do mapa: (0, 0)
     this.studioBlock = reservar(3, 4, 'studio');   // ao lado:        (0, 64)
-    this.prefeituraBlock = reservar(5, 3, 'prefeitura'); // parque da prefeitura (128, 0)
   }
 
   blockAt(i, j) {
