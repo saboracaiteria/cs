@@ -26,8 +26,8 @@ export const PLAYER = {
   height: 1.78,
   eye: 1.62,
   // DOBRADA a pedido (2x o solo 6.4/14.5): no MP/BR o Bob é mais veloz
-  walkSpeed: 12.8,
-  runSpeed: 29.0,
+  walkSpeed: 6.4,
+  runSpeed: 14.5,
   accel: 58,
   jumpSpeed: 10,
   gravity: 28,

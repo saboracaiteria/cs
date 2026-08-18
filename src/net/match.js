@@ -689,10 +689,10 @@ export class Match {
       } else if (rp.vivo) {
         rp._explodiu = false;
       }
-      // velocidades do MP/BR (12.8/29 — DOBRADAS vs solo 6.4/14.5)
+      // velocidades idênticas ao solo (6.4 / 14.5)
       const vel = rp.local
         ? Math.hypot(rp._vx || 0, rp._vz || 0)   // predicao: pernas acompanham o corpo
-        : Math.hypot(d.moveX || 0, d.moveZ || 0) * (d.run ? 29 : 12.8);
+        : Math.hypot(d.moveX || 0, d.moveZ || 0) * (d.run ? 14.5 : 6.4);
       // [FPS] LOD de animação: avatar longe anima a cada 3º frame (a posição
       // continua seguindo a 60fps; só os passos/asa ficam em câmera lenta)
       const distCam = rp.local ? 0 : Math.hypot(rp.x - this.camera.position.x, rp.z - this.camera.position.z);

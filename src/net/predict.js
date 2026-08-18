@@ -12,8 +12,8 @@
 export const MP_PLAYER = {
   radius: 0.42,
   height: 1.78,
-  walkSpeed: 12.8,
-  runSpeed: 29.0,
+  walkSpeed: 6.4,
+  runSpeed: 14.5,
   accel: 58,
   jumpSpeed: 10,
   gravity: 28,
