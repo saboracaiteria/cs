@@ -154,35 +154,17 @@ export class RemotePlayer {
     }
 
     if (this.local && this._predicted) {
-      // [REDE-FLUIDEZ] jogador LOCAL: a PREDICAO local manda — o snap do
-      // servidor esta SEMPRE atrasado pela latencia (err ~ velocidade x RTT).
-      // Por isso o limiar e DINAMICO: corrige so divergencia REAL.
+      // Jogador local previsto: a posição física local é soberana para movimentação contínua e sem travamentos.
+      // O snap do servidor só força a posição em caso de teleporte/respawn legítimo (> 25m).
       const dx = (this._tX ?? this.x) - this.x;
       const dz = (this._tZ ?? this.z) - this.z;
       const err = Math.hypot(dx, dz);
-      // [PAREDE-FIX] limiar 8m: cobre a LATENCIA ao correr (29 m/s x 250ms =
-      // 7.25m). O snap do servidor esta SEMPRE atrasado pelo RTT: ao encostar
-      // na parede, a predicao local ja parou mas o snap ainda mostra o jogador
-      // andando (distancia = vel x RTT, ate 4-5m). Com limiar fixo 3.5m a
-      // correcao disparava TODO frame, puxava o jogador para tras e zerava a
-      // velocidade = PRESO e TREMENDO na parede. Agora so corrige divergencia
-      // REAL (colisao local vs servidor diferente, empurrao, respawn > 8m).
-      if (err > 8) {
-        if (err > 20) {
-          // respawn/teleporte legitimo do servidor
-          this.x = this._tX; this.z = this._tZ;
-          this._vx = 0; this._vz = 0; this._vy = 0;
-        } else {
-          // correcao lenta (25 m/s max) — NAO zera as vels: o jogador local
-          // segue o input e o snap so corrige a divergencia real devagar
-          const maxCorr = 25 * dt;
-          const k = Math.min(1, maxCorr / err);
-          this.x += dx * k;
-          this.z += dz * k;
-        }
+      if (err > 25) {
+        this.x = this._tX; this.z = this._tZ;
+        this._vx = 0; this._vz = 0; this._vy = 0;
       }
       const dy = (this._tY ?? this.y) - this.y;
-      if (dy < -1.2) this.y += dy * Math.min(1, 10 * dt);
+      if (dy < -2.0) this.y += dy * Math.min(1, 10 * dt);
     } else {
       // [REDE-FLUIDEZ] avatar REMOTO: correcao com velocidade limitada (max
       // 22 m/s) — sem o "teleporte" de antes (|dx|>2 saltava direto pro alvo).

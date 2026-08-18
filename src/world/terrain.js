@@ -86,10 +86,10 @@ function corridorMask(x, z) {
   return smoothstep(Math.min(fx, fz, fz0));
 }
 
-/** Relevo antes de qualquer terraplenagem. */
 function terrenoNatural(x, z) {
   const d = Math.max(Math.abs(x), Math.abs(z));
-  const away = smoothstep(clamp((d - CITY_R) / 80, 0, 1));
+  // A cidade vai até HALF (224), com margem até 250m o terreno é 100% plano (BASE_Y)
+  const away = smoothstep(clamp((d - 250) / 80, 0, 1));
   return BASE_Y + away * hills(x, z);
 }
 

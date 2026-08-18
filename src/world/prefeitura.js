@@ -29,8 +29,8 @@ export function buildPrefeitura(scene, col, city) {
   const LAGO_W_BOT = 60;   // Base mais afunilada (Sul)
 
   // ------------------------------------------------------------------ 1. Gramado do Parque
-  const parkW = 180;
-  const parkD = LAGO_LEN + 50;
+  const parkW = 140;
+  const parkD = LAGO_LEN + 40;
   const grassMat = voxMaterial(0x487e32, { aspereza: 0.9 });
   const grassMesh = new THREE.Mesh(new THREE.PlaneGeometry(parkW, parkD).rotateX(-Math.PI / 2), grassMat);
   grassMesh.position.set(cx, PISO, cz);
@@ -40,7 +40,7 @@ export function buildPrefeitura(scene, col, city) {
   col.addPlatform(cx - parkW / 2, cz - parkD / 2, cx + parkW / 2, cz + parkD / 2, () => PISO);
 
   // ------------------------------------------------------------------ 2. Formato Orgânico do Lago (Foto de Satélite)
-  const lakeX = cx - 20;
+  const lakeX = cx - 15;
   const lakeZ = cz;
 
   // Criando a forma (Shape 2D) com cantos arredondados e lados em curva suave
@@ -58,11 +58,10 @@ export function buildPrefeitura(scene, col, city) {
 
   // ------------------------------------------------------------------ 3. Escavação & Margem com Profundidade Real (1.8m)
   const DEPTH = 1.8;
-  const WATER_Y = PISO - 0.45; // Água fica 45cm abaixo do calçadão/pista
-  const BOTTOM_Y = PISO - DEPTH; // Fundo da bacia
+  const WATER_Y = PISO - 0.35; // Água 35cm abaixo da pista
+  const BOTTOM_Y = PISO - DEPTH;
 
-  // Malha da Bacia Escavada (Parede da Margem e Fundo do Lago)
-  const basinMat = voxMaterial(0x324738, { aspereza: 0.95 }); // Concreto/rocha/areia escura do fundo
+  const basinMat = voxMaterial(0x324738, { aspereza: 0.95 });
   const extrudeSettings = {
     steps: 1,
     depth: DEPTH,
@@ -79,16 +78,13 @@ export function buildPrefeitura(scene, col, city) {
   basinMesh.receiveShadow = true;
   g.add(basinMesh);
 
-  // ------------------------------------------------------------------ 4. Lâmina d'Água Translúcida e Realista
-  const waterMat = new THREE.MeshPhysicalMaterial({
-    color: 0x168a9b,
-    roughness: 0.05,
-    metalness: 0.1,
-    transmission: 0.85,
+  // ------------------------------------------------------------------ 4. Lâmina d'Água Visível
+  const waterMat = new THREE.MeshStandardMaterial({
+    color: 0x1aa0b4,
+    roughness: 0.1,
+    metalness: 0.5,
     transparent: true,
-    opacity: 0.85,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.04,
+    opacity: 0.88,
   });
 
   const waterShapeGeo = new THREE.ShapeGeometry(shape);

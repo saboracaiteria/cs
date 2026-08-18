@@ -227,7 +227,7 @@ export class Match {
       const k = e.key.toLowerCase();
       this._kSet.add(k);
       this._recalcInp();
-      if (k === 'shift') { this.inp.run = !this.inp.run; this.inp.down = this.inp.run; }
+      if (k === 'shift') { this.inp.run = !this.inp.run; }
       if (k === ' ') { this.inp.jump = true; this.inp.up = true; e.preventDefault(); }
       if (k === 'tab') { e.preventDefault(); this.scoreboard.alternar(); }
       if (k === 'e') this._toggleCar = true;
