@@ -86,35 +86,35 @@ export class Human {
       calf.position.y = -SHIN_L / 2; calf.scale.set(1, 1, 1.18); calf.castShadow = this.fullShadow;
       shinGroup.add(calf);
 
-      // --- MODELAGEM ANATÔMICA DO TÊNIS (Proporções realistas e sola rente ao chão) ---
+      // --- MODELAGEM ANATÔMICA DO TÊNIS (Tamanho natural equilibrado e sola no chão) ---
       const footGroup = new THREE.Group();
-      footGroup.position.set(0, -SHIN_L - 0.045, 0); // Rebaixado de -0.025 para -0.045 para colar a sola no chão
-      footGroup.scale.set(1.0, 1.0, 1.05); // Proporção mais natural do sapato
+      footGroup.position.set(0, -SHIN_L - 0.040, 0); // Mantém a sola perfeitamente no chão
+      footGroup.scale.set(1.08, 1.05, 1.14); // Tamanho natural do pé (nem pequeno, nem calcanhar gigante)
 
-      // 1. Sola Anatômica (Traseira ajustada + Bico erguido)
-      const soleHeel = new THREE.Mesh(new THREE.CylinderGeometry(0.040, 0.038, 0.035, 14), mat.shoeSole);
-      soleHeel.position.set(0, -0.018, -0.025);
-      soleHeel.scale.set(0.95, 1.0, 1.1);
+      // 1. Sola Anatômica (Traseira proporcional + Bico erguido)
+      const soleHeel = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.040, 0.035, 14), mat.shoeSole);
+      soleHeel.position.set(0, -0.018, -0.026);
+      soleHeel.scale.set(0.96, 1.0, 1.15);
 
-      const soleFront = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.035, 0.035, 14), mat.shoeSole);
-      soleFront.position.set(0, -0.015, 0.065);
-      soleFront.rotation.x = -0.06; // Elevação sutil no bico do tênis (toe spring)
-      soleFront.scale.set(0.92, 1.0, 1.15);
+      const soleFront = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.038, 0.035, 14), mat.shoeSole);
+      soleFront.position.set(0, -0.015, 0.068);
+      soleFront.rotation.x = -0.06;
+      soleFront.scale.set(0.94, 1.0, 1.20);
 
-      const soleMid = new THREE.Mesh(new THREE.BoxGeometry(0.084, 0.035, 0.09), mat.shoeSole);
+      const soleMid = new THREE.Mesh(new THREE.BoxGeometry(0.092, 0.035, 0.095), mat.shoeSole);
       soleMid.position.set(0, -0.018, 0.02);
 
-      // 2. Cabedal / Corpo do Tênis (Calcanhar discreto e bico anatômico)
-      const shoeHeel = new THREE.Mesh(new THREE.CylinderGeometry(0.039, 0.036, 0.06, 14), mat.shoe);
-      shoeHeel.position.set(0, 0.005, -0.022);
-      shoeHeel.scale.set(0.92, 1.0, 1.05);
+      // 2. Cabedal / Corpo do Tênis
+      const shoeHeel = new THREE.Mesh(new THREE.CylinderGeometry(0.043, 0.039, 0.062, 14), mat.shoe);
+      shoeHeel.position.set(0, 0.005, -0.024);
+      shoeHeel.scale.set(0.94, 1.0, 1.12);
 
-      const shoeToe = new THREE.Mesh(new THREE.CylinderGeometry(0.041, 0.030, 0.06, 14), mat.shoe);
-      shoeToe.position.set(0, 0.003, 0.068);
+      const shoeToe = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.033, 0.062, 14), mat.shoe);
+      shoeToe.position.set(0, 0.003, 0.072);
       shoeToe.rotation.x = -0.05;
-      shoeToe.scale.set(0.88, 1.0, 1.1);
+      shoeToe.scale.set(0.90, 1.0, 1.15);
 
-      const shoeBody = new THREE.Mesh(new THREE.BoxGeometry(0.082, 0.06, 0.09), mat.shoe);
+      const shoeBody = new THREE.Mesh(new THREE.BoxGeometry(0.090, 0.062, 0.095), mat.shoe);
       shoeBody.position.set(0, 0.005, 0.02);
 
       footGroup.add(soleHeel, soleFront, soleMid, shoeHeel, shoeToe, shoeBody);
