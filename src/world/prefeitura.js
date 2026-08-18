@@ -28,9 +28,9 @@ export function buildPrefeitura(scene, col, city) {
   const LAGO_W_TOP = 85;   // Topo mais largo (Norte)
   const LAGO_W_BOT = 60;   // Base mais afunilada (Sul)
 
-  // ------------------------------------------------------------------ 1. Base do Parque (Gramado Elevado)
-  const parkW = 140;
-  const parkD = LAGO_LEN + 40;
+  // ------------------------------------------------------------------ 1. Base do Parque (Grama do Parque)
+  const parkW = 150;
+  const parkD = LAGO_LEN + 50;
   const grassMat = voxMaterial(0x487e32, { aspereza: 0.9 });
   const grassMesh = new THREE.Mesh(new THREE.PlaneGeometry(parkW, parkD).rotateX(-Math.PI / 2), grassMat);
   grassMesh.position.set(cx, PISO, cz);
@@ -95,29 +95,30 @@ export function buildPrefeitura(scene, col, city) {
   waterMesh.receiveShadow = true;
   g.add(waterMesh);
 
-  // ------------------------------------------------------------------ 5. Calçadão de Concreto Claro & Pista Vermelha de Caminhada
+  // ------------------------------------------------------------------ 5. Calçadão de Concreto & Pista Vermelha (Aneis Vazados)
   // A. Calçadão Bege / Cinza Claro de Concreto ao Redor do Lago
-  const concreteMat = voxMaterial(0xdcd6cd, { aspereza: 0.75 }); // Concreto claro do calçadão
-  const concreteShapeGeo = new THREE.ShapeGeometry(shape);
-  concreteShapeGeo.rotateX(-Math.PI / 2);
+  const concreteMat = voxMaterial(0xdcd6cd, { aspereza: 0.75 }); // Concreto claro
+  const calcadaoShapeGeo = new THREE.ShapeGeometry(shape);
+  calcadaoShapeGeo.rotateX(-Math.PI / 2);
 
-  const concreteWalkwayMesh = new THREE.Mesh(concreteShapeGeo, concreteMat);
-  concreteWalkwayMesh.scale.set(1.22, 1.22, 1.22); // Calçadão amplo
-  concreteWalkwayMesh.position.set(lakeX, PISO + 0.02, lakeZ);
-  g.add(concreteWalkwayMesh);
+  // Calçadão Externo (Bege Concreto)
+  const calcadaoExt = new THREE.Mesh(calcadaoShapeGeo, concreteMat);
+  calcadaoExt.scale.set(1.25, 1.25, 1.25);
+  calcadaoExt.position.set(lakeX, PISO + 0.02, lakeZ);
+  g.add(calcadaoExt);
 
   // B. Pista Vermelha de Caminhada/Ciclovia Periférica (Canaã)
   const trackMat = voxMaterial(0xc24936, { aspereza: 0.8 }); // Pista vermelha
-  const trackMesh = new THREE.Mesh(concreteShapeGeo, trackMat);
-  trackMesh.scale.set(1.12, 1.12, 1.12);
-  trackMesh.position.set(lakeX, PISO + 0.03, lakeZ);
-  g.add(trackMesh);
+  const pistaVermelha = new THREE.Mesh(calcadaoShapeGeo, trackMat);
+  pistaVermelha.scale.set(1.15, 1.15, 1.15);
+  pistaVermelha.position.set(lakeX, PISO + 0.03, lakeZ);
+  g.add(pistaVermelha);
 
-  // C. Re-cobrir a relva interna para deixar o calçadão e a pista perfeitamente visíveis ao redor da água
-  const innerGrassMesh = new THREE.Mesh(concreteShapeGeo, grassMat);
-  innerGrassMesh.scale.set(1.005, 1.005, 1.005);
-  innerGrassMesh.position.set(lakeX, PISO + 0.04, lakeZ);
-  g.add(innerGrassMesh);
+  // C. Faixa Interna de Concreto Rente à Margem da Água
+  const calcadaoInt = new THREE.Mesh(calcadaoShapeGeo, concreteMat);
+  calcadaoInt.scale.set(1.05, 1.05, 1.05);
+  calcadaoInt.position.set(lakeX, PISO + 0.04, lakeZ);
+  g.add(calcadaoInt);
 
   // ------------------------------------------------------------------ 6. Prédio da Prefeitura (1 Quarteirão de Comprimento)
   const bldgX = cx + 55;

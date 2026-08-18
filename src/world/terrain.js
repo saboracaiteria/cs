@@ -171,15 +171,25 @@ export class Terrain {
 
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i);
-      const y = terrainHeight(x, z);
-      pos.setY(i, y - MESH_SINK);
+
+      // Recorta a malha do solo natural onde existem ruas da cidade ou o complexo da prefeitura
+      const naCidade = Math.max(Math.abs(x), Math.abs(z)) <= 242;
+      const naPrefeitura = (x >= 235 && x <= 390 && Math.abs(z) <= 135);
+
+      if (naCidade || naPrefeitura) {
+        pos.setY(i, -15); // Afunda a malha natural para não brigar com asfalto nem calçadões
+      } else {
+        const y = terrainHeight(x, z);
+        pos.setY(i, y - MESH_SINK);
+      }
 
       // tinta por vértice: areia na margem, rocha no alto, grama no resto
+      const yVal = pos.getY(i);
       const c = grassC.clone();
-      const shore = 1 - clamp(Math.abs(y - LAKE.surfaceY) / 2.6, 0, 1);
+      const shore = 1 - clamp(Math.abs(yVal - LAKE.surfaceY) / 2.6, 0, 1);
       if (shore > 0) c.lerp(sandC, shore * 0.9);
-      if (y > 6) c.lerp(rockC, clamp((y - 6) / 8, 0, 1) * 0.7);
-      if (y < LAKE.surfaceY - 1.5) c.lerp(new THREE.Color(0x3c4a3a), 0.7);   // fundo do lago
+      if (yVal > 6) c.lerp(rockC, clamp((yVal - 6) / 8, 0, 1) * 0.7);
+      if (yVal < LAKE.surfaceY - 1.5) c.lerp(new THREE.Color(0x3c4a3a), 0.7);   // fundo do lago
       colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
     }
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
