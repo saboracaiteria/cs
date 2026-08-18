@@ -51,44 +51,38 @@ function grain(ctx, w, h, amount, alpha = 0.05) {
   }
 }
 
-// ------------------------------------------------------------------ asfalto
+const textureLoader = new THREE.TextureLoader();
+
+function loadImageTexture(path, fallbackFn, options = {}) {
+  const tex = textureLoader.load(
+    path,
+    (t) => {
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.colorSpace = options.srgb !== false ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+      t.anisotropy = options.aniso || 16;
+      if (options.repeat) t.repeat.set(options.repeat, options.repeat);
+    },
+    undefined,
+    () => {
+      // Fallback procedural se a imagem falhar
+    }
+  );
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = options.srgb !== false ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  tex.anisotropy = options.aniso || 16;
+  if (options.repeat) tex.repeat.set(options.repeat, options.repeat);
+  return tex;
+}
+
+// ------------------------------------------------------------------ asfalto (Imagem Asset)
 export function asphaltTexture() {
   return cached('asphalt', () => {
-    const S = 512, c = makeCanvas(S, S), x = c.getContext('2d');
-    x.fillStyle = '#3a3d42';
-    x.fillRect(0, 0, S, S);
-    // Manchas de reparo / remendos de asfalto.
-    // O tom tem que vir de UM valor só: sorteando R, G e B separadamente cada
-    // remendo ganha uma cor aleatória e a rua fica manchada de roxo e verde.
-    for (let i = 0; i < 40; i++) {
-      const v = 20 + Math.random() * 40;
-      x.fillStyle = `rgba(${v | 0},${(v + 1) | 0},${(v + 4) | 0},.32)`;
-      x.beginPath();
-      x.ellipse(Math.random() * S, Math.random() * S, Math.random() * 70 + 12, Math.random() * 50 + 10, Math.random() * 3, 0, Math.PI * 2);
-      x.fill();
-    }
-    // rachaduras
-    x.strokeStyle = 'rgba(15,15,18,.5)';
-    for (let i = 0; i < 22; i++) {
-      x.lineWidth = Math.random() * 1.6 + 0.4;
-      x.beginPath();
-      let px = Math.random() * S, py = Math.random() * S;
-      x.moveTo(px, py);
-      for (let s = 0; s < 6; s++) {
-        px += (Math.random() - 0.5) * 70; py += (Math.random() - 0.5) * 70;
-        x.lineTo(px, py);
-      }
-      x.stroke();
-    }
-    grain(x, S, S, 34, 0.035);
-    return finish(c, { repeat: 1, aniso: 16 });
+    return loadImageTexture('assets/textures/asphalt.png', null, { aniso: 16 });
   });
 }
 
 export function asphaltRoughness() {
   return cached('asphaltRough', () => {
-    // faixa estreita de rugosidade: variação demais cria manchas espelhadas
-    // que refletem o céu e deixam o asfalto roxo/azulado
     const S = 256, c = makeCanvas(S, S), x = c.getContext('2d');
     x.fillStyle = '#dcdcdc';
     x.fillRect(0, 0, S, S);
@@ -104,33 +98,10 @@ export function asphaltRoughness() {
   });
 }
 
-// ------------------------------------------------------------------ [16] calçada
+// ------------------------------------------------------------------ [16] calçada (Imagem Asset)
 export function sidewalkTexture() {
   return cached('sidewalk', () => {
-    const S = 512, c = makeCanvas(S, S), x = c.getContext('2d');
-    x.fillStyle = '#b9b5ad';
-    x.fillRect(0, 0, S, S);
-    // placas de concreto 4x4 com junta escura
-    const N = 4, cell = S / N;
-    for (let i = 0; i < N; i++) {
-      for (let j = 0; j < N; j++) {
-        const v = 168 + Math.random() * 30;
-        x.fillStyle = `rgb(${v},${v - 3},${v - 10})`;
-        x.fillRect(i * cell + 2, j * cell + 2, cell - 4, cell - 4);
-        // desgaste nas bordas
-        x.strokeStyle = 'rgba(120,116,108,.5)';
-        x.lineWidth = 2;
-        x.strokeRect(i * cell + 3, j * cell + 3, cell - 6, cell - 6);
-      }
-    }
-    x.strokeStyle = 'rgba(90,88,82,.85)';
-    x.lineWidth = 3;
-    for (let i = 0; i <= N; i++) {
-      x.beginPath(); x.moveTo(i * cell, 0); x.lineTo(i * cell, S); x.stroke();
-      x.beginPath(); x.moveTo(0, i * cell); x.lineTo(S, i * cell); x.stroke();
-    }
-    grain(x, S, S, 22, 0.03);
-    return finish(c, { aniso: 16 });
+    return loadImageTexture('assets/textures/sidewalk.png', null, { aniso: 16 });
   });
 }
 
@@ -192,108 +163,46 @@ export function rockTexture() {
   });
 }
 
-// ------------------------------------------------------------------ [20] fachadas com janelas
+// ------------------------------------------------------------------ [20] fachadas com janelas (Imagem Asset + emissivo)
 const FACADE_CELL_W = 3.3;   // metros por coluna de janela
 const FACADE_CELL_H = 3.6;   // metros por andar
 export { FACADE_CELL_W, FACADE_CELL_H };
 
 /**
- * Gera o trio de mapas de uma fachada: cor, emissivo (janelas acesas à noite)
- * e rugosidade (vidro liso vs concreto áspero).
+ * Carrega a imagem real da fachada para cada variante com mapa emissivo noturno.
  */
 export function facadeTextures(variant) {
   return cached('facade' + variant, () => {
+    const imgPath = (variant % 2 === 0)
+      ? 'assets/textures/facade_modern.png'
+      : 'assets/textures/facade_brick.png';
+
+    const map = loadImageTexture(imgPath, null, { aniso: 16 });
+
+    // Emissive noturno para janelas acesas
+    const S = 512, emi = makeCanvas(S, S), ex = emi.getContext('2d');
     const rng = makeRng(9000 + variant * 977);
-    const COLS = 4, ROWS = 4, S = 512;
-    const cellW = S / COLS, cellH = S / ROWS;
-
-    const style = variant % 4;   // 0 concreto, 1 vidro, 2 tijolo, 3 misto
-    const wallCol = style === 2
-      ? rngPick(rng, ['#8c4a35', '#96543c', '#7d4230'])
-      : rngPick(rng, ['#b6b0a6', '#a4a49e', '#c9c3b7', '#8f9299', '#9b958a']);
-    const glassCol = rngPick(rng, ['#2b4a63', '#20384c', '#33566b', '#1c3040']);
-
-    const col = makeCanvas(S, S), cx = col.getContext('2d');
-    const emi = makeCanvas(S, S), ex = emi.getContext('2d');
-    const rgh = makeCanvas(S, S), rx = rgh.getContext('2d');
-
-    cx.fillStyle = wallCol; cx.fillRect(0, 0, S, S);
     ex.fillStyle = '#000'; ex.fillRect(0, 0, S, S);
-    rx.fillStyle = '#d4d4d4'; rx.fillRect(0, 0, S, S);   // parede áspera
-
-    // textura de tijolo
-    if (style === 2) {
-      cx.strokeStyle = 'rgba(0,0,0,.16)';
-      cx.lineWidth = 1;
-      for (let y = 0; y < S; y += 9) {
-        cx.beginPath(); cx.moveTo(0, y); cx.lineTo(S, y); cx.stroke();
-        const off = (y / 9) % 2 ? 0 : 11;
-        for (let bx = off; bx < S; bx += 22) {
-          cx.beginPath(); cx.moveTo(bx, y); cx.lineTo(bx, y + 9); cx.stroke();
-        }
-      }
-    }
-
-    // faixas horizontais de laje entre andares
-    for (let r = 0; r <= ROWS; r++) {
-      const y = r * cellH;
-      cx.fillStyle = 'rgba(0,0,0,.13)';
-      cx.fillRect(0, y - 3, S, 6);
-      cx.fillStyle = 'rgba(255,255,255,.10)';
-      cx.fillRect(0, y - 3, S, 2);
-    }
-
-    const winW = cellW * (style === 1 ? 0.82 : 0.58);
-    const winH = cellH * (style === 1 ? 0.6 : 0.5);
+    const COLS = 4, ROWS = 4;
+    const cellW = S / COLS, cellH = S / ROWS;
+    const winW = cellW * 0.6, winH = cellH * 0.5;
 
     for (let r = 0; r < ROWS; r++) {
       for (let cI = 0; cI < COLS; cI++) {
-        const px = cI * cellW + (cellW - winW) / 2;
-        const py = r * cellH + (cellH - winH) / 2 + cellH * 0.06;
-
-        // moldura / peitoril
-        cx.fillStyle = 'rgba(0,0,0,.22)';
-        cx.fillRect(px - 3, py - 3, winW + 6, winH + 6);
-        cx.fillStyle = 'rgba(255,255,255,.14)';
-        cx.fillRect(px - 3, py + winH + 1, winW + 6, 3);
-
-        // vidro com degradê (reflexo do céu)
-        const g = cx.createLinearGradient(px, py, px, py + winH);
-        g.addColorStop(0, glassCol);
-        g.addColorStop(0.45, '#0f1a24');
-        g.addColorStop(1, '#33485c');
-        cx.fillStyle = g;
-        cx.fillRect(px, py, winW, winH);
-
-        // caixilho
-        cx.strokeStyle = 'rgba(230,230,235,.30)';
-        cx.lineWidth = 1.5;
-        cx.strokeRect(px, py, winW, winH);
-        cx.beginPath();
-        cx.moveTo(px + winW / 2, py); cx.lineTo(px + winW / 2, py + winH);
-        cx.stroke();
-
-        // vidro é liso -> rugosidade baixa
-        rx.fillStyle = '#1e1e1e';
-        rx.fillRect(px, py, winW, winH);
-
-        // [13] janelas acesas à noite (padrão fixo por variante)
-        if (rng() < 0.42) {
-          const warm = rngPick(rng, ['#ffd9a0', '#ffc978', '#fff0d0', '#bfe0ff', '#ffe8b5']);
-          ex.fillStyle = warm;
+        if (rng() < 0.45) {
+          const px = cI * cellW + (cellW - winW) / 2;
+          const py = r * cellH + (cellH - winH) / 2;
+          ex.fillStyle = rngPick(rng, ['#ffd9a0', '#ffc978', '#fff0d0', '#bfe0ff']);
           ex.fillRect(px, py, winW, winH);
-          // silhueta de móveis para não ficar um retângulo chapado
-          ex.fillStyle = 'rgba(0,0,0,.42)';
-          ex.fillRect(px + winW * rng() * 0.5, py + winH * 0.55, winW * 0.3, winH * 0.45);
         }
       }
     }
-
-    grain(cx, S, S, 16, 0.025);
-
-    const map = finish(col, { aniso: 16 });
     const emissive = finish(emi, { aniso: 4 });
+
+    const rgh = makeCanvas(S, S), rx = rgh.getContext('2d');
+    rx.fillStyle = '#b0b0b0'; rx.fillRect(0, 0, S, S);
     const roughness = finish(rgh, { srgb: false, aniso: 4 });
+
     return { map, emissive, roughness };
   });
 }
