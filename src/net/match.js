@@ -1025,8 +1025,8 @@ export class Match {
       if (pilotoLocal && hl.id === this._meuHeliId) {
         // predição local (mesma física do servidor): o aparelho responde NA HORA
         this._predizerHeli(hl, dt);
-        // reconciliação: só adota o snap se a divergência for real (empurrão/teleporte)
-        if (hl.alvo && Math.hypot(hl.x - hl.alvo.x, hl.z - hl.alvo.z) > 10) {
+        // reconciliação: só adota o snap se a divergência for extrema (ex: teleporte > 28m)
+        if (hl.alvo && Math.hypot(hl.x - hl.alvo.x, hl.z - hl.alvo.z) > 28) {
           hl.x = hl.alvo.x; hl.y = hl.alvo.y; hl.z = hl.alvo.z;
           hl.velx = 0; hl.vely = 0; hl.velz = 0;
         }

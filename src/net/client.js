@@ -60,14 +60,13 @@ export class ClientNet {
     this.ws.onclose = () => {
       this.estado = 'off';
       this._status();
-      // reconecta sozinho se nao foi saida intencional (preview/celular pausam o JS)
+      // reconecta sozinho imediatamente se nao foi saida intencional
       if (!this._sairIntencional && this.url) {
         clearTimeout(this._reconT);
         this._recon++;
         this._reconT = setTimeout(() => {
           this.conectar();
-          if (this._onReplay) this._onReplay();
-        }, 2500);
+        }, 800);
       }
     };
     this.ws.onerror = () => {
