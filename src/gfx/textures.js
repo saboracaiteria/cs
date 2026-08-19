@@ -18,7 +18,14 @@ function makeCanvas(w, h) {
   return c;
 }
 
-
+function finish(canvas, { srgb = true, repeat = 1, aniso = 4 } = {}) {
+  const t = new THREE.CanvasTexture(canvas);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  t.anisotropy = aniso;
+  if (repeat !== 1) t.repeat.set(repeat, repeat);
+  return t;
+}
 
 /** Ruído granulado sobreposto — dá "sujeira" e quebra o look de plástico. */
 function grain(ctx, w, h, amount, alpha = 0.05) {
@@ -52,7 +59,7 @@ function loadImageTexture(path, fallbackFn, options = {}) {
     (t) => {
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
       t.colorSpace = options.srgb !== false ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-      t.anisotropy = options.aniso || 16;
+      t.anisotropy = options.aniso || 4;
       if (options.repeat) t.repeat.set(options.repeat, options.repeat);
     },
     undefined,
@@ -62,7 +69,7 @@ function loadImageTexture(path, fallbackFn, options = {}) {
   );
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.colorSpace = options.srgb !== false ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-  tex.anisotropy = options.aniso || 16;
+  tex.anisotropy = options.aniso || 4;
   if (options.repeat) tex.repeat.set(options.repeat, options.repeat);
   return tex;
 }
@@ -70,7 +77,7 @@ function loadImageTexture(path, fallbackFn, options = {}) {
 // ------------------------------------------------------------------ asfalto (Imagem Asset)
 export function asphaltTexture() {
   return cached('asphalt', () => {
-    return loadImageTexture('assets/textures/asphalt.png', null, { aniso: 16 });
+    return loadImageTexture('assets/textures/asphalt.png', null, { aniso: 4 });
   });
 }
 
@@ -94,7 +101,7 @@ export function asphaltRoughness() {
 // ------------------------------------------------------------------ [16] calçada (Imagem Asset)
 export function sidewalkTexture() {
   return cached('sidewalk', () => {
-    return loadImageTexture('assets/textures/sidewalk.png', null, { aniso: 16 });
+    return loadImageTexture('assets/textures/sidewalk.png', null, { aniso: 4 });
   });
 }
 
@@ -121,7 +128,7 @@ export function grassTexture() {
       x.fill();
     }
     grain(x, S, S, 26, 0);
-    return finish(c, { aniso: 16 });
+    return finish(c, { aniso: 4 });
   });
 }
 
@@ -152,7 +159,7 @@ export function rockTexture() {
       x.fill();
     }
     grain(x, S, S, 30, 0.04);
-    return finish(c, { aniso: 8 });
+    return finish(c, { aniso: 4 });
   });
 }
 
@@ -170,7 +177,7 @@ export function facadeTextures(variant) {
       ? 'assets/textures/facade_modern.png'
       : 'assets/textures/facade_brick.png';
 
-    const map = loadImageTexture(imgPath, null, { aniso: 16 });
+    const map = loadImageTexture(imgPath, null, { aniso: 4 });
 
     // Emissive noturno para janelas acesas
     const S = 512, emi = makeCanvas(S, S), ex = emi.getContext('2d');
@@ -219,7 +226,7 @@ export function numberTexture(text, bg = '#f2f2f2', fg = '#101418') {
   x.fillText(String(text), W / 2, H / 2 + 4);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 8;
+  t.anisotropy = 4;
   numberCache.set(key, t);
   return t;
 }
@@ -250,7 +257,7 @@ export function helipadTexture() {
       x.fillRect(-6, -18, 12, 36);
       x.restore();
     }
-    return finish(c, { aniso: 8 });
+    return finish(c, { aniso: 4 });
   });
 }
 
@@ -258,7 +265,6 @@ export function helipadTexture() {
 export function waterNormalTexture() {
   return cached('waterN', () => {
     const S = 512, c = makeCanvas(S, S), x = c.getContext('2d');
-    // normal map "plano" com ondulações suaves desenhadas como gradientes
     x.fillStyle = '#8080ff';
     x.fillRect(0, 0, S, S);
     for (let i = 0; i < 90; i++) {
@@ -271,7 +277,7 @@ export function waterNormalTexture() {
       x.fillStyle = g;
       x.beginPath(); x.arc(px, py, r, 0, Math.PI * 2); x.fill();
     }
-    return finish(c, { srgb: false, aniso: 8 });
+    return finish(c, { srgb: false, aniso: 4 });
   });
 }
 
@@ -373,17 +379,6 @@ export function blobShadowTexture() {
 //  [57][58][59] texturas dos marcos brasileiros
 // ==================================================================
 
-/**
- * Converte um mapa de ALTURA (canvas em tons de cinza) em normal map.
- *
- * Vale mais que desenhar o normal map à mão: a mesma função que pinta a
- * pedra, a telha ou o rebite serve de relevo, então desenho e relevo nunca
- * saem de sincronia.
- *
- * O canal verde sai com o sinal invertido em relação ao eixo Y do canvas
- * porque `CanvasTexture` sobe a imagem com `flipY`: o +Y do canvas vira o -V
- * da textura, e sem essa troca todo o relevo aparece afundado.
- */
 function normalFromHeight(src, forca = 2.4) {
   const w = src.width, h = src.height;
   const sc = src.getContext('2d').getImageData(0, 0, w, h).data;
@@ -409,18 +404,16 @@ function normalFromHeight(src, forca = 2.4) {
   return out;
 }
 
-/** Desenha as pedras do calçamento e devolve os canvas de cor e de altura. */
 function _cobbleCanvases() {
   const S = 512;
   const cor = makeCanvas(S, S), cx = cor.getContext('2d');
   const alt = makeCanvas(S, S), ax = alt.getContext('2d');
-  cx.fillStyle = '#4a453e'; cx.fillRect(0, 0, S, S);      // argamassa entre as pedras
+  cx.fillStyle = '#4a453e'; cx.fillRect(0, 0, S, S);
   ax.fillStyle = '#202020'; ax.fillRect(0, 0, S, S);
 
   const rng = makeRng(4242);
   const N = 13, cell = S / N;
   for (let j = 0; j < N; j++) {
-    // fiadas alternadas, como calçamento de paralelepípedo assentado à mão
     const desloc = (j % 2) * cell * 0.5;
     for (let i = -1; i <= N; i++) {
       const px = i * cell + desloc + rngRange(rng, -2.5, 2.5);
@@ -436,14 +429,12 @@ function _cobbleCanvases() {
         ctx2.roundRect(px, py, rw, rh, raio);
         ctx2.fill();
       }
-      // brilho de pedra polida pelo uso, no alto de cada bloco
       cx.fillStyle = `rgba(255,255,255,${rngRange(rng, 0.02, 0.09).toFixed(3)})`;
       cx.beginPath();
       cx.roundRect(px + rw * 0.14, py + rh * 0.12, rw * 0.55, rh * 0.4, 3);
       cx.fill();
     }
   }
-  // borra o mapa de altura para as juntas virarem vale suave, não degrau
   ax.filter = 'blur(2px)';
   ax.drawImage(alt, 0, 0);
   ax.filter = 'none';
@@ -451,26 +442,19 @@ function _cobbleCanvases() {
   return { cor, alt };
 }
 
-/** [59] Calçamento de pedra do Pelourinho. */
 export function cobbleTexture() {
-  return cached('cobble', () => finish(_cobbleCanvases().cor, { aniso: 16 }));
+  return cached('cobble', () => finish(_cobbleCanvases().cor, { aniso: 4 }));
 }
 export function cobbleNormal() {
   return cached('cobbleN', () => {
     const t = new THREE.CanvasTexture(normalFromHeight(_cobbleCanvases().alt, 3.2));
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.colorSpace = THREE.NoColorSpace;
-    t.anisotropy = 8;
+    t.anisotropy = 4;
     return t;
   });
 }
 
-/**
- * [59] Reboco colonial pintado, uma textura por cor.
- *
- * O que faz a casa parecer velha não é a cor: é a sujeira que escorre da
- * cimalha, a barra de umidade subindo do chão e a variação de mão de pintura.
- */
 export function stuccoTexture(hex) {
   return cached('stucco:' + hex, () => {
     const S = 256, c = makeCanvas(S, S), x = c.getContext('2d');
@@ -480,7 +464,6 @@ export function stuccoTexture(hex) {
     x.fillRect(0, 0, S, S);
 
     const rng = makeRng(hex & 0xffff);
-    // variação de mão de pintura
     for (let i = 0; i < 70; i++) {
       const t = rngRange(rng, -0.06, 0.06);
       const col = base.clone().offsetHSL(0, 0, t);
@@ -492,14 +475,6 @@ export function stuccoTexture(hex) {
     }
     x.globalAlpha = 1;
 
-    /*
-     * Umidade e escorridos existem, mas de leve.
-     *
-     * Numa primeira versão eles estavam fortes (45% e 32% de opacidade) e a
-     * fachada virava um gradeado de listras escuras — de longe as casas
-     * pareciam pintadas de código de barras, não rebocadas. O desgaste tem
-     * que ficar no limite de "só se nota de perto".
-     */
     const umid = x.createLinearGradient(0, S, 0, S * 0.72);
     umid.addColorStop(0, 'rgba(72,68,58,.16)');
     umid.addColorStop(1, 'rgba(72,68,58,0)');
@@ -516,7 +491,6 @@ export function stuccoTexture(hex) {
       x.fillStyle = g;
       x.fillRect(px, 0, larg, comp);
     }
-    // reboco descascado, mostrando a caiação por baixo
     for (let i = 0; i < 10; i++) {
       x.fillStyle = `rgba(232,226,212,${rngRange(rng, 0.08, 0.18).toFixed(2)})`;
       x.beginPath();
@@ -524,11 +498,10 @@ export function stuccoTexture(hex) {
       x.fill();
     }
     grain(x, S, S, 12, 0.015);
-    return finish(c, { aniso: 8 });
+    return finish(c, { aniso: 4 });
   });
 }
 
-/** Telha-canal: fiadas de meias-canas alternando capa e bica. */
 function _roofCanvases() {
   const S = 512;
   const cor = makeCanvas(S, S), cx = cor.getContext('2d');
@@ -541,7 +514,6 @@ function _roofCanvases() {
   for (let i = 0; i < COLS; i++) {
     const px = i * w;
     const v = rngRange(rng, 0.82, 1.12);
-    // a canaleta: escura no vale, clara na crista
     const g = cx.createLinearGradient(px, 0, px + w, 0);
     g.addColorStop(0.0, `rgba(70,32,22,1)`);
     g.addColorStop(0.5, `rgb(${(168 * v) | 0},${(80 * v) | 0},${(54 * v) | 0})`);
@@ -556,7 +528,6 @@ function _roofCanvases() {
     ax.fillStyle = gh;
     ax.fillRect(px, 0, w, S);
   }
-  // emendas entre fiadas
   const FIADAS = 7, fh = S / FIADAS;
   for (let j = 1; j <= FIADAS; j++) {
     cx.fillStyle = 'rgba(38,18,12,.55)';
@@ -564,7 +535,6 @@ function _roofCanvases() {
     ax.fillStyle = 'rgba(0,0,0,.55)';
     ax.fillRect(0, j * fh - 3, S, 4);
   }
-  // limo e telhas trocadas
   for (let i = 0; i < 60; i++) {
     cx.fillStyle = rng() > 0.55
       ? `rgba(86,96,58,${rngRange(rng, 0.1, 0.34).toFixed(2)})`
@@ -577,21 +547,19 @@ function _roofCanvases() {
   return { cor, alt };
 }
 
-/** [59] Telha colonial. */
 export function roofTileTexture() {
-  return cached('roofTile', () => finish(_roofCanvases().cor, { aniso: 16 }));
+  return cached('roofTile', () => finish(_roofCanvases().cor, { aniso: 4 }));
 }
 export function roofTileNormal() {
   return cached('roofTileN', () => {
     const t = new THREE.CanvasTexture(normalFromHeight(_roofCanvases().alt, 2.0));
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.colorSpace = THREE.NoColorSpace;
-    t.anisotropy = 8;
+    t.anisotropy = 4;
     return t;
   });
 }
 
-/** [59] Azulejo português azul e branco, para as fachadas revestidas. */
 export function azulejoTexture() {
   return cached('azulejo', () => {
     const S = 512, c = makeCanvas(S, S), x = c.getContext('2d');
@@ -601,7 +569,6 @@ export function azulejoTexture() {
         const px = i * cell, py = j * cell;
         x.fillStyle = '#eef2f4';
         x.fillRect(px, py, cell, cell);
-        // junta
         x.strokeStyle = 'rgba(150,160,168,.7)';
         x.lineWidth = 2;
         x.strokeRect(px + 1, py + 1, cell - 2, cell - 2);
@@ -611,7 +578,6 @@ export function azulejoTexture() {
         x.strokeStyle = '#2a5f9e';
         x.fillStyle = '#336fb4';
         x.lineWidth = 2.4;
-        // flor-de-lis estilizada: quatro pétalas e um miolo
         for (let k = 0; k < 4; k++) {
           x.rotate(Math.PI / 2);
           x.beginPath();
@@ -624,7 +590,6 @@ export function azulejoTexture() {
         x.beginPath();
         x.arc(0, 0, cell * 0.08, 0, Math.PI * 2);
         x.fill();
-        // cantos
         x.fillStyle = '#2a5f9e';
         for (const s of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
           x.beginPath();
@@ -634,13 +599,11 @@ export function azulejoTexture() {
         x.restore();
       }
     }
-    // craquelê e desgaste
     grain(x, S, S, 12, 0.04);
-    return finish(c, { aniso: 16 });
+    return finish(c, { aniso: 4 });
   });
 }
 
-/** Chapa de aço rebitada da ponte, com corrosão. */
 function _steelCanvases() {
   const S = 512;
   const cor = makeCanvas(S, S), cx = cor.getContext('2d');
@@ -649,7 +612,6 @@ function _steelCanvases() {
   ax.fillStyle = '#808080'; ax.fillRect(0, 0, S, S);
 
   const rng = makeRng(9091);
-  // chapas soldadas
   const PL = 4, pw = S / PL;
   for (let i = 0; i < PL; i++) {
     for (let j = 0; j < PL; j++) {
@@ -665,7 +627,6 @@ function _steelCanvases() {
     cx.beginPath(); cx.moveTo(0, i * pw); cx.lineTo(S, i * pw); cx.stroke();
   }
 
-  // rebites nas bordas das chapas
   const rebite = (px, py) => {
     const g = cx.createRadialGradient(px - 1.5, py - 1.5, 0.5, px, py, 5);
     g.addColorStop(0, '#cfd6dc');
@@ -682,7 +643,6 @@ function _steelCanvases() {
     }
   }
 
-  // ferrugem escorrendo dos rebites
   for (let i = 0; i < 40; i++) {
     const px = rng() * S, py = rng() * S;
     const comp = rngRange(rng, 12, 70);
@@ -699,28 +659,25 @@ function _steelCanvases() {
   return { cor, alt };
 }
 
-/** [57] Aço rebitado da Hercílio Luz. */
 export function steelTexture() {
-  return cached('steel', () => finish(_steelCanvases().cor, { aniso: 16 }));
+  return cached('steel', () => finish(_steelCanvases().cor, { aniso: 4 }));
 }
 export function steelNormal() {
   return cached('steelN', () => {
     const t = new THREE.CanvasTexture(normalFromHeight(_steelCanvases().alt, 2.6));
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.colorSpace = THREE.NoColorSpace;
-    t.anisotropy = 8;
+    t.anisotropy = 4;
     return t;
   });
 }
 
-/** [58] Concreto aparente moldado, com marca de fôrma. */
 export function concreteTexture() {
   return cached('concrete', () => {
     const S = 512, c = makeCanvas(S, S), x = c.getContext('2d');
     x.fillStyle = '#dcd8d0';
     x.fillRect(0, 0, S, S);
     const rng = makeRng(3131);
-    // painéis de fôrma
     const N = 3, w = S / N;
     for (let i = 0; i < N; i++) {
       for (let j = 0; j < N; j++) {
@@ -732,10 +689,9 @@ export function concreteTexture() {
     x.strokeStyle = 'rgba(168,164,156,.75)';
     x.lineWidth = 2;
     for (let i = 0; i <= N; i++) {
-      x.beginPath(); x.moveTo(i * w, 0); x.lineTo(i * w, S); x.stroke();
-      x.beginPath(); x.moveTo(0, i * w); x.lineTo(S, i * w); x.stroke();
+      x.beginPath(); cx.moveTo(i * w, 0); cx.lineTo(i * w, S); cx.stroke();
+      x.beginPath(); cx.moveTo(0, i * w); cx.lineTo(S, i * w); cx.stroke();
     }
-    // furos dos tirantes da fôrma
     for (let i = 0; i < N; i++) {
       for (let j = 0; j < N; j++) {
         for (const [fx, fy] of [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) {
@@ -748,7 +704,6 @@ export function concreteTexture() {
         }
       }
     }
-    // manchas de chuva
     for (let i = 0; i < 18; i++) {
       const px = rng() * S, comp = rngRange(rng, 30, S * 0.8);
       const g = x.createLinearGradient(0, 0, 0, comp);
@@ -758,24 +713,16 @@ export function concreteTexture() {
       x.fillRect(px, 0, rngRange(rng, 4, 16), comp);
     }
     grain(x, S, S, 14, 0.03);
-    return finish(c, { aniso: 16 });
+    return finish(c, { aniso: 4 });
   });
 }
 
-/**
- * [58] Pele de vidro com caixilho.
- *
- * A grade dos montantes vai na TEXTURA e não em geometria: uma fachada de
- * cortina com barra modelada custaria milhares de caixas e, a essa distância,
- * daria exatamente a mesma imagem.
- */
 export function curtainWallTexture(cols = 16, rows = 8, vidro = '#1d3d50', caixilho = '#c9ccd1') {
   return cached(`curtain:${cols}:${rows}:${vidro}:${caixilho}`, () => {
     const S = 512, c = makeCanvas(S, S), x = c.getContext('2d');
     x.fillStyle = vidro;
     x.fillRect(0, 0, S, S);
     const cw = S / cols, ch = S / rows;
-    // reflexo do céu descendo em cada painel
     for (let i = 0; i < cols; i++) {
       for (let j = 0; j < rows; j++) {
         const g = x.createLinearGradient(i * cw, j * ch, i * cw + cw, j * ch + ch);
@@ -795,16 +742,7 @@ export function curtainWallTexture(cols = 16, rows = 8, vidro = '#1d3d50', caixi
     for (let j = 0; j <= rows; j++) {
       x.beginPath(); x.moveTo(0, j * ch); x.lineTo(S, j * ch); x.stroke();
     }
-    return finish(c, { aniso: 16 });
+    grain(x, S, S, 8, 0.01);
+    return finish(c, { aniso: 4 });
   });
-}
-
-export function disposeTextures() {
-  cache.forEach((v) => {
-    if (v && v.dispose) v.dispose();
-    else if (v && v.map) { v.map.dispose(); v.emissive.dispose(); v.roughness.dispose(); }
-  });
-  cache.clear();
-  numberCache.forEach((t) => t.dispose());
-  numberCache.clear();
 }
