@@ -1133,9 +1133,5 @@ body.hud-edit #tc-stick-zone.custom-selected{
   border-color:#fbbf24 !important; box-shadow:0 0 25px rgba(251,191,36,.7) !important;
 }
 
-/* seleção (padrão DINO4): botão tocado ganha destaque âmbar p/ a escala */
-body.hud-edit .tc-btn.custom-selected, body.hud-edit #tc-stick-zone.custom-selected{
-  border-color:#fbbf24 !important; border-style:solid !important;
-  box-shadow:0 0 25px rgba(251,191,36,.7) !important; outline-color:#fbbf24 !important;
-}
+
 

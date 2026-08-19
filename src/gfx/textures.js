@@ -18,14 +18,7 @@ function makeCanvas(w, h) {
   return c;
 }
 
-function finish(canvas, { srgb = true, repeat = 1, aniso = 8 } = {}) {
-  const t = new THREE.CanvasTexture(canvas);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-  t.anisotropy = aniso;
-  if (repeat !== 1) t.repeat.set(repeat, repeat);
-  return t;
-}
+
 
 /** Ruído granulado sobreposto — dá "sujeira" e quebra o look de plástico. */
 function grain(ctx, w, h, amount, alpha = 0.05) {
