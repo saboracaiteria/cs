@@ -19,7 +19,7 @@ export function buildPrefeitura(scene, col, city) {
   const lakeX = cx;
   const lakeZ = cz;
 
-  // Formato trapezoidal limpo e original do complexo
+  // Formato trapezoidal 100% fiel e limpo do lago e pistas
   function makeTrapezoidShape(wTop, wBot, length, isLake = false) {
     const s = new THREE.Shape();
     const halfL = length / 2;
@@ -32,13 +32,14 @@ export function buildPrefeitura(scene, col, city) {
 
     s.quadraticCurveTo(-wb - 4, 0, -wt + 8, halfL);
     s.quadraticCurveTo(0, halfL + 6, wt - 8, halfL);
-    s.quadraticCurveTo(wt + 4, 0, wb - 6, -halfL);
 
     if (isLake) {
-      // Recorte de encaixe exatamente na quina da marcação roxa (Leste/Sul, +X, -Z local)
-      s.lineTo(wb - 18, -halfL);
-      s.quadraticCurveTo(wb - 25, -halfL + 30, wb - 6, -halfL + 50);
+      // Recorte suave de encaixe para a pracinha amarela na margem oeste/sul (lado esquerdo inferior, perto da curva roxa/amarela)
+      s.quadraticCurveTo(wt + 4, 0, wb - 6, -halfL + 60);
+      s.quadraticCurveTo(wb - 20, -halfL + 30, wb - 14, -halfL);
+      s.quadraticCurveTo(0, -halfL - 6, -wb + 6, -halfL);
     } else {
+      s.quadraticCurveTo(wt + 4, 0, wb - 6, -halfL);
       s.quadraticCurveTo(0, -halfL - 6, -wb + 6, -halfL);
     }
     return s;
@@ -113,36 +114,37 @@ export function buildPrefeitura(scene, col, city) {
   calcadaoInt.receiveShadow = true;
   g.add(calcadaoInt);
 
-  // --- PRACINHA CIRCULAR RADIAL NA POSIÇÃO EXATA DA MARCAÇÃO ROXA ---
-  // Posicionada exatamente na curva roxa da imagem, encaixada no recorte do lago e sem encostar nas faixas!
-  const pracaRoxaX = lakeX + 16; 
-  const pracaRoxaZ = lakeZ + 38;
+  // --- PRACINHA / PARQUINHO NA POSIÇÃO EXATA DA MARCAÇÃO AMARELA ---
+  // Posicionada exatamente sobre a quina interna da curva da margem sul do lago (círculo amarelo do print)
+  // Sem tocar no lago e sem encostar nas faixas concêntricas (pista vermelha e calçadões)!
+  const pracaAmarelaX = lakeX - 12; 
+  const pracaAmarelaZ = lakeZ + 48;
 
-  // Centro circular da praça
-  const centroPracaGeo = new THREE.CylinderGeometry(5.5, 5.5, 0.04, 32);
+  // Centro circular da praça/parquinho
+  const centroPracaGeo = new THREE.CylinderGeometry(5.0, 5.0, 0.04, 32);
   const centroPracaMesh = new THREE.Mesh(centroPracaGeo, concreteMat);
-  centroPracaMesh.position.set(pracaRoxaX, PISO + 0.04, pracaRoxaZ);
+  centroPracaMesh.position.set(pracaAmarelaX, PISO + 0.04, pracaAmarelaZ);
   centroPracaMesh.receiveShadow = true;
   g.add(centroPracaMesh);
 
   // Anel externo circular da praça
-  const anelPracaGeo = new THREE.RingGeometry(10.5, 12.5, 32);
+  const anelPracaGeo = new THREE.RingGeometry(9.0, 11.0, 32);
   anelPracaGeo.rotateX(-Math.PI / 2);
-  anelPracaGeo.translate(pracaRoxaX, PISO + 0.04, pracaRoxaZ);
+  anelPracaGeo.translate(pracaAmarelaX, PISO + 0.04, pracaAmarelaZ);
   const anelPracaMesh = new THREE.Mesh(anelPracaGeo, concreteMat);
   anelPracaMesh.receiveShadow = true;
   g.add(anelPracaMesh);
 
-  // Caminhos radiais em raios (8 radiais)
+  // Caminhos radiais da pracinha (8 caminhos radiais)
   const numRaios = 8;
   const raiosGeos = [];
   for (let i = 0; i < numRaios; i++) {
     const angle = (i * Math.PI * 2) / numRaios;
-    const raioGeo = new THREE.PlaneGeometry(1.5, 11);
+    const raioGeo = new THREE.PlaneGeometry(1.4, 9.5);
     raioGeo.rotateX(-Math.PI / 2);
     raioGeo.rotateY(-angle);
-    const rx = pracaRoxaX + Math.sin(angle) * 6;
-    const rz = pracaRoxaZ + Math.cos(angle) * 6;
+    const rx = pracaAmarelaX + Math.sin(angle) * 5;
+    const rz = pracaAmarelaZ + Math.cos(angle) * 5;
     raioGeo.translate(rx, PISO + 0.038, rz);
     raiosGeos.push(raioGeo);
   }
@@ -150,7 +152,7 @@ export function buildPrefeitura(scene, col, city) {
   raiosMesh.receiveShadow = true;
   g.add(raiosMesh);
 
-  // --- LAGO (com recorte de encaixe exato para a pracinha roxa) ---
+  // --- LAGO (com recorte de encaixe exato para a pracinha na marcação amarela) ---
   const lakeShape = makeTrapezoidShape(60, 42, 154, true);
 
   const DEPTH = 1.8;
