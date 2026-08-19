@@ -52,11 +52,13 @@ export function buildPrefeitura(scene, col, city) {
     return geo;
   }
 
-  // --- PISTA DE ASFALTO / RUAS EXTERNAS AO REDOR DO COMPLEXO ---
-  // Faixa de rua asfaltada que circula todo o parque
-  const ruaGeo = makeRingGeometry(116, 90, 236, 96, 70, 216);
-  ruaGeo.translate(lakeX, PISO + 0.005, lakeZ);
-  const roadMat = new THREE.MeshStandardMaterial({
+  // --- PISTA DE ASFALTO COM FAIXAS (IGUAL ÀS RUAS DA CIDADE) ---
+  const roadW = 12.0; // Largura da rua de asfalto estilo cidade
+  const ruaGeo = makeRingGeometry(116, 90, 236, 116 - roadW*2, 90 - roadW*2, 236 - roadW*2);
+  ruaGeo.translate(lakeX, 0, lakeZ);
+
+  // Usa o mesmo material de asfalto texturizado da cidade ou cria um equivalente com asphaltTexture
+  const roadMat = city && city.roadMaterial ? city.roadMaterial : new THREE.MeshStandardMaterial({
     color: 0x333333,
     roughness: 0.82,
     metalness: 0.1,
@@ -65,7 +67,27 @@ export function buildPrefeitura(scene, col, city) {
   ruaMesh.receiveShadow = true;
   g.add(ruaMesh);
 
-  // --- DIMENSÕES CONCÊNTRICAS (FAIXAS DO PARQUE) ---
+  // Marcações das faixas brancas na pista externa
+  const faixaExtGeo = makeRingGeometry(115.6, 89.6, 235.6, 115.2, 89.2, 235.2);
+  faixaExtGeo.translate(lakeX, 0.012, lakeZ);
+  const whiteMat = new THREE.MeshStandardMaterial({
+    color: 0xf2f2ee, roughness: 0.62, metalness: 0.0,
+    emissive: 0x1a1a18, emissiveIntensity: 0.5,
+  });
+  const faixaExtMesh = new THREE.Mesh(faixaExtGeo, whiteMat);
+  g.add(faixaExtMesh);
+
+  // Faixa amarela dividindo as pistas
+  const faixaAmarelaGeo = makeRingGeometry(104, 78, 224, 103.4, 77.4, 223.4);
+  faixaAmarelaGeo.translate(lakeX, 0.012, lakeZ);
+  const yellowMat = new THREE.MeshStandardMaterial({
+    color: 0xe8b93a, roughness: 0.66, metalness: 0.0,
+    emissive: 0x2a1e05, emissiveIntensity: 0.5,
+  });
+  const faixaAmarelaMesh = new THREE.Mesh(faixaAmarelaGeo, yellowMat);
+  g.add(faixaAmarelaMesh);
+
+  // --- DIMENSÕES CONCÊNTRICAS (FAIXAS INTERNAS DO PARQUE) ---
   // 3. Faixa Externa (Calçadão de Concreto Claro)
   const calcadaoExtGeo = makeRingGeometry(92, 66, 210, 84, 60, 196);
   calcadaoExtGeo.translate(lakeX, PISO + 0.01, lakeZ);
@@ -90,13 +112,12 @@ export function buildPrefeitura(scene, col, city) {
   g.add(calcadaoInt);
 
   // --- LAGO (100% Encaixado dentro do espaço interno, sem tocar nas faixas) ---
-  // Borda do lago: Topo 60m, Base 42m, Extensão 154m (deixa ~4m de margem livre em relação à faixa interna)
   const lakeShape = makeTrapezoidShape(60, 42, 154);
 
   const DEPTH = 1.8;
   const WATER_Y = PISO - 0.35;
 
-  // Bacia/Fundo do Lago (Azul escuro profundo para dar sensação de profundidade)
+  // Bacia/Fundo do Lago (Azul escuro profundo)
   const basinMat = voxMaterial(0x0e3b5e, { aspereza: 0.95 });
   const extrudeSettings = {
     steps: 1,
@@ -114,7 +135,7 @@ export function buildPrefeitura(scene, col, city) {
   basinMesh.receiveShadow = true;
   g.add(basinMesh);
 
-  // Superfície da Água (Azul vivo cristalino e reluzente)
+  // Superfície da Água (Azul vivo cristalino)
   const waterMat = new THREE.MeshStandardMaterial({
     color: 0x0077be,
     roughness: 0.05,
@@ -131,14 +152,14 @@ export function buildPrefeitura(scene, col, city) {
   waterMesh.receiveShadow = true;
   g.add(waterMesh);
 
-  // --- PRÉDIO DA PREFEITURA (Posicionado no topo/Norte do lago - Marcado de vermelho) ---
-  const bldgW = 64; // Frente virada para o lago
-  const bldgD = 22; // Profundidade
+  // --- PRÉDIO DA PREFEITURA (Na LATERAL da PONTA DO LAGO - Exatamente onde está a bola vermelha) ---
+  const bldgW = 24;
+  const bldgD = 60;
   const bldgH = 9.5;
 
-  // Coordenadas: Topo/Norte do lago (lakeZ - LAGO_LEN/2 - offset)
-  const bldgX = cx;
-  const bldgZ = cz - (LAGO_LEN / 2) - 22;
+  // Coordenadas: Lado Leste (+X) na cabeceira Norte (-Z) do lago
+  const bldgX = cx + 54;
+  const bldgZ = cz - 75;
 
   const verdeClaro = voxMaterial(0xa2c7b5, { aspereza: 0.65, metal: 0.1 });
   const verdeEscuro = voxMaterial(0x2d5948, { aspereza: 0.55, metal: 0.2 });
@@ -152,32 +173,32 @@ export function buildPrefeitura(scene, col, city) {
   g.add(bldgMesh);
 
   const columns = [];
-  for (let x = -bldgW / 2 + 4; x <= bldgW / 2 - 4; x += 6) {
+  for (let z = -bldgD / 2 + 3; z <= bldgD / 2 - 3; z += 6) {
     const colGeo = new THREE.BoxGeometry(0.8, bldgH + 0.3, 0.8);
-    colGeo.translate(bldgX + x, PISO + bldgH / 2, bldgZ + bldgD / 2 + 0.2);
+    colGeo.translate(bldgX - bldgW / 2 - 0.2, PISO + bldgH / 2, bldgZ + z);
     columns.push(colGeo);
   }
   const colMesh = new THREE.Mesh(mergeGeometries(columns, false), verdeEscuro);
   colMesh.castShadow = true;
   g.add(colMesh);
 
-  const glassFacade = new THREE.Mesh(new THREE.BoxGeometry(bldgW * 0.7, bldgH * 0.8, 0.5), vidro);
-  glassFacade.position.set(bldgX, PISO + bldgH * 0.48, bldgZ + bldgD / 2 + 0.3);
+  const glassFacade = new THREE.Mesh(new THREE.BoxGeometry(0.5, bldgH * 0.8, bldgD * 0.7), vidro);
+  glassFacade.position.set(bldgX - bldgW / 2 - 0.3, PISO + bldgH * 0.48, bldgZ);
   g.add(glassFacade);
 
-  const marquise = new THREE.Mesh(new THREE.BoxGeometry(26, 0.5, 8), concreto);
-  marquise.position.set(bldgX, PISO + 4.5, bldgZ + bldgD / 2 + 4);
+  const marquise = new THREE.Mesh(new THREE.BoxGeometry(8, 0.5, 22), concreto);
+  marquise.position.set(bldgX - bldgW / 2 - 4, PISO + 4.5, bldgZ);
   marquise.castShadow = true;
   g.add(marquise);
 
   const totemMat = voxMaterial(0xffffff, { aspereza: 0.4 });
-  const totem = new THREE.Mesh(new THREE.BoxGeometry(3.5, 4.2, 1.2), totemMat);
-  totem.position.set(bldgX - 18, PISO + 2.1, bldgZ + bldgD / 2 + 10);
+  const totem = new THREE.Mesh(new THREE.BoxGeometry(1.2, 4.2, 3.5), totemMat);
+  totem.position.set(bldgX - 18, PISO + 2.1, bldgZ + 18);
   totem.castShadow = true;
   g.add(totem);
 
-  const totemPlaca = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.6, 1.35), voxMaterial(0x184838));
-  totemPlaca.position.set(bldgX - 18, PISO + 3.1, bldgZ + bldgD / 2 + 10);
+  const totemPlaca = new THREE.Mesh(new THREE.BoxGeometry(1.35, 1.6, 3.2), voxMaterial(0x184838));
+  totemPlaca.position.set(bldgX - 18, PISO + 3.1, bldgZ + 18);
   g.add(totemPlaca);
 
   col.addBox(bldgX, bldgZ, bldgW / 2, bldgD / 2, PISO + bldgH, 'prefeitura');
