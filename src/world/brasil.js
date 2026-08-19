@@ -405,13 +405,13 @@ export class BrazilLandmarks {
 
     const aco3d = new THREE.Mesh(fundir(estrutura), aco);
     aco3d.position.x = H.x;
-    aco3d.castShadow = true; aco3d.receiveShadow = true;
+    aco3d.castShadow = false; aco3d.receiveShadow = true;
     aco3d.name = 'hercilio-estrutura';
     this.group.add(aco3d);
 
     const obra3d = new THREE.Mesh(fundir(obra), concreto);
     obra3d.position.x = H.x;
-    obra3d.castShadow = true; obra3d.receiveShadow = true;
+    obra3d.castShadow = false; obra3d.receiveShadow = true;
     obra3d.name = 'hercilio-concreto';
     this.group.add(obra3d);
 

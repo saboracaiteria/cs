@@ -141,7 +141,7 @@ export class Landmarks {
    */
   _mountain(spec, roundness, collisionRadiusFn = null) {
     const rng = this.rng;
-    const geo = new THREE.ConeGeometry(spec.r, spec.h, 56, 22, false);
+    const geo = new THREE.ConeGeometry(spec.r, spec.h, 28, 10, false);
     geo.translate(0, spec.h / 2, 0);
 
     const pos = geo.attributes.position;
@@ -186,7 +186,7 @@ export class Landmarks {
 
     const mesh = new THREE.Mesh(geo, this.rockMat);
     mesh.position.set(spec.x, spec.baseY, spec.z);
-    mesh.castShadow = true;          // [44]
+    mesh.castShadow = false;          // [perf] morros gigantes não precisam projetar sombras (relevo já é pintado)
     mesh.receiveShadow = true;
     mesh.name = 'mountain';
     this.group.add(mesh);
