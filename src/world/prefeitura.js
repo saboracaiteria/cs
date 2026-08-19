@@ -115,6 +115,57 @@ export function buildPrefeitura(scene, col, city) {
   calcadaoInt.receiveShadow = true;
   g.add(calcadaoInt);
 
+  // --- PRACINHAS E CALÇAMENTOS ESPECÍFICOS DO COMPLEXO DA PREFEITURA ---
+  // 1. Praça Circular com Caminhos Radiais: posicionada no canto INFERIOR DIREITO (Sudeste/Sul - Lado oposto à Prefeitura e do lago)
+  const pracaSulX = lakeX + 25; 
+  const pracaSulZ = lakeZ + 70;
+
+  // Centro circular da praça
+  const centroPracaGeo = new THREE.CylinderGeometry(6, 6, 0.04, 32);
+  const centroPracaMesh = new THREE.Mesh(centroPracaGeo, concreteMat);
+  centroPracaMesh.position.set(pracaSulX, PISO + 0.04, pracaSulZ);
+  centroPracaMesh.receiveShadow = true;
+  g.add(centroPracaMesh);
+
+  // Anel externo circular da praça
+  const anelPracaGeo = new THREE.RingGeometry(12, 14.5, 32);
+  anelPracaGeo.rotateX(-Math.PI / 2);
+  anelPracaGeo.translate(pracaSulX, PISO + 0.04, pracaSulZ);
+  const anelPracaMesh = new THREE.Mesh(anelPracaGeo, concreteMat);
+  anelPracaMesh.receiveShadow = true;
+  g.add(anelPracaMesh);
+
+  // Caminhos radiais em raios (8 caminhos radiais)
+  const numRaios = 8;
+  const raiosGeos = [];
+  for (let i = 0; i < numRaios; i++) {
+    const angle = (i * Math.PI * 2) / numRaios;
+    const raioGeo = new THREE.PlaneGeometry(1.8, 14);
+    raioGeo.rotateX(-Math.PI / 2);
+    raioGeo.rotateY(-angle);
+    const rx = pracaSulX + Math.sin(angle) * 7;
+    const rz = pracaSulZ + Math.cos(angle) * 7;
+    raioGeo.translate(rx, PISO + 0.038, rz);
+    raiosGeos.push(raioGeo);
+  }
+  const raiosMesh = new THREE.Mesh(mergeGeometries(raiosGeos, false), concreteMat);
+  raiosMesh.receiveShadow = true;
+  g.add(raiosMesh);
+
+  // 2. Praça Superior Esquerda (Noroeste): Geometria em calçamento claro acompanhando a curva da via e a margem noroeste
+  const pracaNorteShape = new THREE.Shape();
+  // Traçado curvo acompanhando a margem noroeste do lago
+  pracaNorteShape.moveTo(-35, -50);
+  pracaNorteShape.quadraticCurveTo(-15, -60, -10, -90);
+  pracaNorteShape.quadraticCurveTo(-30, -95, -45, -75);
+  pracaNorteShape.quadraticCurveTo(-40, -60, -35, -50);
+  const pracaNorteGeo = new THREE.ShapeGeometry(pracaNorteShape);
+  pracaNorteGeo.rotateX(-Math.PI / 2);
+  pracaNorteGeo.translate(lakeX, PISO + 0.035, lakeZ);
+  const pracaNorteMesh = new THREE.Mesh(pracaNorteGeo, concreteMat);
+  pracaNorteMesh.receiveShadow = true;
+  g.add(pracaNorteMesh);
+
   // --- LAGO (100% Encaixado dentro do espaço interno, sem tocar nas faixas) ---
   const lakeShape = makeTrapezoidShape(60, 42, 154);
 
