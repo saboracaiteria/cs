@@ -18,7 +18,7 @@ function makeCanvas(w, h) {
   return c;
 }
 
-function finish(canvas, { srgb = true, repeat = 1, aniso = 8 } = {}) {
+function finish(canvas, { srgb = true, repeat = 1, aniso = 4 } = {}) {
   const t = new THREE.CanvasTexture(canvas);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
@@ -59,7 +59,7 @@ function loadImageTexture(path, fallbackFn, options = {}) {
     (t) => {
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
       t.colorSpace = options.srgb !== false ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-      t.anisotropy = options.aniso || 16;
+      t.anisotropy = options.aniso || 4;
       if (options.repeat) t.repeat.set(options.repeat, options.repeat);
     },
     undefined,
@@ -69,7 +69,7 @@ function loadImageTexture(path, fallbackFn, options = {}) {
   );
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.colorSpace = options.srgb !== false ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-  tex.anisotropy = options.aniso || 16;
+  tex.anisotropy = options.aniso || 4;
   if (options.repeat) tex.repeat.set(options.repeat, options.repeat);
   return tex;
 }
