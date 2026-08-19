@@ -1687,25 +1687,30 @@ export class Match {
   _alvoVeiculo() {
     if (this._emCarro) return { car: 0, heli: null };
     if (this._emHeli) return { car: null, heli: 0 };
+    const rp = this.avatares.get(this.meuId);
     const snap = this.snapBuf.ultimo();
-    const eu = snap && snap.players ? snap.players.find((p) => p.id === this.meuId) : null;
-    if (!eu) return null;
+    const euSnap = snap && snap.players ? snap.players.find((p) => p.id === this.meuId) : null;
+    const posX = rp ? rp.x : (euSnap ? euSnap.x : this.camera.position.x);
+    const posY = rp ? rp.y : (euSnap ? euSnap.y : this.camera.position.y);
+    const posZ = rp ? rp.z : (euSnap ? euSnap.z : this.camera.position.z);
+
     let best = null, bestD = Infinity;
     for (const [id, cr] of this.carrosMp) {
-      if (cr.playerId != null) continue;
-      const dx = cr.x - eu.x, dz = cr.z - eu.z;
+      if (cr.playerId != null || cr.destroyed) continue;
+      const dx = cr.x - posX, dz = cr.z - posZ;
       const d = dx * dx + dz * dz;
-      if (d < bestD) { bestD = d; best = { tipo: 'carro', id }; }
+      if (d < bestD) { bestD = d; best = { tipo: 'carro', id, dist: Math.sqrt(d) }; }
     }
     for (const [id, hl] of this.helisMp) {
       if (hl.playerId != null) continue;
-      const dx = hl.x - eu.x, dz = hl.z - eu.z;
-      const d = dx * dx + dz * dz;
-      if (d < bestD) { bestD = d; best = { tipo: 'heli', id }; }
+      const dx = hl.x - posX, dy = hl.y - posY, dz = hl.z - posZ;
+      const d = dx * dx + dy * dy + dz * dz;
+      const dist3d = Math.sqrt(d);
+      if (dist3d < bestD) { bestD = dist3d; best = { tipo: 'heli', id, dist: dist3d }; }
     }
     if (!best) return null;
-    const range = best.tipo === 'carro' ? 4.5 : HELI.enterRange;
-    if (bestD > range * range) return null;
+    const maxRange = best.tipo === 'carro' ? 6.0 : (HELI.enterRange || 8.0);
+    if (best.dist > maxRange) return null;
     return best.tipo === 'carro' ? { car: best.id, heli: null } : { car: null, heli: best.id };
   }
 

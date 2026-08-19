@@ -49,9 +49,7 @@ export class RoomManager {
    * quem aceita é movido para a sala de quem chamou.
    */
   join(client, nick, modo, cor, cycle, token) {
-    // [fix] procura sala existente com vaga ANTES de criar nova:
-    // sem isto, cada player criava a PRÓPRIA sala (19 bots cada) = servidor
-    // com CPU dobrado (jogo travado) e cada um via bots/carros diferentes
+    // procura sala existente com vaga no lobby/countdown; se nao houver, cria uma NOVA sala
     const room = this.find(modo) || this.create(modo, cycle);
     room.addClient(client, nick, cor, token);
     return room;
