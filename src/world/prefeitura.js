@@ -8,28 +8,20 @@ export function buildPrefeitura(scene, col, city) {
   g.name = 'prefeitura-lago-complex';
   scene.add(g);
 
-  const PISO = CURB_H + 0.12; // Cota elevada (12cm acima da calçada urbana) para garantir que a grama do terreno nunca invada
+  const PISO = CURB_H + 0.12; // Cota elevada (12cm acima da calçada urbana)
 
-  // O limite leste da cidade (última rua) fica em x = 224 (onde HALF = 224).
-  // A pista de asfalto do complexo do lago tem largura roadW = 12, então seu bordo oeste fica em (lakeX - wOut/2).
-  // Queremos que o bordo oeste da pista encoste perfeitamente na rua da cidade (x = 224 + ROAD_H = 233 ou x = 224).
-  // Com cx = 282 e pista externa com largura X de 116 (meia largura 58), o bordo oeste fica em 282 - 58 = 224!
   const cx = 282;
   const cz = 0;
 
   const Q_LEN = CELL; // 64m (1 quarteirão)
-  const LAGO_LEN = Q_LEN * 3; // 192m (3 quarteirões de comprimento!)
-  const LAGO_W_TOP = 85;   // Topo mais largo (Norte)
-  const LAGO_W_BOT = 60;   // Base mais afunilada (Sul)
-
-  const parkW = 150;
-  const parkD = LAGO_LEN + 50;
+  const LAGO_LEN = Q_LEN * 3; // 192m
 
   // Centro do complexo lago/faixas
   const lakeX = cx;
   const lakeZ = cz;
 
-  function makeTrapezoidShape(wTop, wBot, length) {
+  // Função para criar o formato do lago com recorte/reentrância na quina inferior esquerda (Sudoeste / marcado de roxo/verde)
+  function makeTrapezoidShape(wTop, wBot, length, isLake = false) {
     const s = new THREE.Shape();
     const halfL = length / 2;
     const wt = wTop / 2;
@@ -38,7 +30,21 @@ export function buildPrefeitura(scene, col, city) {
     // +halfL = Topo (Norte - Largo)
     // -halfL = Base (Sul - Estreito)
     s.moveTo(-wb + 6, -halfL);
-    s.quadraticCurveTo(-wb - 4, 0, -wt + 8, halfL);
+
+    // Se for o lago, fazemos um recorte/chanfro na quina inferior esquerda (-X, -Z em coordenadas locais, ou seja, lado do prédio/sul)
+    // para dar espaço perfeito para a pracinha roxa recuada sem tocar no lago nem nas faixas!
+    if (isLake) {
+      s.lineTo(-wb + 14, -halfL); // Recorte na quina inferior esquerda do lago
+      s.quadraticCurveTo(-wb + 2, -halfL + 25, -wb - 4, 0);
+    } else {
+      s.quadraticCurveTo(-wb - 4, 0, -wt + 8, halfL);
+    }
+
+    if (!isLake) {
+      s.moveTo(-wb + 6, -halfL);
+      s.quadraticCurveTo(-wb - 4, 0, -wt + 8, halfL);
+    }
+    
     s.quadraticCurveTo(0, halfL + 6, wt - 8, halfL);
     s.quadraticCurveTo(wt + 4, 0, wb - 6, -halfL);
     s.quadraticCurveTo(0, -halfL - 6, -wb + 6, -halfL);
@@ -47,8 +53,8 @@ export function buildPrefeitura(scene, col, city) {
 
   // Helper para criar anéis/pistas vazadas no centro
   function makeRingGeometry(wTopOut, wBotOut, lenOut, wTopIn, wBotIn, lenIn) {
-    const outer = makeTrapezoidShape(wTopOut, wBotOut, lenOut);
-    const inner = makeTrapezoidShape(wTopIn, wBotIn, lenIn);
+    const outer = makeTrapezoidShape(wTopOut, wBotOut, lenOut, false);
+    const inner = makeTrapezoidShape(wTopIn, wBotIn, lenIn, false);
     const holePath = new THREE.Path(inner.getPoints().reverse()); // Sentido inverso para furo correto
     outer.holes = [holePath];
     const geo = new THREE.ShapeGeometry(outer);
@@ -61,7 +67,6 @@ export function buildPrefeitura(scene, col, city) {
   const ruaGeo = makeRingGeometry(116, 90, 236, 116 - roadW*2, 90 - roadW*2, 236 - roadW*2);
   ruaGeo.translate(lakeX, 0, lakeZ);
 
-  // Usa o mesmo material de asfalto texturizado da cidade ou cria um equivalente com asphaltTexture
   const roadMat = city && city.roadMaterial ? city.roadMaterial : new THREE.MeshStandardMaterial({
     color: 0x333333,
     roughness: 0.82,
@@ -115,36 +120,37 @@ export function buildPrefeitura(scene, col, city) {
   calcadaoInt.receiveShadow = true;
   g.add(calcadaoInt);
 
-  // --- PRACINHAS E CALÇAMENTOS ESPECÍFICOS DO COMPLEXO DA PREFEITURA ---
-  // 1. Praça Circular com Caminhos Radiais: posicionada no canto INFERIOR DIREITO (Sudeste/Sul - Lado oposto à Prefeitura e do lago)
-  const pracaSulX = lakeX + 25; 
-  const pracaSulZ = lakeZ + 70;
+  // --- PRACINHA CIRCULAR RADIAL NA POSIÇÃO MARCADA DE ROXO ---
+  // Posicionada na área livre entre a margem recuada do lago e o calçadão/prédio (região marcada de roxo)
+  // Sem tocar no lago e sem encostar nas faixas de trânsito/ciclovia!
+  const pracaRoxaX = lakeX - 18; 
+  const pracaRoxaZ = lakeZ - 35;
 
   // Centro circular da praça
-  const centroPracaGeo = new THREE.CylinderGeometry(6, 6, 0.04, 32);
+  const centroPracaGeo = new THREE.CylinderGeometry(5, 5, 0.04, 32);
   const centroPracaMesh = new THREE.Mesh(centroPracaGeo, concreteMat);
-  centroPracaMesh.position.set(pracaSulX, PISO + 0.04, pracaSulZ);
+  centroPracaMesh.position.set(pracaRoxaX, PISO + 0.04, pracaRoxaZ);
   centroPracaMesh.receiveShadow = true;
   g.add(centroPracaMesh);
 
   // Anel externo circular da praça
-  const anelPracaGeo = new THREE.RingGeometry(12, 14.5, 32);
+  const anelPracaGeo = new THREE.RingGeometry(9.5, 11.5, 32);
   anelPracaGeo.rotateX(-Math.PI / 2);
-  anelPracaGeo.translate(pracaSulX, PISO + 0.04, pracaSulZ);
+  anelPracaGeo.translate(pracaRoxaX, PISO + 0.04, pracaRoxaZ);
   const anelPracaMesh = new THREE.Mesh(anelPracaGeo, concreteMat);
   anelPracaMesh.receiveShadow = true;
   g.add(anelPracaMesh);
 
-  // Caminhos radiais em raios (8 caminhos radiais)
-  const numRaios = 8;
+  // Caminhos radiais em raios (6 radiais bem ajustados)
+  const numRaios = 6;
   const raiosGeos = [];
   for (let i = 0; i < numRaios; i++) {
     const angle = (i * Math.PI * 2) / numRaios;
-    const raioGeo = new THREE.PlaneGeometry(1.8, 14);
+    const raioGeo = new THREE.PlaneGeometry(1.4, 10);
     raioGeo.rotateX(-Math.PI / 2);
     raioGeo.rotateY(-angle);
-    const rx = pracaSulX + Math.sin(angle) * 7;
-    const rz = pracaSulZ + Math.cos(angle) * 7;
+    const rx = pracaRoxaX + Math.sin(angle) * 5.5;
+    const rz = pracaRoxaZ + Math.cos(angle) * 5.5;
     raioGeo.translate(rx, PISO + 0.038, rz);
     raiosGeos.push(raioGeo);
   }
@@ -152,22 +158,8 @@ export function buildPrefeitura(scene, col, city) {
   raiosMesh.receiveShadow = true;
   g.add(raiosMesh);
 
-  // 2. Praça Superior Esquerda (Noroeste): Geometria em calçamento claro acompanhando a curva da via e a margem noroeste
-  const pracaNorteShape = new THREE.Shape();
-  // Traçado curvo acompanhando a margem noroeste do lago
-  pracaNorteShape.moveTo(-35, -50);
-  pracaNorteShape.quadraticCurveTo(-15, -60, -10, -90);
-  pracaNorteShape.quadraticCurveTo(-30, -95, -45, -75);
-  pracaNorteShape.quadraticCurveTo(-40, -60, -35, -50);
-  const pracaNorteGeo = new THREE.ShapeGeometry(pracaNorteShape);
-  pracaNorteGeo.rotateX(-Math.PI / 2);
-  pracaNorteGeo.translate(lakeX, PISO + 0.035, lakeZ);
-  const pracaNorteMesh = new THREE.Mesh(pracaNorteGeo, concreteMat);
-  pracaNorteMesh.receiveShadow = true;
-  g.add(pracaNorteMesh);
-
-  // --- LAGO (100% Encaixado dentro do espaço interno, sem tocar nas faixas) ---
-  const lakeShape = makeTrapezoidShape(60, 42, 154);
+  // --- LAGO (com recorte ajustado para acomodar a pracinha perfeitamente) ---
+  const lakeShape = makeTrapezoidShape(58, 40, 150, true);
 
   const DEPTH = 1.8;
   const WATER_Y = PISO - 0.35;
@@ -208,17 +200,11 @@ export function buildPrefeitura(scene, col, city) {
   g.add(waterMesh);
 
   // --- PRÉDIO DA PREFEITURA ---
-  // A pista externa fica em cx=282. O bordo interno da pista no lado leste (+X) no topo (Norte, -Z)
-  // tem wTopIn / 2 = (116 - 24)/2 = 46 (ou seja, X = 282 + 46 = 328).
-  // A pista inteira se estende até X = 282 + 58 = 340.
-  // Colocaremos o prédio da prefeitura na área interna do parque ou ajustado para não ficar por cima da rua leste!
-  // Prédio: bldgW = 24. Se posicionado em bldgX = 314, vai de X=302 a X=326 (perfeitamente dentro do calçadão/parque, antes de chegar na pista de asfalto 328-340).
   const bldgW = 24;
   const bldgD = 60;
   const bldgH = 9.5;
 
-  // Coordenadas: Lado Leste (+X) na área interna do parque, cabeceira Norte (-Z) do lago
-  const bldgX = cx + 32; // 282 + 32 = 314 (fica a oeste da rua leste que começa em 328)
+  const bldgX = cx + 32; 
   const bldgZ = cz - 75;
 
   const verdeClaro = voxMaterial(0xa2c7b5, { aspereza: 0.65, metal: 0.1 });
