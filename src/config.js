@@ -424,75 +424,15 @@ export const NIGHT = {
  *   2. bloom/SMAA    — passes de tela cheia, custo de preenchimento puro
  *   3. shadowRadius  — quanto MAIOR o raio, mais objetos entram no passe de
  *                      sombra; importa mais que a resolução do mapa
+ *
+ * A quantidade de pedestres e carros SAIU daqui: virou POPULATIONS, um ajuste
+ * próprio. Eram duas decisões diferentes empacotadas numa só — quem quisesse a
+ * cidade cheia tinha de aceitar sombra, bloom e SMAA no talo junto.
  */
 
-export const PRESETS = [
-  {
-    id: 'baixa', label: 'BAIXA',
-    renderScale: 0.50,
-    shadows: false, shadowMapSize: 512, shadowRadius: 35,
-    bloom: false, smaa: false, bloomScale: 0.4,
-    dynamicLights: 0,
-    fogFar: 1200,
-    envUpdate: 16,
-    frameCap: 60,
-    pixelRatioCap: 1.0,
-    leafDetail: 0,
-  },
-  {
-    id: 'media', label: 'MÉDIA',
-    renderScale: 0.65,
-    shadows: true, shadowMapSize: 1024, shadowRadius: 32,
-    shadowType: 'basic',
-    bloom: false, smaa: false, bloomScale: 0.4,
-    dynamicLights: 1,
-    fogFar: 1600,
-    envUpdate: 8,
-    frameCap: 60,
-    pixelRatioCap: 1.25,
-    shadowTickEvery: 3,
-    dynFloor: 0.50,
-    leafDetail: 0,
-  },
-  {
-    id: 'alta', label: 'ALTA',
-    renderScale: 0.85,
-    shadows: true, shadowMapSize: 1024, shadowRadius: 50,
-    shadowType: 'basic',
-    bloom: false, smaa: true, bloomScale: 0.4,
-    dynamicLights: 3,
-    fogFar: 2000,
-    envUpdate: 4,
-    frameCap: 60,
-    pixelRatioCap: 1.5,
-    leafDetail: 1,
-  },
-  {
-    id: '120fps', label: '120 FPS',
-    renderScale: 0.45,
-    shadows: false, shadowMapSize: 512, shadowRadius: 25,
-    shadowType: 'basic',
-    bloom: false, smaa: false, bloomScale: 0.4,
-    dynamicLights: 0,
-    fogFar: 1300,
-    envUpdate: 16,
-    pixelRatioCap: 1.0,
-    dynFloor: 0.40,
-    targetMsHigh: 7.5,
-    targetMsLow: 6.0,
-    frameCap: 120,
-    shadowTickEvery: 4,
-    leafDetail: 0,
-  },
-];
 
+/** Perfil inicial (índice em PRESETS): MÉDIA, que roda liso na maioria das máquinas. */
 export const DEFAULT_PRESET = 1;
- *
-
-
-
-
-
 
 
 /**
