@@ -174,7 +174,7 @@ export class Terrain {
 
       // Recorta a malha do solo natural onde existem ruas da cidade ou o complexo da prefeitura
       const naCidade = Math.max(Math.abs(x), Math.abs(z)) <= 242;
-      const naPrefeitura = (x >= 235 && x <= 390 && Math.abs(z) <= 135);
+      const naPrefeitura = (x >= 235 && x <= 400 && Math.abs(z) <= 165);
 
       if (naCidade || naPrefeitura) {
         pos.setY(i, -15); // Afunda a malha natural para não brigar com asfalto nem calçadões

@@ -52,7 +52,20 @@ export function buildPrefeitura(scene, col, city) {
     return geo;
   }
 
-  // --- DIMENSÕES CONCÊNTRICAS ---
+  // --- PISTA DE ASFALTO / RUAS EXTERNAS AO REDOR DO COMPLEXO ---
+  // Faixa de rua asfaltada que circula todo o parque
+  const ruaGeo = makeRingGeometry(116, 90, 236, 96, 70, 216);
+  ruaGeo.translate(lakeX, PISO + 0.005, lakeZ);
+  const roadMat = new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    roughness: 0.82,
+    metalness: 0.1,
+  });
+  const ruaMesh = new THREE.Mesh(ruaGeo, roadMat);
+  ruaMesh.receiveShadow = true;
+  g.add(ruaMesh);
+
+  // --- DIMENSÕES CONCÊNTRICAS (FAIXAS DO PARQUE) ---
   // 3. Faixa Externa (Calçadão de Concreto Claro)
   const calcadaoExtGeo = makeRingGeometry(92, 66, 210, 84, 60, 196);
   calcadaoExtGeo.translate(lakeX, PISO + 0.01, lakeZ);
@@ -118,12 +131,14 @@ export function buildPrefeitura(scene, col, city) {
   waterMesh.receiveShadow = true;
   g.add(waterMesh);
 
-  // --- PRÉDIO DA PREFEITURA (ao lado do lago) ---
-  const bldgX = cx + 55;
-  const bldgZ = cz;
-  const bldgW = 24;
-  const bldgD = Q_LEN; // 64m (1 Quarteirão completo)
+  // --- PRÉDIO DA PREFEITURA (Posicionado no topo/Norte do lago - Marcado de vermelho) ---
+  const bldgW = 64; // Frente virada para o lago
+  const bldgD = 22; // Profundidade
   const bldgH = 9.5;
+
+  // Coordenadas: Topo/Norte do lago (lakeZ - LAGO_LEN/2 - offset)
+  const bldgX = cx;
+  const bldgZ = cz - (LAGO_LEN / 2) - 22;
 
   const verdeClaro = voxMaterial(0xa2c7b5, { aspereza: 0.65, metal: 0.1 });
   const verdeEscuro = voxMaterial(0x2d5948, { aspereza: 0.55, metal: 0.2 });
@@ -137,32 +152,32 @@ export function buildPrefeitura(scene, col, city) {
   g.add(bldgMesh);
 
   const columns = [];
-  for (let z = -bldgD / 2 + 3; z <= bldgD / 2 - 3; z += 6) {
+  for (let x = -bldgW / 2 + 4; x <= bldgW / 2 - 4; x += 6) {
     const colGeo = new THREE.BoxGeometry(0.8, bldgH + 0.3, 0.8);
-    colGeo.translate(bldgX - bldgW / 2 - 0.2, PISO + bldgH / 2, bldgZ + z);
+    colGeo.translate(bldgX + x, PISO + bldgH / 2, bldgZ + bldgD / 2 + 0.2);
     columns.push(colGeo);
   }
   const colMesh = new THREE.Mesh(mergeGeometries(columns, false), verdeEscuro);
   colMesh.castShadow = true;
   g.add(colMesh);
 
-  const glassFacade = new THREE.Mesh(new THREE.BoxGeometry(0.5, bldgH * 0.8, 18), vidro);
-  glassFacade.position.set(bldgX - bldgW / 2 - 0.3, PISO + bldgH * 0.48, bldgZ);
+  const glassFacade = new THREE.Mesh(new THREE.BoxGeometry(bldgW * 0.7, bldgH * 0.8, 0.5), vidro);
+  glassFacade.position.set(bldgX, PISO + bldgH * 0.48, bldgZ + bldgD / 2 + 0.3);
   g.add(glassFacade);
 
-  const marquise = new THREE.Mesh(new THREE.BoxGeometry(8, 0.5, 22), concreto);
-  marquise.position.set(bldgX - bldgW / 2 - 4, PISO + 4.5, bldgZ);
+  const marquise = new THREE.Mesh(new THREE.BoxGeometry(26, 0.5, 8), concreto);
+  marquise.position.set(bldgX, PISO + 4.5, bldgZ + bldgD / 2 + 4);
   marquise.castShadow = true;
   g.add(marquise);
 
   const totemMat = voxMaterial(0xffffff, { aspereza: 0.4 });
-  const totem = new THREE.Mesh(new THREE.BoxGeometry(1.2, 4.2, 3.5), totemMat);
-  totem.position.set(bldgX - 18, PISO + 2.1, bldgZ + 18);
+  const totem = new THREE.Mesh(new THREE.BoxGeometry(3.5, 4.2, 1.2), totemMat);
+  totem.position.set(bldgX - 18, PISO + 2.1, bldgZ + bldgD / 2 + 10);
   totem.castShadow = true;
   g.add(totem);
 
-  const totemPlaca = new THREE.Mesh(new THREE.BoxGeometry(1.35, 1.6, 3.2), voxMaterial(0x184838));
-  totemPlaca.position.set(bldgX - 18, PISO + 3.1, bldgZ + 18);
+  const totemPlaca = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.6, 1.35), voxMaterial(0x184838));
+  totemPlaca.position.set(bldgX - 18, PISO + 3.1, bldgZ + bldgD / 2 + 10);
   g.add(totemPlaca);
 
   col.addBox(bldgX, bldgZ, bldgW / 2, bldgD / 2, PISO + bldgH, 'prefeitura');
