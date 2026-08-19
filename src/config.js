@@ -270,7 +270,7 @@ export const DEFAULT_POPULATION = 2;
  */
 export const PLATOS = [
   // Platô da Prefeitura e Lago de Canaã dos Carajás para manter o terreno 100% plano
-  { x: 310, z: 0, hx: 90, hz: 120, rot: 0, fade: 25 },
+  { x: 282, z: 0, hx: 90, hz: 120, rot: 0, fade: 25 },
 ];
 
 // ---------------------------------------------------------------- [54] bondinho

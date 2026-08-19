@@ -10,7 +10,11 @@ export function buildPrefeitura(scene, col, city) {
 
   const PISO = CURB_H + 0.12; // Cota elevada (12cm acima da calçada urbana) para garantir que a grama do terreno nunca invada
 
-  const cx = 310;
+  // O limite leste da cidade (última rua) fica em x = 224 (onde HALF = 224).
+  // A pista de asfalto do complexo do lago tem largura roadW = 12, então seu bordo oeste fica em (lakeX - wOut/2).
+  // Queremos que o bordo oeste da pista encoste perfeitamente na rua da cidade (x = 224 + ROAD_H = 233 ou x = 224).
+  // Com cx = 282 e pista externa com largura X de 116 (meia largura 58), o bordo oeste fica em 282 - 58 = 224!
+  const cx = 282;
   const cz = 0;
 
   const Q_LEN = CELL; // 64m (1 quarteirão)
@@ -21,7 +25,7 @@ export function buildPrefeitura(scene, col, city) {
   const parkW = 150;
   const parkD = LAGO_LEN + 50;
 
-  // Centro do complexo lago/faixas (mesmo centro do quarteirão da prefeitura)
+  // Centro do complexo lago/faixas
   const lakeX = cx;
   const lakeZ = cz;
 
@@ -152,13 +156,18 @@ export function buildPrefeitura(scene, col, city) {
   waterMesh.receiveShadow = true;
   g.add(waterMesh);
 
-  // --- PRÉDIO DA PREFEITURA (Na LATERAL da PONTA DO LAGO - Exatamente onde está a bola vermelha) ---
+  // --- PRÉDIO DA PREFEITURA ---
+  // A pista externa fica em cx=282. O bordo interno da pista no lado leste (+X) no topo (Norte, -Z)
+  // tem wTopIn / 2 = (116 - 24)/2 = 46 (ou seja, X = 282 + 46 = 328).
+  // A pista inteira se estende até X = 282 + 58 = 340.
+  // Colocaremos o prédio da prefeitura na área interna do parque ou ajustado para não ficar por cima da rua leste!
+  // Prédio: bldgW = 24. Se posicionado em bldgX = 314, vai de X=302 a X=326 (perfeitamente dentro do calçadão/parque, antes de chegar na pista de asfalto 328-340).
   const bldgW = 24;
   const bldgD = 60;
   const bldgH = 9.5;
 
-  // Coordenadas: Lado Leste (+X) na cabeceira Norte (-Z) do lago
-  const bldgX = cx + 54;
+  // Coordenadas: Lado Leste (+X) na área interna do parque, cabeceira Norte (-Z) do lago
+  const bldgX = cx + 32; // 282 + 32 = 314 (fica a oeste da rua leste que começa em 328)
   const bldgZ = cz - 75;
 
   const verdeClaro = voxMaterial(0xa2c7b5, { aspereza: 0.65, metal: 0.1 });
@@ -193,12 +202,12 @@ export function buildPrefeitura(scene, col, city) {
 
   const totemMat = voxMaterial(0xffffff, { aspereza: 0.4 });
   const totem = new THREE.Mesh(new THREE.BoxGeometry(1.2, 4.2, 3.5), totemMat);
-  totem.position.set(bldgX - 18, PISO + 2.1, bldgZ + 18);
+  totem.position.set(bldgX - 14, PISO + 2.1, bldgZ + 18);
   totem.castShadow = true;
   g.add(totem);
 
   const totemPlaca = new THREE.Mesh(new THREE.BoxGeometry(1.35, 1.6, 3.2), voxMaterial(0x184838));
-  totemPlaca.position.set(bldgX - 18, PISO + 3.1, bldgZ + 18);
+  totemPlaca.position.set(bldgX - 14, PISO + 3.1, bldgZ + 18);
   g.add(totemPlaca);
 
   col.addBox(bldgX, bldgZ, bldgW / 2, bldgD / 2, PISO + bldgH, 'prefeitura');
