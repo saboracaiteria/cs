@@ -19,7 +19,7 @@ export function buildPrefeitura(scene, col, city) {
   const lakeX = cx;
   const lakeZ = cz;
 
-  // Formato trapezoidal 100% fiel e limpo do lago e pistas
+  // Formato trapezoidal limpo do lago com recorte arredondado na quina sul para a pracinha
   function makeTrapezoidShape(wTop, wBot, length, isLake = false) {
     const s = new THREE.Shape();
     const halfL = length / 2;
@@ -32,14 +32,15 @@ export function buildPrefeitura(scene, col, city) {
 
     s.quadraticCurveTo(-wb - 4, 0, -wt + 8, halfL);
     s.quadraticCurveTo(0, halfL + 6, wt - 8, halfL);
+    s.quadraticCurveTo(wt + 4, 0, wb - 6, -halfL + 50);
 
     if (isLake) {
-      // Recorte suave de encaixe para a pracinha amarela na margem oeste/sul (lado esquerdo inferior, perto da curva roxa/amarela)
-      s.quadraticCurveTo(wt + 4, 0, wb - 6, -halfL + 60);
-      s.quadraticCurveTo(wb - 20, -halfL + 30, wb - 14, -halfL);
+      // Recorte concavo arredondado exatamente na quina inferior (no círculo amarelo do print)
+      // para criar a reentrância circular perfeita onde encaixa a pracinha
+      s.quadraticCurveTo(wb - 28, -halfL + 25, wb - 8, -halfL);
       s.quadraticCurveTo(0, -halfL - 6, -wb + 6, -halfL);
     } else {
-      s.quadraticCurveTo(wt + 4, 0, wb - 6, -halfL);
+      s.quadraticCurveTo(wb - 6, -halfL, wb - 6, -halfL);
       s.quadraticCurveTo(0, -halfL - 6, -wb + 6, -halfL);
     }
     return s;
@@ -114,11 +115,10 @@ export function buildPrefeitura(scene, col, city) {
   calcadaoInt.receiveShadow = true;
   g.add(calcadaoInt);
 
-  // --- PRACINHA / PARQUINHO NA POSIÇÃO EXATA DA MARCAÇÃO AMARELA ---
-  // Posicionada exatamente sobre a quina interna da curva da margem sul do lago (círculo amarelo do print)
-  // Sem tocar no lago e sem encostar nas faixas concêntricas (pista vermelha e calçadões)!
-  const pracaAmarelaX = lakeX - 12; 
-  const pracaAmarelaZ = lakeZ + 48;
+  // --- PRACINHA / PARQUINHO NA QUINA ENCAIXADA DO LAGO (MARCAÇÃO AMARELA) ---
+  // A pracinha fica perfeitamente centralizada dentro da curva côncava recuada da quina do lago!
+  const pracaAmarelaX = lakeX + 10; 
+  const pracaAmarelaZ = lakeZ - 52;
 
   // Centro circular da praça/parquinho
   const centroPracaGeo = new THREE.CylinderGeometry(5.0, 5.0, 0.04, 32);
@@ -128,7 +128,7 @@ export function buildPrefeitura(scene, col, city) {
   g.add(centroPracaMesh);
 
   // Anel externo circular da praça
-  const anelPracaGeo = new THREE.RingGeometry(9.0, 11.0, 32);
+  const anelPracaGeo = new THREE.RingGeometry(8.5, 10.5, 32);
   anelPracaGeo.rotateX(-Math.PI / 2);
   anelPracaGeo.translate(pracaAmarelaX, PISO + 0.04, pracaAmarelaZ);
   const anelPracaMesh = new THREE.Mesh(anelPracaGeo, concreteMat);
@@ -140,11 +140,11 @@ export function buildPrefeitura(scene, col, city) {
   const raiosGeos = [];
   for (let i = 0; i < numRaios; i++) {
     const angle = (i * Math.PI * 2) / numRaios;
-    const raioGeo = new THREE.PlaneGeometry(1.4, 9.5);
+    const raioGeo = new THREE.PlaneGeometry(1.3, 9.0);
     raioGeo.rotateX(-Math.PI / 2);
     raioGeo.rotateY(-angle);
-    const rx = pracaAmarelaX + Math.sin(angle) * 5;
-    const rz = pracaAmarelaZ + Math.cos(angle) * 5;
+    const rx = pracaAmarelaX + Math.sin(angle) * 4.8;
+    const rz = pracaAmarelaZ + Math.cos(angle) * 4.8;
     raioGeo.translate(rx, PISO + 0.038, rz);
     raiosGeos.push(raioGeo);
   }
@@ -152,7 +152,7 @@ export function buildPrefeitura(scene, col, city) {
   raiosMesh.receiveShadow = true;
   g.add(raiosMesh);
 
-  // --- LAGO (com recorte de encaixe exato para a pracinha na marcação amarela) ---
+  // --- LAGO (com recorte côncavo arredondado exato na quina) ---
   const lakeShape = makeTrapezoidShape(60, 42, 154, true);
 
   const DEPTH = 1.8;
