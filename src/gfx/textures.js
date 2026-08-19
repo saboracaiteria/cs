@@ -688,10 +688,7 @@ export function concreteTexture() {
     }
     x.strokeStyle = 'rgba(168,164,156,.75)';
     x.lineWidth = 2;
-    for (let i = 0; i <= N; i++) {
-      x.beginPath(); cx.moveTo(i * w, 0); cx.lineTo(i * w, S); cx.stroke();
-      x.beginPath(); cx.moveTo(0, i * w); cx.lineTo(S, i * w); cx.stroke();
-    }
+
     for (let i = 0; i < N; i++) {
       for (let j = 0; j < N; j++) {
         for (const [fx, fy] of [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) {
