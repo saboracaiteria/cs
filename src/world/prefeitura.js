@@ -83,8 +83,8 @@ export function buildPrefeitura(scene, col, city) {
   const DEPTH = 1.8;
   const WATER_Y = PISO - 0.35;
 
-  // Bacia/Fundo do Lago
-  const basinMat = voxMaterial(0x324738, { aspereza: 0.95 });
+  // Bacia/Fundo do Lago (Azul escuro profundo para dar sensação de profundidade)
+  const basinMat = voxMaterial(0x0e3b5e, { aspereza: 0.95 });
   const extrudeSettings = {
     steps: 1,
     depth: DEPTH,
@@ -101,13 +101,13 @@ export function buildPrefeitura(scene, col, city) {
   basinMesh.receiveShadow = true;
   g.add(basinMesh);
 
-  // Superfície da Água
+  // Superfície da Água (Azul vivo cristalino e reluzente)
   const waterMat = new THREE.MeshStandardMaterial({
-    color: 0x1aa0b4,
-    roughness: 0.1,
-    metalness: 0.5,
+    color: 0x0077be,
+    roughness: 0.05,
+    metalness: 0.8,
     transparent: true,
-    opacity: 0.88,
+    opacity: 0.78,
   });
 
   const waterShapeGeo = new THREE.ShapeGeometry(lakeShape);
