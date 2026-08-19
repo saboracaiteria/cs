@@ -429,7 +429,63 @@ export const NIGHT = {
  * próprio. Eram duas decisões diferentes empacotadas numa só — quem quisesse a
  * cidade cheia tinha de aceitar sombra, bloom e SMAA no talo junto.
  */
-
+export const PRESETS = [
+  {
+    id: 'baixa', label: 'BAIXA',
+    renderScale: 0.55,
+    shadows: false, shadowMapSize: 1024, shadowRadius: 45,
+    bloom: false, smaa: false, bloomScale: 0.5,
+    dynamicLights: 0,
+    fogFar: 1400,
+    envUpdate: 12,
+    frameCap: 60,    // [FPS] display 120Hz nao roda o jogo a 120 fps a toa
+    leafDetail: 0,   // [FPS] copa das arvores com 1/4 dos triangulos
+  },
+  {
+    id: 'media', label: 'MÉDIA',
+    renderScale: 0.75,
+    // sombra curta e barata: pega o que está perto do jogador, que é o que
+    // realmente se vê, e deixa o passe de sombra pequeno
+    shadows: true, shadowMapSize: 1024, shadowRadius: 38,   // [FPS2] area de sombra -29% (menos casters no passe)
+    shadowType: 'basic',     // [FPS] PCF basico (era PCFSoft): ~35% mais barato no passe de sombra
+    bloom: false, smaa: true, bloomScale: 0.4,   // [FPS] bloom off (caro) + SMAA on (barato e nitido)
+    dynamicLights: 3,
+    fogFar: 1900,
+    envUpdate: 6,
+    frameCap: 60,           // [FPS] cap 60 fps
+    shadowTickEvery: 3,     // [FPS] sombra a cada 3 frames (era 2): -33% de custo
+    dynFloor: 0.62,         // [FPS] mais margem p/ a resolucao dinamica agir antes de travar
+    leafDetail: 0,   // [FPS] copa das arvores com 1/4 dos triangulos (60 tris em vez de 240)
+  },
+  {
+    id: 'alta', label: 'ALTA',
+    renderScale: 1.0,
+    shadows: true, shadowMapSize: 2048, shadowRadius: 70,   // [FPS] 85 -> 70 (menos casters no passe)
+    bloom: true, smaa: true, bloomScale: 0.55,
+    dynamicLights: 6,
+    fogFar: 2300,
+    envUpdate: 3,
+    frameCap: 60,   // [FPS] cap 60 fps
+    leafDetail: 1,   // copa cheia (240 tris/arvore) — maquina forte aguenta
+  },
+  {
+    id: '120fps', label: '120 FPS',
+    renderScale: 0.5,
+    shadows: true, shadowMapSize: 1024, shadowRadius: 40,
+    shadowType: 'basic',
+    bloom: false, smaa: false, bloomScale: 0.4,
+    dynamicLights: 1,
+    fogFar: 1500,
+    envUpdate: 12,
+    pixelRatioCap: 1.25,
+    dynFloor: 0.55,
+    targetMsHigh: 8.0,
+    targetMsLow: 6.5,
+    frameCap: 120,   // [FPS] preset 120fps de verdade
+    shadowTickEvery: 3,
+    leafDetail: 0,   // [FPS] copa das arvores com 1/4 dos triangulos
+  },
+];
 
 /** Perfil inicial (índice em PRESETS): MÉDIA, que roda liso na maioria das máquinas. */
 export const DEFAULT_PRESET = 1;
